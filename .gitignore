@@ -1,0 +1,30 @@
+# Documentação de referência (não versionada)
+clubi-guia-de-implementacao.md
+clubi-decisoes-de-arquitetura.md
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+.pytest_cache/
+.ruff_cache/
+
+# Django
+*.sqlite3
+/backend/staticfiles/
+/backend/media/
+
+# Ambiente
+.env
+.env.*
+!.env.example
+
+# Node
+node_modules/
+/frontend/dist/
+
+# Sistema operacional / editores
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
