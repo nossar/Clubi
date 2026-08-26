@@ -1,0 +1,146 @@
+/* Design tokens for the rendered auth pages.
+   The SPA reuses the same values so the seam between /accounts/ and / is not visible. */
+
+:root {
+  --clubi-bg: #f6f2ea;
+  --clubi-surface: #ffffff;
+  --clubi-ink: #1d1a17;
+  --clubi-muted: #6d6459;
+  --clubi-line: #e2dace;
+  --clubi-accent: #7a2e2e;
+  --clubi-accent-ink: #ffffff;
+  --clubi-danger: #a3312a;
+
+  --clubi-radius: 10px;
+  --clubi-gap: 1rem;
+  --clubi-font-sans: "Inter", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --clubi-font-serif: "Iowan Old Style", "Palatino Linotype", Georgia, serif;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem 1rem;
+  background: var(--clubi-bg);
+  color: var(--clubi-ink);
+  font-family: var(--clubi-font-sans);
+  line-height: 1.5;
+}
+
+.auth-card {
+  width: 100%;
+  max-width: 26rem;
+  padding: 2rem;
+  background: var(--clubi-surface);
+  border: 1px solid var(--clubi-line);
+  border-radius: var(--clubi-radius);
+}
+
+.auth-brand {
+  display: block;
+  margin-bottom: 1.5rem;
+  font-family: var(--clubi-font-serif);
+  font-size: 1.5rem;
+  letter-spacing: 0.02em;
+  color: var(--clubi-accent);
+  text-decoration: none;
+}
+
+.auth-card h1 {
+  margin: 0 0 0.25rem;
+  font-family: var(--clubi-font-serif);
+  font-size: 1.35rem;
+  font-weight: 600;
+}
+
+.auth-lead {
+  margin: 0 0 1.5rem;
+  color: var(--clubi-muted);
+  font-size: 0.925rem;
+}
+
+.auth-form p {
+  margin: 0 0 var(--clubi-gap);
+}
+
+label {
+  display: block;
+  margin-bottom: 0.35rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+}
+
+input[type="text"],
+input[type="email"],
+input[type="password"] {
+  width: 100%;
+  padding: 0.6rem 0.7rem;
+  border: 1px solid var(--clubi-line);
+  border-radius: var(--clubi-radius);
+  background: var(--clubi-surface);
+  color: inherit;
+  font: inherit;
+}
+
+input:focus-visible,
+button:focus-visible,
+a:focus-visible {
+  outline: 2px solid var(--clubi-accent);
+  outline-offset: 2px;
+}
+
+.helptext,
+.helptext ul {
+  display: block;
+  margin: 0.35rem 0 0;
+  padding-left: 1rem;
+  color: var(--clubi-muted);
+  font-size: 0.8125rem;
+}
+
+.helptext ul {
+  margin: 0;
+}
+
+.errorlist {
+  margin: 0 0 var(--clubi-gap);
+  padding-left: 1.1rem;
+  color: var(--clubi-danger);
+  font-size: 0.875rem;
+}
+
+.button {
+  width: 100%;
+  margin-top: 0.5rem;
+  padding: 0.7rem 1rem;
+  border: 0;
+  border-radius: var(--clubi-radius);
+  background: var(--clubi-accent);
+  color: var(--clubi-accent-ink);
+  font: inherit;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.button:hover {
+  filter: brightness(1.1);
+}
+
+.auth-links {
+  margin: 1.25rem 0 0;
+  font-size: 0.875rem;
+  color: var(--clubi-muted);
+}
+
+.auth-links a {
+  color: var(--clubi-accent);
+}

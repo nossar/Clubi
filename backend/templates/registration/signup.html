@@ -1,0 +1,24 @@
+{% extends "registration/base.html" %}
+
+{% block title %}Criar conta · Clubi{% endblock %}
+{% block heading %}Criar conta{% endblock %}
+
+{% block content %}
+  <p class="auth-lead">Participe do clube do livro da ESPM.</p>
+
+  {% if form.non_field_errors %}
+    <ul class="errorlist">
+      {% for error in form.non_field_errors %}<li>{{ error }}</li>{% endfor %}
+    </ul>
+  {% endif %}
+
+  <form class="auth-form" method="post">
+    {% csrf_token %}
+    {{ form.as_p }}
+    <button class="button" type="submit">Criar conta</button>
+  </form>
+
+  <p class="auth-links">
+    Já tem conta? <a href="{% url 'login' %}">Entrar</a>
+  </p>
+{% endblock %}

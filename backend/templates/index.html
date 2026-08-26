@@ -1,0 +1,38 @@
+{% load static %}
+{% comment %}
+SPA shell placeholder. Replace with the Vite build shell (guide, section 8) once
+frontend/dist exists — it must load assets/index.css and assets/index.js.
+{% endcomment %}
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Clubi</title>
+  <link rel="stylesheet" href="{% static 'css/auth.css' %}">
+</head>
+<body>
+  <main class="auth-card">
+    <a class="auth-brand" href="/">Clubi</a>
+    <h1>Clube do Livro da ESPM</h1>
+    {% if user.is_authenticated %}
+      <p class="auth-lead">
+        Olá, {{ user.full_name|default:user.username }}. A interface ainda está em
+        construção — por enquanto, o clube funciona pelo Admin.
+      </p>
+      <p class="auth-links">
+        <a href="/admin/">Ir para o Admin</a>
+      </p>
+      <form class="auth-form" method="post" action="{% url 'logout' %}">
+        {% csrf_token %}
+        <button class="button" type="submit">Sair</button>
+      </form>
+    {% else %}
+      <p class="auth-lead">A interface ainda está em construção.</p>
+      <p class="auth-links">
+        <a href="{% url 'login' %}">Entrar</a> · <a href="{% url 'signup' %}">Criar conta</a>
+      </p>
+    {% endif %}
+  </main>
+</body>
+</html>

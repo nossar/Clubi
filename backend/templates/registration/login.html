@@ -1,0 +1,26 @@
+{% extends "registration/base.html" %}
+
+{% block title %}Entrar · Clubi{% endblock %}
+{% block heading %}Entrar{% endblock %}
+
+{% block content %}
+  <p class="auth-lead">Bem-vindo de volta ao clube.</p>
+
+  {% if form.errors %}
+    <ul class="errorlist">
+      <li>Usuário ou senha incorretos. Tente novamente.</li>
+    </ul>
+  {% endif %}
+
+  <form class="auth-form" method="post">
+    {% csrf_token %}
+    {{ form.as_p }}
+    <input type="hidden" name="next" value="{{ next }}">
+    <button class="button" type="submit">Entrar</button>
+  </form>
+
+  <p class="auth-links">
+    <a href="{% url 'password_reset' %}">Esqueci minha senha</a><br>
+    Ainda não tem conta? <a href="{% url 'signup' %}">Cadastre-se</a>
+  </p>
+{% endblock %}

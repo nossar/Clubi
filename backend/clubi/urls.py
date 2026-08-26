@@ -1,22 +1,32 @@
-"""
-URL configuration for clubi project.
+"""URL configuration for the clubi project.
 
-The `urlpatterns` list routes URLs to views. For more information please see:
-    https://docs.djangoproject.com/en/6.0/topics/http/urls/
-Examples:
-Function views
-    1. Add an import:  from my_app import views
-    2. Add a URL to urlpatterns:  path('', views.home, name='home')
-Class-based views
-    1. Add an import:  from other_app.views import Home
-    2. Add a URL to urlpatterns:  path('', Home.as_view(), name='home')
-Including another URLconf
-    1. Import the include() function: from django.urls import include, path
-    2. Add a URL to urlpatterns:  path('blog/', include('blog.urls'))
+/admin/      → Django Admin
+/accounts/   → rendered auth pages (login, signup, password reset)
+/api/        → JSON API (Ninja) — added in the API phase
+/*           → the SPA shell
 """
+
+from django.conf import settings
+from django.conf.urls.static import static
 from django.contrib import admin
-from django.urls import path
+from django.urls import include, path, re_path
+from django.views.generic import TemplateView
+
+from users.views import SignupView
 
 urlpatterns = [
-    path('admin/', admin.site.urls),
+    path("admin/", admin.site.urls),
+    # Must come before the include() so it wins over auth's own patterns.
+    path("accounts/signup/", SignupView.as_view(), name="signup"),
+    path("accounts/", include("django.contrib.auth.urls")),
+    # everything else is handled by the SPA
+    re_path(
+        r"^(?!static/|media/|api/|admin/|accounts/).*$",
+        TemplateView.as_view(template_name="index.html"),
+        name="spa",
+    ),
 ]
+
+if settings.DEBUG:
+    # In production media is served by R2 (or by the proxy); in dev, by Django itself.
+    urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
