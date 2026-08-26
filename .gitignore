@@ -1,7 +1,9 @@
 # Documentação de referência (não versionada)
-CLAUDE.md
 clubi-guia-de-implementacao.md
 clubi-decisoes-de-arquitetura.md
+
+# Claude Code (as instruções do projeto, .claude/CLAUDE.md, são versionadas)
+.claude/settings.local.json
 
 # Python
 __pycache__/
