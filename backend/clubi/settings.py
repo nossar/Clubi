@@ -130,6 +130,26 @@ LOGIN_REDIRECT_URL = "/"
 LOGOUT_REDIRECT_URL = "/"
 
 
+# Email
+# Only used by the password reset flow. In development the messages are printed to the
+# console; a real SMTP host is required in production for the reset to work at all.
+
+EMAIL_BACKEND = config("EMAIL_BACKEND", default="") or (
+    "django.core.mail.backends.console.EmailBackend"
+    if DEBUG
+    else "django.core.mail.backends.smtp.EmailBackend"
+)
+EMAIL_HOST = config("EMAIL_HOST", default="")
+EMAIL_PORT = config("EMAIL_PORT", default=587, cast=int)
+EMAIL_HOST_USER = config("EMAIL_HOST_USER", default="")
+EMAIL_HOST_PASSWORD = config("EMAIL_HOST_PASSWORD", default="")
+EMAIL_USE_TLS = config("EMAIL_USE_TLS", default=True, cast=bool)
+DEFAULT_FROM_EMAIL = config("DEFAULT_FROM_EMAIL", default="Clubi <nao-responda@clubi.local>")
+
+# Reset links stay valid for 3 hours.
+PASSWORD_RESET_TIMEOUT = 60 * 60 * 3
+
+
 # Static files and media
 
 STATIC_URL = "static/"
