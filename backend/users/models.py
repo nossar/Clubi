@@ -9,7 +9,9 @@ class User(AbstractUser):
     photo = models.ImageField(upload_to="profiles/", null=True, blank=True)
     quote = models.CharField(max_length=180, blank=True)
 
-    # The `favorites` M2M (through books.Favorite) lands with the books app.
+    favorites = models.ManyToManyField(
+        "books.Book", through="books.Favorite", related_name="favorited_by"
+    )
 
     class Meta:
         ordering = ["full_name"]
