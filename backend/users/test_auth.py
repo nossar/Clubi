@@ -118,8 +118,8 @@ class TestSpaShell:
         assert "Clubi" in response.content.decode()
 
     def test_api_prefix_is_not_swallowed_by_the_shell(self, client):
-        # /api/ is not mounted yet; it must 404 rather than render the SPA.
-        assert client.get("/api/me").status_code == 404
+        # An unmounted /api/ path must 404 rather than render the SPA.
+        assert client.get("/api/nao-existe").status_code == 404
 
 
 class TestPagesRender:

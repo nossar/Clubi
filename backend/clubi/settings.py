@@ -70,6 +70,8 @@ MIDDLEWARE = [
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
+    # Django only populates request.FILES on POST; PUT /api/me/photo needs this.
+    "ninja.compatibility.files.fix_request_files_middleware",
 ]
 
 ROOT_URLCONF = "clubi.urls"

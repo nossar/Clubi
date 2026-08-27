@@ -6,8 +6,10 @@ shows the whole surface the SPA can call.
 """
 
 from ninja import NinjaAPI
+from ninja.security import django_auth
 
 from books.api import books_router, picks_router
+from users.api import me_router, users_router
 
 # No csrf= argument: since django-ninja 1.x the CSRF check lives in the auth class,
 # and django_auth (SessionAuth) enforces it on every unsafe method by default.
@@ -18,5 +20,7 @@ api = NinjaAPI(
     docs_url="/docs",
 )
 
+api.add_router("/me", me_router, auth=django_auth, tags=["me"])
+api.add_router("/users", users_router, tags=["users"])
 api.add_router("/books", books_router, tags=["books"])
 api.add_router("/monthly-picks", picks_router, tags=["monthly-picks"])
