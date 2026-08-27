@@ -9,6 +9,7 @@ from ninja import NinjaAPI
 from ninja.security import django_auth
 
 from books.api import books_router, picks_router
+from posts.api import posts_router
 from users.api import me_router, users_router
 
 # No csrf= argument: since django-ninja 1.x the CSRF check lives in the auth class,
@@ -24,3 +25,4 @@ api.add_router("/me", me_router, auth=django_auth, tags=["me"])
 api.add_router("/users", users_router, tags=["users"])
 api.add_router("/books", books_router, tags=["books"])
 api.add_router("/monthly-picks", picks_router, tags=["monthly-picks"])
+api.add_router("/posts", posts_router, tags=["posts"])
