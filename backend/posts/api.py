@@ -1,5 +1,5 @@
 from django.core.paginator import Paginator
-from django.db.models import Max
+from django.db import IntegrityError, transaction
 from django.shortcuts import get_object_or_404
 from ninja import File, PatchDict, Router, Status
 from ninja.errors import HttpError
@@ -97,11 +97,26 @@ def delete_post(request, post_id: int):
 def attach_image(request, post_id: int, file: File[UploadedFile]):
     post = _own_post(request, post_id)
 
-    if post.images.count() >= MAX_IMAGES_PER_POST:
-        raise HttpError(400, f"Uma publicação pode ter no máximo {MAX_IMAGES_PER_POST} imagens.")
     if file.size > MAX_IMAGE_BYTES:
         raise HttpError(400, "Arquivo maior que 8 MB.")
 
-    next_position = (post.images.aggregate(m=Max("position"))["m"] or 0) + 1
-    post.images.create(file=compress_image(file), position=next_position)
+    # The smallest free slot, not max(position) + 1: deleting an image through the
+    # admin inline leaves a hole, and counting the rows would still say there is
+    # room while the next position was already past the 1-4 CheckConstraint.
+    taken = set(post.images.values_list("position", flat=True))
+    free = [slot for slot in range(1, MAX_IMAGES_PER_POST + 1) if slot not in taken]
+    if not free:
+        raise HttpError(400, f"Uma publicação pode ter no máximo {MAX_IMAGES_PER_POST} imagens.")
+
+    image = compress_image(file)
+    try:
+        # atomic() opens a savepoint so the IntegrityError can be caught without
+        # poisoning the surrounding transaction.
+        with transaction.atomic():
+            post.images.create(file=image, position=free[0])
+    except IntegrityError as exc:
+        # A concurrent upload committed that slot between the read above and this
+        # insert. The unique constraint is the arbiter; the loser retries.
+        raise HttpError(409, "Outra imagem ocupou esse espaço. Tente novamente.") from exc
+
     return _with_relations(post)

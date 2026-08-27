@@ -1,5 +1,6 @@
 import pytest
 
+from posts import api as posts_api
 from posts.models import Post, PostImage
 
 pytestmark = pytest.mark.django_db
@@ -96,6 +97,38 @@ class TestPosts:
         assert len(second.json()["images"]) == 2
         assert list(post.images.values_list("position", flat=True)) == [1, 2]
         assert post.images.first().file.name.endswith(".jpg")
+
+    def test_reuses_the_slot_freed_by_an_admin_deletion(self, auth, member, image_upload):
+        post = Post.objects.create(author=member, title="T", body="B")
+        for position in (1, 2, 3, 4):
+            PostImage.objects.create(post=post, file=image_upload(), position=position)
+        # The founder removes the second image through the admin inline, leaving a
+        # hole. Counting rows would say "room for one more" and then aim past slot 4.
+        post.images.filter(position=2).delete()
+
+        response = auth.post(f"/api/posts/{post.id}/images", {"file": image_upload()})
+
+        assert response.status_code == 200
+        assert sorted(post.images.values_list("position", flat=True)) == [1, 2, 3, 4]
+
+    def test_losing_the_race_for_a_slot_is_409_rather_than_500(
+        self, auth, member, image_upload, monkeypatch
+    ):
+        post = Post.objects.create(author=member, title="T", body="B")
+        original = posts_api.compress_image
+
+        def take_the_slot_first(upload, *args, **kwargs):
+            # compress_image runs between picking the free slot and inserting, so
+            # this stands in for a concurrent upload committing in that window.
+            PostImage.objects.create(post=post, file=image_upload(), position=1)
+            return original(upload, *args, **kwargs)
+
+        monkeypatch.setattr(posts_api, "compress_image", take_the_slot_first)
+
+        response = auth.post(f"/api/posts/{post.id}/images", {"file": image_upload()})
+
+        assert response.status_code == 409
+        assert post.images.count() == 1
 
     def test_a_fifth_image_is_refused(self, auth, member, image_upload):
         post = Post.objects.create(author=member, title="T", body="B")
