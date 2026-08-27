@@ -29,3 +29,25 @@ class TestApiSurface:
     def test_every_app_router_answers_under_its_prefix(self, client, path, expected):
         assert client.get(path).status_code == expected
 
+
+class TestOperationIds:
+    """The operationId is public contract — it shows up in the generated client."""
+
+    @staticmethod
+    def _ids():
+        from api.api import api
+
+        schema = api.get_openapi_schema()
+        return [
+            op["operationId"] for methods in schema["paths"].values() for op in methods.values()
+        ]
+
+    def test_are_unique_across_the_whole_surface(self):
+        ids = self._ids()
+
+        assert len(ids) == len(set(ids)), "two views share a name; rename one"
+
+    def test_do_not_encode_the_module_layout(self):
+        # If these start carrying app names again, moving a route will churn
+        # frontend/src/api/generated.ts for no reason (ADR-15).
+        assert not [i for i in self._ids() if "_api_" in i or "routers" in i]
