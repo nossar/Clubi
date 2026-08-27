@@ -53,6 +53,8 @@ INSTALLED_APPS = [
     "django.contrib.sessions",
     "django.contrib.messages",
     "django.contrib.staticfiles",
+    # Third party — needed for /api/docs templates and export_openapi_schema.
+    "ninja",
     "core",
     "users",
     "books",
