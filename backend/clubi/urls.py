@@ -2,7 +2,7 @@
 
 /admin/      → Django Admin
 /accounts/   → rendered auth pages (login, signup, password reset)
-/api/        → JSON API (Ninja) — added in the API phase
+/api/        → JSON API (Ninja), docs at /api/docs
 /*           → the SPA shell
 """
 
@@ -12,10 +12,12 @@ from django.contrib import admin
 from django.urls import include, path, re_path
 from django.views.generic import TemplateView
 
+from api.api import api
 from users.views import SignupView
 
 urlpatterns = [
     path("admin/", admin.site.urls),
+    path("api/", api.urls),
     # Must come before the include() so it wins over auth's own patterns.
     path("accounts/signup/", SignupView.as_view(), name="signup"),
     path("accounts/", include("django.contrib.auth.urls")),

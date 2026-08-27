@@ -6,17 +6,18 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 Clubi — the ESPM book club website. Django + Django Ninja backend serving a React/TypeScript SPA from a single origin.
 
-**Current state: backend models, admin and auth are done; the API and the frontend are not.**
+**Current state: the whole backend is done — models, admin, auth and the API. The frontend is not.**
 
 Written and working:
-- `users` — custom `User` (`full_name`, `birth_date`, `photo`, `quote`) plus a `favorites` M2M through `books.Favorite`.
-- `books` — `Book`, `MonthlyPick`, `MonthlyReading`, `Favorite`, with migrations and admin.
-- `posts` — `Post`, `PostImage`, with migrations and admin.
+- `users` — custom `User` (`full_name`, `birth_date`, `photo`, `quote`) plus a `favorites` M2M through `books.Favorite`; `users/schemas.py`, `users/api.py` (`me_router`, `users_router`).
+- `books` — `Book`, `MonthlyPick`, `MonthlyReading`, `Favorite`, with migrations and admin; `books/schemas.py`, `books/api.py` (`books_router`, `picks_router`).
+- `posts` — `Post`, `PostImage`, with migrations and admin; `posts/schemas.py`, `posts/api.py` (`posts_router`).
 - `core` — no models; holds `core/images.py` (`compress_image`) and `core/static/css/auth.css`.
 - Auth end to end: `SignupView`, `django.contrib.auth.urls`, pt-BR templates under `backend/templates/registration/`, email settings for password reset, and 17 tests in `users/test_auth.py`.
+- `api` — no models, no routes of its own; only `api/api.py` (the `NinjaAPI` instance and the `add_router` calls) and `api/schemas.py` (the two shared projections). All 22 endpoints of the guide's section 6.2 map are mounted; docs at `/api/docs`.
+- API tests live with their app — `books/test_api.py`, `users/test_api.py`, `posts/test_api.py`, `api/test_api.py` — over shared fixtures in `backend/conftest.py`.
 
 Not written yet:
-- The `api` app — Ninja is a dependency but nothing is mounted. `/api/` currently 404s **on purpose**; `users/test_auth.py::TestSpaShell` asserts it. Delete that assertion when the API lands.
 - `frontend/` — `backend/templates/index.html` is a declared placeholder for the SPA shell, to be replaced by the Vite build.
 - The root `Makefile` and the Neon Postgres wiring (see below).
 
@@ -73,7 +74,25 @@ The implementation guide specifies a root `Makefile` (`make install|dev-backend|
 
 **The SPA catch-all is a negative lookahead.** `clubi/urls.py` routes everything except `static/`, `media/`, `api/`, `admin/` and `accounts/` to the shell. An unmounted route must 404, not render the shell — otherwise a typo'd API path silently returns HTML.
 
-**Django Ninja, not DRF (ADR-02).** All endpoints under `/api/`, Pydantic `Schema`/`ModelSchema` in `api/schemas.py`, one router file per area in `api/routers/`, docs at `/api/docs`.
+**Django Ninja, not DRF (ADR-02).** All endpoints under `/api/`, Pydantic `Schema`/`ModelSchema`, docs at `/api/docs`.
+
+**Each app owns its slice of the API (ADR-15).** Models, schemas and routes for a domain live in that domain's app: `books/models.py` + `books/schemas.py` + `books/api.py`. `api/` is not a facade — it holds the `NinjaAPI` instance and nothing else except the shared projections. When you add an endpoint, it goes in the app that owns the models behind it; only the `add_router` line goes in `api/api.py`.
+
+Four rules follow from that, and they are the ones to hold onto:
+
+1. **Two kinds of schema, and only one is shareable.** *Projections* (`BookOut`, `UserBrief`) describe one entity, import no other schema, and exist to be embedded. *Response shapes* (`PostOut`, `ReaderOut`, `UserProfileOut`) describe what one endpoint returns.
+2. **Response shapes live with the route, not with the entity they cite.** `ReaderOut` is in `books/schemas.py` — not `users/` — because it is the return type of `GET /api/monthly-picks/current/readers`. Filing it under the entity is exactly what would create the `books ↔ users` cycle.
+3. **`api/schemas.py` holds only `BookOut` and `UserBrief`.** Adding a third projection needs a reason; each one becomes project-wide vocabulary. Never move a schema there just to dodge an import.
+4. **Cross-app schema imports stay one-directional.** Today there is exactly one: `users/schemas.py` imports `ReadingHistoryOut` from `books`. `books` must never import from `users`, and `posts` imports from neither. The dependency graph is `books → api/schemas`, `posts → api/schemas`, `users → api/schemas` + `books`.
+
+Prefix, `auth` and `tags` are set at the mount point in `api/api.py`, never inside the app — `api/api.py` is the one file that shows the whole surface.
+
+`api/api.py` also overrides `get_openapi_operation_id` to return the bare view name. Ninja's default is `<module>_<view>`, which would leak the file layout into the generated frontend client and churn it on every move. **The cost is that view names must be unique across the whole API, not just within an app** — `api/test_api.py` fails if two collide or if an id starts carrying module names again. Pick a distinct view name when adding a route.
+
+Three things about the Ninja wiring that are easy to get wrong:
+- `NinjaAPI` takes no `csrf=` argument (the guide's snippet predates Ninja 1.x). CSRF is enforced by the auth class — `django_auth` checks it on every unsafe method by default. Do not add `csrf_exempt` anywhere.
+- Multipart on `PUT` needs `ninja.compatibility.files.fix_request_files_middleware` in `MIDDLEWARE`; Django only fills `request.FILES` on POST. `PUT /api/me/photo` depends on it.
+- Partial updates use `PatchDict[Schema]`, which widens every field to optional. The routes re-narrow it: a `null` for a field the model stores as a blank string becomes `""`, and only genuinely nullable fields (`birth_date`, `Post.book_id`) accept `null`.
 
 **Monorepo, two folders, one deploy (ADR-03).** `backend/` and `frontend/`, built together, served by one Django process. `settings.py` already picks up `frontend/dist` as a staticfiles dir once it exists.
 

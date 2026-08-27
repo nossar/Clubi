@@ -1,6 +1,5 @@
-# Documentação de referência (não versionada)
+# Documentação de referência (o guia não é versionado; os ADRs são)
 clubi-guia-de-implementacao.md
-clubi-decisoes-de-arquitetura.md
 
 # Claude Code (as instruções do projeto, .claude/CLAUDE.md, são versionadas)
 .claude/settings.local.json
