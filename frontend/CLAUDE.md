@@ -20,27 +20,60 @@ process bug even when it looks fine — the fix is to add it to DESIGN.md with i
 
 ## Current state
 
-**Fases 4 and 5 are done.** Vite with the proxy, `client.ts`, TanStack Query, `styles/tokens.css`
-and `base.css`, `Header`, `Footer`, `Home` with the monthly highlight and a working `ProgressBar`,
-and now `Feed`, `NewPost`, `PostDetail` and `PostCard` — which also renders on the Home under a
-"Publicações recentes" section (`RecentPosts`). You open `/`, see the book of the month, update
-your progress, and publish, read, edit and delete posts with images, all through the UI.
+**Fases 4, 5 and 6 are done.** Vite with the proxy, `client.ts`, TanStack Query,
+`styles/tokens.css` and `base.css`, `Header`, `Footer`, `Home` with the monthly highlight and a
+working `ProgressBar`, `Feed`, `NewPost`, `PostDetail` and `PostCard` — which also renders on the
+Home under a "Publicações recentes" section (`RecentPosts`) — and now `Profile`, `EditProfile`,
+`StarRating` and `FavoritesShelf`. You open `/`, see the book of the month, update your progress
+and rate it, publish, read, edit and delete posts with images, and open any member's profile to
+see their shelf and every reading they have logged.
 
 What is here:
 
 - [DESIGN.md](DESIGN.md) — the visual source of truth (ADR-17). E-01 … E-12 were reviewed by the
   founder on 2026-08-27; **E-13 (component dimensions, section 8.7) came out of Fase 4, grew three
-  rows in Fase 5, and is the only one still open.**
+  rows in Fase 5 and four more in Fase 6 (profile photo, rating star, shelf slot, history cover),
+  and is the only one still open.**
 - `clubi/` — the brand assets themselves: brandbook PDF, logo variants, the two font families,
   graphic elements, and the published social pieces. Read-only input to DESIGN.md; never edit
   these, and never derive a value from them without recording it in DESIGN.md.
-- `src/` — the SPA. `Home`, `/posts`, `/posts/new` and `/posts/:id` are mounted; `App.tsx` answers
-  everything else with a pt-BR not-found screen, because Django's catch-all hands the shell every
-  path it does not own.
+- `src/` — the SPA. `Home`, `/posts`, `/posts/new`, `/posts/:id`, `/u/:username` and
+  `/profile/edit` are mounted; `App.tsx` answers everything else with a pt-BR not-found screen,
+  because Django's catch-all hands the shell every path it does not own.
 
-Next up is the guide's **Fase 6** (profiles): `Profile`, `EditProfile`, `StarRating` and
-`FavoritesShelf`. The backend for it has been finished since before Fase 4; only the screens are
-missing. Follow the phase order rather than building screens out of sequence.
+Next up is the guide's **Fase 7** (search): the `Search` screen and the `Header` autocomplete, over
+`search_users` (`GET /api/users`, with `q` and `limit`). The backend for it is already there; only
+the screens are missing. Follow the phase order rather than building screens out of sequence.
+
+### Three places the API and the documents disagree, decided in Fase 6
+
+Each of these was a real conflict, and the resolution is deliberate rather than an oversight:
+
+1. **There is no list of a member's posts on their profile**, although guide 7.4 and the route
+   table below both used to promise `PostCard` on three screens. `GET /api/posts` accepts only
+   `page` and `size` — there is no author filter — so the section could only be built by filtering
+   a paginated feed on the client, which shows "their posts that happened to land on page 1". Both
+   documents were corrected instead of shipping that. **Adding the section means adding an
+   `author` query param to `list_posts` first.**
+2. **A rating of `0` means "sem nota", and is the only way to clear one.** `update_reading` guards
+   every field with `if payload.<field> is not None`, so `{"rating": null}` is discarded in silence
+   and the old number survives; `MonthlyReadingIn` allows `ge=0` and the model validator allows 0,
+   so 0 is a real value. DESIGN.md 9 requires the rating to be reversible, and this is the one
+   shape the API offers that delivers it. `StarRating` renders `0` and `null` identically.
+3. **`PatchDict` drops `ProfileIn`'s `max_length`.** A 200-character `full_name` (column: 120) and
+   a 200-character `quote` (column: 180) both answer 200 OK and are written — SQLite does not
+   enforce varchar length, but the Neon Postgres of ADR-13 would raise `DataError` → 500. So the
+   `maxLength` attributes in `EditProfile` are not a convenience, they are **the only length
+   validation in the path today**. Fixing the backend is a decision to raise, not something to
+   change inside a phase declared frontend-only.
+
+One thing Fase 6 changed in a file Fase 4 had already written:
+
+- **`client.ts` normalises a non-string `detail`.** Ninja's own 4xx bodies are
+  `{ "detail": "..." }` in pt-BR and are still carried through untouched, but Pydantic's 422 sends
+  an *array* of validation objects whose `msg` is English and mentions `loc`/`ctx`. That coerced
+  to the literal `"[object Object]"` on screen. The screens make a 422 unreachable — the shelf
+  locks at four slots and generates its own positions — so this is the guard behind the guard.
 
 Two things Fase 5 changed in files Fase 4 had already written, worth knowing before assuming
 those files are frozen:
@@ -176,11 +209,13 @@ frontend/
     └── styles/    tokens.css, base.css
 ```
 
-Written so far: everything above except `Profile`, `EditProfile`, `BookOfTheMonth`, `PickHistory`,
-`Search`, `StarRating` and `FavoritesShelf` — Fase 6 and 7 territory. `BrandElement` (inlines a
-brand SVG so `currentColor` applies), `ReadersList` ("quem está lendo", on the Home), `RecentPosts`
-(the Home's feed preview) and `BookPicker` (the search-select behind `PostIn.book_id`, shared by
-`NewPost` and `PostDetail`'s inline edit) were added in Fases 4 and 5 and are not in guide 7.4.
+Written so far: everything above except `BookOfTheMonth`, `PickHistory` and `Search` — Fase 7
+territory. Four components are not in guide 7.4: `BrandElement` (inlines a brand SVG so
+`currentColor` applies), `ReadersList` ("quem está lendo", on the Home), `RecentPosts` (the
+Home's feed preview) and `BookPicker` — the search-select behind `PostIn.book_id`, written for
+`NewPost`, reused by `PostDetail`'s inline edit and, since Fase 6, by `FavoritesShelf`. Its input
+`id` is a prop with a default: two pickers on one screen would otherwise share an `id` and the
+second `<label htmlFor>` would address the first field.
 
 | Route | Component | | Route | Component |
 |---|---|---|---|---|
@@ -190,8 +225,9 @@ brand SVG so `currentColor` applies), `ReadersList` ("quem está lendo", on the 
 | `/posts/:id` | `PostDetail` | | `/search` | `Search` |
 | `/u/:username` | `Profile` | | | |
 
-`PostCard` renders on Home (via `RecentPosts`) and Feed; Profile will be its third caller in Fase
-6. Write it once; three near-copies is how they diverge.
+`PostCard` renders on Home (via `RecentPosts`) and Feed — **two screens, not the three guide 7.4
+predicted**: see the first of the three disagreements above for why Profile is not its third
+caller. Write it once; near-copies are how they diverge.
 
 ## State rules
 
@@ -212,8 +248,8 @@ Three disciplines Django used to enforce for free (guide 7.5):
 | Feed | `["posts", page]` | creating, editing or deleting a post |
 | Single post | `["post", id]` | editing that post (`setQueryData` on the mutation response; deleted on a successful delete) |
 | Book search (NewPost, edit) | `["books", "search", query]` | never — read-only, and `staleTime` alone keeps retyping the same term cheap |
-| Profile | `["user", username]` | editing the profile, saving favorites |
-| Current user | `["me"]` | editing the profile |
+| Profile | `["user", username]` | editing the profile, saving favorites, saving a rating (the history prints it) |
+| Current user | `["me"]` | editing the profile, **and saving favorites** — `UserOut` embeds `favorites`, so the `/api/me` behind `CurrentUserProvider` goes stale too |
 
 `RecentPosts` (the Home) and `Feed`'s first page both read `["posts", 1]` — one cache entry, not
 two. Invalidation after a write uses the `["posts"]` prefix, which covers every page of the feed
@@ -241,13 +277,24 @@ to `/accounts/login/` — retrying either only fires requests at a page that is 
 - **Progress is one `PUT`** to `/monthly-picks/current/reading` with any of `pages_read`, `rating`,
   `review`. `percent` is `null` when the book has no page count; over the total is a 400.
 - **The shelf is replaced whole**: `PUT /api/me/favorites` with positions 1–4. Reorder in local
-  state, then PUT.
+  state, then PUT. `UserOut.favorites` comes back as a bare `BookOut[]` already in slot order — no
+  `position` on the way out — so the order *is* the array index, and saving rebuilds `position` as
+  index + 1. Always send contiguous 1..N: the API accepts 1 and 4, but on read that is
+  indistinguishable from 1 and 2, so a gap is invisible dirt.
+- **`BookOut.id` is `number | null | undefined`** in the generated types, because `ModelSchema`
+  derives it from Django's AutoField. Everything the API returns is saved, so narrow once at the
+  boundary (`FavoritesShelf` does) rather than asserting at each use.
 - **On `PATCH`, clear a text field with `""`, not `null`** — only `birth_date` and `Post.book_id`
   accept `null`.
 - **Uploads are multipart**: `PUT /api/me/photo` (max 8 MB) and `POST /api/posts/{id}/images`
   (max 4), both field `file`. A post with images is two requests. `client.ts` hardcodes
   `Content-Type: application/json`, so a `FormData` body must override that header away and let the
-  browser set the boundary.
+  browser set the boundary. **There is no endpoint to remove a photo** — `upload_photo` only
+  writes and `ProfileIn` has no `photo` field — so do not draw a "Remover foto" button.
+- **An emptied `<input type="date">` must be sent as `null`, never `""`.** `date | None` does not
+  parse an empty string, and `update_me` converts a null to `""` for every field *except*
+  `birth_date`, the one genuinely nullable column. That is the opposite of `update_post`, which
+  ignores a null in `title`/`body` and accepts it only in `book_id`.
 
 ## Styling
 

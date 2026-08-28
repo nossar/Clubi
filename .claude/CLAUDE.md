@@ -6,7 +6,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 Clubi — the ESPM book club website. Django + Django Ninja backend serving a React/TypeScript SPA from a single origin.
 
-**Current state: the whole backend is done — models, admin, auth and the API. The frontend has its first screen (Fase 4); Fases 5 to 7 are the remaining screens.**
+**Current state: the whole backend is done — models, admin, auth and the API. The frontend has Fases 4, 5 and 6 (Home, posts, profiles); Fase 7 (busca) is what is left of the screens.**
 
 Written and working:
 - `users` — custom `User` (`full_name`, `birth_date`, `photo`, `quote`) plus a `favorites` M2M through `books.Favorite`; `users/schemas.py`, `users/api.py` (`me_router`, `users_router`).
@@ -17,10 +17,11 @@ Written and working:
 - `api` — no models, no routes of its own; only `api/api.py` (the `NinjaAPI` instance and the `add_router` calls) and `api/schemas.py` (the two shared projections). All 22 endpoints of the guide's section 6.2 map are mounted; docs at `/api/docs`.
 - API tests live with their app — `books/test_api.py`, `users/test_api.py`, `posts/test_api.py`, `api/test_api.py` — over shared fixtures in `backend/conftest.py`.
 
-- `frontend/` — Fase 4 is done: Vite with the proxy, `src/api/client.ts`, TanStack Query, `styles/tokens.css` and `base.css` on the brand tokens, `Header`, `Footer`, and `Home` with the monthly highlight and a working `ProgressBar`. `backend/templates/index.html` is now the real SPA shell, loading the pinned Vite bundle. See `frontend/CLAUDE.md` for the folder's contract and `frontend/DESIGN.md` for anything visual.
+- `frontend/` — Fases 4, 5 and 6 are done: Vite with the proxy, `src/api/client.ts`, TanStack Query, `styles/tokens.css` and `base.css` on the brand tokens, `Header`, `Footer`, `Home` with the monthly highlight and a working `ProgressBar`, the posts screens (`Feed`, `NewPost`, `PostDetail`, `PostCard`), and the profile screens (`Profile`, `EditProfile`, `StarRating`, `FavoritesShelf`). `backend/templates/index.html` is the real SPA shell, loading the pinned Vite bundle. See `frontend/CLAUDE.md` for the folder's contract and `frontend/DESIGN.md` for anything visual.
 
 Not written yet:
-- The other SPA screens — `Feed`, `NewPost`, `PostDetail`, `Profile`, `EditProfile`, `BookOfTheMonth`, `PickHistory`, `Search`, and `PostCard` (Fases 5 to 7). Their endpoints already exist; only the screens are missing.
+- The remaining SPA screens — `BookOfTheMonth`, `PickHistory` and `Search` (Fase 7). Their endpoints already exist; only the screens are missing.
+- **One backend gap the frontend found and did not fix** (Fase 6, raised rather than acted on): `PatchDict[ProfileIn]` discards the schema's `max_length`, so `PATCH /api/me` writes a 200-character `full_name` into a 120-character column and answers 200 OK. SQLite does not check varchar length; the Neon Postgres of ADR-13 would raise `DataError` → 500. `EditProfile`'s `maxLength` attributes are the only length validation in the path today.
 - The Neon Postgres wiring (see below). The root `Makefile` now exists and no longer gates the frontend steps.
 
 Follow the phase order in the implementation guide rather than inventing structure.
