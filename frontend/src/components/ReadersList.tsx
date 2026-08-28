@@ -3,16 +3,9 @@ import { useQuery } from "@tanstack/react-query";
 import { api } from "../api/client";
 import type { Reader, User } from "../api/types";
 import { useCurrentUser } from "../context/CurrentUser";
+import { initials } from "../format";
 
 type Companion = Pick<User, "username" | "full_name" | "photo">;
-
-function initials(name: string): string {
-  const parts = name.trim().split(/\s+/).filter(Boolean);
-  if (parts.length === 0) return "?";
-  const first = parts[0][0];
-  const last = parts.length > 1 ? parts[parts.length - 1][0] : "";
-  return (first + last).toUpperCase();
-}
 
 /**
  * Who else is reading this month's book — presence, not a scoreboard (DESIGN.md 9).
@@ -75,9 +68,9 @@ export function ReadersList() {
             return (
               <li className={isMe ? "reader reader--me" : "reader"} key={person.username}>
                 {person.photo ? (
-                  <img className="reader__avatar" src={person.photo} alt="" width={44} height={44} />
+                  <img className="avatar" src={person.photo} alt="" width={44} height={44} />
                 ) : (
-                  <span className="reader__avatar" aria-hidden="true">
+                  <span className="avatar" aria-hidden="true">
                     {initials(person.full_name || person.username)}
                   </span>
                 )}

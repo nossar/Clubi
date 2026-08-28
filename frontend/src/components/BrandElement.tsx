@@ -6,14 +6,22 @@
  * surrounding colour — that is what lets one drawing serve cream-on-wine and wine-on-cream
  * without a second "sticker" file (DESIGN.md 6.1). They already carry aria-hidden. */
 
+import balao from "../assets/elements/balao.svg?raw";
+import clips from "../assets/elements/clips.svg?raw";
 import livroAberto from "../assets/elements/livro-aberto.svg?raw";
 import nuvem from "../assets/elements/nuvem.svg?raw";
+import x from "../assets/elements/x.svg?raw";
 
-// Only what Fase 4 renders. Add an entry when a screen actually needs it, and keep to at most
-// two elements per screen (DESIGN.md 6.2) — they are punctuation, not content.
+// Add an entry when a screen actually needs it, and keep to at most two elements per screen
+// (DESIGN.md 6.2) — they are punctuation, not content. "x" is the one glyph that is not from
+// the brandbook: DESIGN.md 6.3 calls for a residual "×" drawn in the marca's stroke, versioned
+// here alongside the ten brandbook elements, since no icon library is used (E-07).
 const ELEMENTS = {
+  balao,
+  clips,
   "livro-aberto": livroAberto,
   nuvem,
+  x,
 } as const;
 
 export type BrandElementName = keyof typeof ELEMENTS;

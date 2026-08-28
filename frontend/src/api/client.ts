@@ -23,15 +23,34 @@ export class ApiError extends Error {
   }
 }
 
-export async function api<T>(path: string, init: RequestInit = {}): Promise<T> {
+/**
+ * `init.headers` widens past `RequestInit`'s `HeadersInit` so a caller can pass
+ * `{ "Content-Type": undefined }` to *remove* the default JSON header — needed for
+ * multipart uploads (Fase 5), where the browser must write its own `boundary`. A plain object
+ * spread can't do that: `{ ...defaults, "Content-Type": undefined }` still has the key, and
+ * `fetch` stringifies that to the literal `"undefined"`. Building a `Headers` object and
+ * `.delete()`-ing on `undefined` is what actually removes it.
+ */
+export async function api<T>(
+  path: string,
+  init: Omit<RequestInit, "headers"> & { headers?: Record<string, string | undefined> } = {},
+): Promise<T> {
+  const headers = new Headers({
+    "Content-Type": "application/json",
+    "X-CSRFToken": csrfToken(),
+  });
+  for (const [key, value] of Object.entries(init.headers ?? {})) {
+    if (value === undefined) {
+      headers.delete(key);
+    } else {
+      headers.set(key, value);
+    }
+  }
+
   const response = await fetch(`/api${path}`, {
     ...init,
     credentials: "same-origin",
-    headers: {
-      "Content-Type": "application/json",
-      "X-CSRFToken": csrfToken(),
-      ...init.headers,
-    },
+    headers,
   });
 
   if (response.status === 401) {
@@ -45,6 +64,13 @@ export async function api<T>(path: string, init: RequestInit = {}): Promise<T> {
     // through instead of inventing one at the component.
     const body = (await response.json().catch(() => ({}))) as { detail?: string };
     throw new ApiError(response.status, body.detail ?? "Unexpected error");
+  }
+
+  // DELETE /api/posts/{id} answers 204 with no body. response.ok is true, but .json() on an
+  // empty body throws "Unexpected end of JSON input" — which would report a successful delete
+  // as a failed mutation.
+  if (response.status === 204) {
+    return undefined as T;
   }
 
   return response.json() as Promise<T>;

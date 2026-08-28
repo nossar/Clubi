@@ -9,3 +9,6 @@ export type User = components["schemas"]["UserOut"];
 export type MonthlyPick = components["schemas"]["MonthlyPickOut"];
 export type MonthlyReading = components["schemas"]["MonthlyReadingOut"];
 export type Reader = components["schemas"]["ReaderOut"];
+export type Post = components["schemas"]["PostOut"];
+export type PostPage = components["schemas"]["Page"];
+export type PostPatch = components["schemas"]["PostInPatch"];

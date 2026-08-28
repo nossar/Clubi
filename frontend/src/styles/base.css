@@ -262,9 +262,16 @@ a {
 }
 
 .field-label {
-  display: block;
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
   font-size: var(--text-sm);
   font-weight: 700;
+}
+
+.field-label .brand-element {
+  width: 1.25rem;
+  flex: none;
 }
 
 .field-number {
@@ -582,7 +589,7 @@ a {
   font-size: var(--text-sm);
 }
 
-.reader__avatar {
+.avatar {
   display: grid;
   place-items: center;
   width: 2.75rem;
@@ -600,6 +607,291 @@ a {
 
 .reader--me {
   font-weight: 700;
+}
+
+/* ---------------------------------------------------------------- feed
+   Functional core (DESIGN.md 7): a plain surface, no checker, no tilt, no stamp. The collage
+   budget for this screen is spent on the balão heading icon alone. */
+.feed__heading {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+  margin-bottom: var(--space-6);
+}
+
+.feed__title {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  font-size: var(--text-xl);
+  color: var(--clubi-ink-brand);
+}
+
+.feed__title .brand-element {
+  width: 2rem;
+  flex: none;
+}
+
+.feed__more {
+  margin-top: var(--space-6);
+}
+
+.post-list {
+  display: grid;
+  gap: var(--space-6);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+/* ---------------------------------------------------------------- post card
+   Shared by RecentPosts, Feed and PostDetail's header. Plain surface, no rotation or texture —
+   the card is data, not a frame (DESIGN.md 7). */
+.post-card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: var(--space-5);
+  border: 1px solid var(--clubi-line);
+  border-radius: var(--radius-md);
+  background: var(--clubi-surface);
+  box-shadow: var(--shadow-paper);
+}
+
+.post-card__header {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.post-card__author {
+  font-weight: 700;
+}
+
+.post-card__date {
+  font-size: var(--text-sm);
+}
+
+.post-card__title-link {
+  display: block;
+  color: var(--clubi-ink);
+  text-decoration: none;
+}
+
+.post-card__title {
+  font-size: var(--text-lg);
+}
+
+.post-card__title-link:hover .post-card__title,
+.post-card__title-link:focus-visible .post-card__title {
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.post-card__book {
+  font-size: var(--text-sm);
+}
+
+/* Feed and Home show a preview; PostDetail renders the full body in .post-detail__body
+   instead, so this clamp never touches the single-post reading view. */
+.post-card__body {
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-line-clamp: 4;
+  line-clamp: 4;
+  -webkit-box-orient: vertical;
+}
+
+.post-card__images {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: var(--space-2);
+}
+
+.post-card__images img {
+  display: block;
+  width: 100%;
+  aspect-ratio: 4 / 3;
+  object-fit: cover;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--clubi-line);
+}
+
+/* ---------------------------------------------------------------- post detail */
+.post-detail {
+  display: grid;
+  gap: var(--space-4);
+}
+
+.post-detail__title {
+  font-size: var(--text-2xl);
+}
+
+.post-detail__body {
+  max-width: var(--measure);
+  white-space: pre-wrap;
+}
+
+.post-detail__images {
+  max-width: var(--measure);
+}
+
+.post-detail__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+}
+
+.post-detail__confirm {
+  display: grid;
+  gap: var(--space-3);
+  padding: var(--space-4);
+  border: 1px solid var(--clubi-line-strong);
+  border-radius: var(--radius-md);
+  background: var(--clubi-surface-sunken);
+}
+
+/* ---------------------------------------------------------------- forms
+   NewPost and PostDetail's inline edit. Miolo funcional: clean, no collage (DESIGN.md 7). */
+.post-form {
+  display: grid;
+  gap: var(--space-5);
+  max-width: var(--measure);
+}
+
+.field {
+  display: grid;
+  gap: var(--space-2);
+}
+
+.field-text,
+.field-textarea {
+  width: 100%;
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--clubi-line-strong);
+  border-radius: var(--radius-sm);
+  background: var(--clubi-surface-sunken);
+  color: inherit;
+  font: inherit;
+  letter-spacing: inherit;
+}
+
+.field-text {
+  min-height: 44px; /* touch target (DESIGN.md 10.4) */
+}
+
+.field-textarea {
+  min-height: 8rem; /* DESIGN.md 8.7 — enough for the body of a post without scrolling */
+  resize: vertical;
+}
+
+.field-file {
+  display: block;
+  font: inherit;
+}
+
+/* ---------------------------------------------------------------- book picker */
+.book-picker__results {
+  margin: var(--space-2) 0 0;
+  padding: 0;
+  list-style: none;
+  border: 1px solid var(--clubi-line);
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+  background: var(--clubi-surface);
+}
+
+.book-picker__results li:not(:last-child) {
+  border-bottom: 1px solid var(--clubi-line);
+}
+
+.book-picker__result {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-2);
+  width: 100%;
+  padding: var(--space-3);
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  letter-spacing: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.book-picker__result:hover,
+.book-picker__result:focus-visible {
+  background: var(--clubi-tint-wine);
+}
+
+.book-picker__empty {
+  margin-top: var(--space-2);
+  font-size: var(--text-sm);
+}
+
+.book-picker__selected {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+  padding: var(--space-3) var(--space-4);
+  border: 1px solid var(--clubi-line-strong);
+  border-radius: var(--radius-sm);
+  background: var(--clubi-surface-sunken);
+}
+
+/* ---------------------------------------------------------------- image picker
+   NewPost's staged uploads, before Publicar. The × glyph here is the one residual control
+   DESIGN.md 6.3 allows outside brand elements and words — removing a staged image is not the
+   same action as deleting a published post, so it does not borrow "Excluir". */
+.image-picker__list {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: var(--space-3);
+  margin: var(--space-3) 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.image-picker__item {
+  position: relative;
+  aspect-ratio: 1;
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+  border: 1px solid var(--clubi-line);
+}
+
+.image-picker__item img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.image-picker__remove {
+  position: absolute;
+  top: var(--space-1);
+  right: var(--space-1);
+  display: grid;
+  place-items: center;
+  width: 44px; /* touch target (DESIGN.md 10.4) */
+  height: 44px;
+  border: 0;
+  border-radius: var(--radius-pill);
+  background: var(--clubi-ink-brand);
+  color: var(--clubi-ink-on-invert);
+  box-shadow: var(--shadow-paper);
+  cursor: pointer;
+}
+
+.image-picker__remove .brand-element {
+  width: 1rem;
 }
 
 /* ---------------------------------------------------------------- page states */

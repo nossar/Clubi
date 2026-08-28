@@ -6,6 +6,7 @@ import { BrandElement } from "../components/BrandElement";
 import { MonthlyPickHighlight } from "../components/MonthlyPickHighlight";
 import { ProgressBar } from "../components/ProgressBar";
 import { ReadersList } from "../components/ReadersList";
+import { RecentPosts } from "../components/RecentPosts";
 
 /** An empty screen is an invitation, not "nenhum registro encontrado" (DESIGN.md 9). */
 function NoMonthlyPick() {
@@ -63,6 +64,7 @@ export function Home() {
       <MonthlyPickHighlight pick={pick} />
       <ProgressBar pick={pick} />
       <ReadersList />
+      <RecentPosts />
     </>
   );
 }
