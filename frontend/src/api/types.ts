@@ -6,6 +6,10 @@ import type { components } from "./generated";
 
 export type Book = components["schemas"]["BookOut"];
 export type User = components["schemas"]["UserOut"];
+export type UserProfile = components["schemas"]["UserProfileOut"];
+export type ProfilePatch = components["schemas"]["ProfileInPatch"];
+export type ReadingHistory = components["schemas"]["ReadingHistoryOut"];
+export type FavoritesPayload = components["schemas"]["FavoritesIn"];
 export type MonthlyPick = components["schemas"]["MonthlyPickOut"];
 export type MonthlyReading = components["schemas"]["MonthlyReadingOut"];
 export type Reader = components["schemas"]["ReaderOut"];

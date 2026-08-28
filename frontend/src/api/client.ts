@@ -13,6 +13,22 @@ export function csrfToken(): string {
   return document.cookie.match(/csrftoken=([^;]+)/)?.[1] ?? "";
 }
 
+/**
+ * Ninja's own 4xx bodies are `{ "detail": "..." }` and already written in pt-BR, so they are
+ * carried through untouched. Pydantic's 422 is a different shape: `detail` is an *array* of
+ * validation objects (`{type, loc, msg}`) whose `msg` is English and talks about `loc` and
+ * `ctx`. Coercing that into an `Error` message printed a literal "[object Object]" on screen.
+ *
+ * The screens are written so a 422 is unreachable — the shelf locks at four slots and builds its
+ * own positions (Fase 6) — but if one ever escapes, the member should read a Portuguese sentence
+ * rather than a Pydantic trace.
+ */
+function detailMessage(detail: unknown): string {
+  if (typeof detail === "string") return detail;
+  if (Array.isArray(detail)) return "Os dados enviados não foram aceitos.";
+  return "Não deu para completar a ação.";
+}
+
 export class ApiError extends Error {
   constructor(
     public status: number,
@@ -61,9 +77,10 @@ export async function api<T>(
 
   if (!response.ok) {
     // Errors are { "detail": "..." } and already written in Portuguese: carry the message
-    // through instead of inventing one at the component.
-    const body = (await response.json().catch(() => ({}))) as { detail?: string };
-    throw new ApiError(response.status, body.detail ?? "Unexpected error");
+    // through instead of inventing one at the component. See detailMessage for the one shape
+    // that is not a string — Pydantic's 422.
+    const body = (await response.json().catch(() => ({}))) as { detail?: unknown };
+    throw new ApiError(response.status, detailMessage(body.detail));
   }
 
   // DELETE /api/posts/{id} answers 204 with no body. response.ok is true, but .json() on an

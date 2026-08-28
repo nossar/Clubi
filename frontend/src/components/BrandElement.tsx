@@ -8,6 +8,7 @@
 
 import balao from "../assets/elements/balao.svg?raw";
 import clips from "../assets/elements/clips.svg?raw";
+import estrela5 from "../assets/elements/estrela-5.svg?raw";
 import livroAberto from "../assets/elements/livro-aberto.svg?raw";
 import nuvem from "../assets/elements/nuvem.svg?raw";
 import x from "../assets/elements/x.svg?raw";
@@ -19,6 +20,9 @@ import x from "../assets/elements/x.svg?raw";
 const ELEMENTS = {
   balao,
   clips,
+  // The rating star is the brand's own five-pointed star (DESIGN.md 6.3): because the SVG paints
+  // with currentColor, "not rated" is the same drawing in --clubi-line — no filled/hollow pair.
+  "estrela-5": estrela5,
   "livro-aberto": livroAberto,
   nuvem,
   x,

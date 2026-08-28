@@ -17,11 +17,18 @@ export function BookPicker({
   onSelect,
   onClear,
   label,
+  inputId = "book-picker-input",
 }: {
   selected: Book | null;
   onSelect: (book: Book) => void;
   onClear: () => void;
   label: string;
+  /**
+   * The field's `id`, so `<label htmlFor>` points at it. Fase 5 hardcoded one value because
+   * only one picker existed per screen; two on the same screen would collide and the label
+   * would address the wrong field. Pass a distinct id whenever that can happen.
+   */
+  inputId?: string;
 }) {
   const [query, setQuery] = useState("");
   const [debouncedQuery, setDebouncedQuery] = useState("");
@@ -62,11 +69,11 @@ export function BookPicker({
 
   return (
     <div>
-      <label className="field-label" htmlFor="book-picker-input">
+      <label className="field-label" htmlFor={inputId}>
         {label}
       </label>
       <input
-        id="book-picker-input"
+        id={inputId}
         className="field-text"
         type="text"
         placeholder="Buscar no catálogo do clubi"

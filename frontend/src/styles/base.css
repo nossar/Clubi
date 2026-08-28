@@ -261,6 +261,12 @@ a {
   background: var(--clubi-tint-wine);
 }
 
+/* A disabled quiet button is "not applicable here" — "Subir" on the first shelf slot — not
+   "wait, something is running", which is what the primary button's cursor: progress says. */
+.button--quiet[disabled] {
+  cursor: default;
+}
+
 .field-label {
   display: flex;
   align-items: center;
@@ -310,13 +316,15 @@ a {
   gap: var(--space-2);
 }
 
+/* Also the only way into your own profile, so it stays on screen at 390px — the member arrives
+   by phone (DESIGN.md 8.5). What drops there is the greeting word, not the link. */
 .site-header__greeting {
   font-size: var(--text-sm);
-  color: var(--clubi-ink-muted);
+  color: var(--clubi-ink-brand);
 }
 
 @media (max-width: 479px) {
-  .site-header__greeting {
+  .site-header__hello {
     display: none;
   }
 }
@@ -480,12 +488,18 @@ a {
   justify-content: flex-end;
   gap: var(--space-2);
   padding: var(--space-4);
-  /* clears the stamp, which is pinned to the bottom-right of the cutout */
-  padding-bottom: var(--space-8);
   color: var(--clubi-ink-brand);
 }
 
+/* Only the hero needs room under the type: the stamp is pinned to the bottom-right of the
+   cutout. Fase 6 put the same placeholder in a 7rem shelf slot, where reserving 4rem of it for
+   a stamp that is not there pushed a long title out of the top of the card. */
+.pick__cutout .book-cover--blank {
+  padding-bottom: var(--space-8);
+}
+
 .book-cover__title {
+  overflow-wrap: anywhere; /* a long title must break, not spill out of the card */
   font-family: var(--clubi-font-display);
   font-size: var(--text-lg);
   font-weight: 600;
@@ -496,6 +510,21 @@ a {
 .book-cover__author {
   font-size: var(--text-sm);
   color: var(--clubi-ink-muted);
+}
+
+/* The placeholder's type is sized for the hero, where the cover is 15rem wide. In the 7rem
+   shelf slot and the 5rem history thumbnail it has to step down a token, or "Memórias Póstumas
+   de Brás Cubas" breaks mid-word to fit. */
+.shelf .book-cover__title {
+  font-size: var(--text-base);
+}
+
+.history__cover .book-cover__title {
+  font-size: var(--text-sm);
+}
+
+.history__cover .book-cover__author {
+  font-size: var(--text-xs);
 }
 
 /* ---------------------------------------------------------------- progress
@@ -547,6 +576,14 @@ a {
   margin-top: var(--space-4);
   font-size: var(--text-sm);
   color: var(--clubi-ink-muted);
+}
+
+/* The rating hangs off the same reading row as the progress, so it lives inside .progress —
+   separated by a rule, never presented as a step you have to complete (DESIGN.md 9). */
+.progress__rating {
+  margin-top: var(--space-6);
+  padding-top: var(--space-5);
+  border-top: 1px solid var(--clubi-line);
 }
 
 /* ---------------------------------------------------------------- notices
@@ -672,6 +709,20 @@ a {
 
 .post-card__date {
   font-size: var(--text-sm);
+}
+
+/* The author's name is a link to their profile since Fase 6, but it is not styled as one: it
+   already reads as the card's byline, and painting it wine would put a second brand-coloured
+   line right above the title. */
+.post-card__author-link {
+  color: inherit;
+  text-decoration: none;
+}
+
+.post-card__author-link:hover,
+.post-card__author-link:focus-visible {
+  text-decoration: underline;
+  text-underline-offset: 2px;
 }
 
 .post-card__title-link {
@@ -892,6 +943,318 @@ a {
 
 .image-picker__remove .brand-element {
   width: 1rem;
+}
+
+/* ---------------------------------------------------------------- utilities */
+/* Text that only the screen reader needs — the star labels, where the drawing carries the
+   meaning visually (DESIGN.md 10.5 keeps decoration aria-hidden; this is the reverse case). */
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  border: 0;
+  clip-path: inset(50%);
+  overflow: hidden;
+  white-space: nowrap;
+}
+
+.field-help {
+  font-size: var(--text-sm);
+}
+
+/* The one button that sits on a wine ground: a wine button would vanish into it, and yellow on
+   wine is the pair DESIGN.md 3.2 measures at 6.84 — the only background yellow is allowed on.
+   The hover is E-02's 12% darkening, applied as brightness because the fill is a token. */
+/* The second selector is load-bearing, not redundant: this button only ever renders inside
+   .on-invert, and `.on-invert a` (0,1,1) outweighs a lone `.button--highlight` (0,1,0) — which
+   painted the label yellow on yellow when the button was a <Link>. */
+.button--highlight,
+.on-invert .button--highlight {
+  background: var(--clubi-highlight);
+  color: var(--clubi-highlight-ink);
+}
+
+.button--highlight:hover,
+.button--highlight:active {
+  background: var(--clubi-highlight);
+  filter: brightness(0.88);
+}
+
+/* ---------------------------------------------------------------- star rating
+   The brand's five-pointed star (DESIGN.md 6.3), painted with currentColor so "não avaliado" is
+   the same drawing in --clubi-line. Anti-metric by product decision (DESIGN.md 9): no club
+   average, no ranking, nothing gated behind giving a note. */
+.star-rating {
+  display: grid;
+  gap: var(--space-2);
+  justify-items: start;
+}
+
+.star-rating__group {
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.star-rating__group legend {
+  padding: 0;
+  margin-bottom: var(--space-2);
+}
+
+.star-rating__stars {
+  display: flex;
+  align-items: center;
+}
+
+/* 44px is the touch target of DESIGN.md 10.4, which names the stars as one of the two places
+   most likely to miss it. The glyph is 1.5rem; the rest of the square is target. */
+.star-rating__star {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  color: var(--clubi-line);
+}
+
+label.star-rating__star {
+  cursor: pointer;
+}
+
+.star-rating__star .brand-element {
+  width: 1.5rem;
+}
+
+/* Filled is orange — 3.06 on cream, above the 3:1 minimum for a non-text mark. Empty is the
+   rule line. The caption spells the number out, so colour is never the only signal
+   (DESIGN.md 10.3). */
+.star-rating__star.is-on {
+  color: var(--clubi-accent);
+}
+
+.on-invert .star-rating__star.is-on {
+  color: var(--clubi-highlight);
+}
+
+/* Real radio inputs, hidden but focusable: that is what buys arrow-key navigation and the
+   checked state without reimplementing either. */
+.star-rating__input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  clip-path: inset(50%);
+  overflow: hidden;
+}
+
+.star-rating__input:focus-visible + .brand-element {
+  outline: 2px solid var(--clubi-focus);
+  outline-offset: 2px;
+}
+
+.star-rating__caption {
+  font-size: var(--text-sm);
+  color: var(--clubi-ink-muted);
+}
+
+/* Read-only, on the profile history: a caption with stars rather than a control, so there is no
+   touch target to reserve. */
+.star-rating--static {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.star-rating--static .star-rating__star {
+  width: 1.5rem;
+  height: 1.5rem;
+}
+
+/* ---------------------------------------------------------------- profile header
+   The frame, so it carries the collage and the wine ground of the section alternation
+   (DESIGN.md 3.4 and 7). Shelf and history below it stay clean. */
+.profile-header__inner {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-5);
+}
+
+/* Same cutout treatment as the book cover (DESIGN.md 7): thick cream border, warm shadow. The
+   diameter is E-13 — about half the hero's cover column, enough to anchor the header without
+   competing with the name. */
+.profile-photo {
+  display: grid;
+  place-items: center;
+  width: clamp(6rem, 22vw, 8rem);
+  height: clamp(6rem, 22vw, 8rem);
+  flex: none;
+  border: var(--space-2) solid var(--clubi-cream);
+  border-radius: var(--radius-pill);
+  background: var(--clubi-tint-wine);
+  box-shadow: var(--shadow-lifted);
+  object-fit: cover;
+  overflow: hidden;
+}
+
+.profile-photo--blank {
+  color: var(--clubi-ink-brand);
+  font-family: var(--clubi-font-display);
+  font-size: var(--text-xl);
+  font-weight: 600;
+  letter-spacing: var(--tracking-display);
+}
+
+.profile-header__name {
+  font-size: clamp(var(--text-xl), 8vw, var(--text-2xl));
+}
+
+.profile-header__username {
+  margin-top: var(--space-1);
+  font-size: var(--text-sm);
+}
+
+.profile-header__quote {
+  max-width: var(--measure);
+  margin-top: var(--space-4);
+  font-family: var(--clubi-font-display);
+  font-size: var(--text-md);
+  line-height: var(--leading-tight);
+  letter-spacing: var(--tracking-display);
+}
+
+.profile-header__birth {
+  margin-top: var(--space-3);
+  font-size: var(--text-sm);
+}
+
+.profile-header__actions {
+  margin-top: var(--space-5);
+}
+
+/* ---------------------------------------------------------------- favorites shelf
+   Four slots, always four columns — the shelf has a fixed size by design (ADR-08), so an
+   auto-fitting grid would misrepresent it. 7rem is E-13: below it the title of a book with no
+   cover stops fitting inside the typographic placeholder. */
+.shelf {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(7rem, 1fr));
+  gap: var(--space-5);
+  max-width: var(--measure);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+@media (min-width: 768px) {
+  .shelf {
+    grid-template-columns: repeat(4, minmax(7rem, 1fr));
+  }
+}
+
+/* Flex, not grid, so the controls can be pushed to the bottom of the tallest slot — otherwise
+   each column's "Subir/Descer/Tirar" row sits wherever that book's title happens to end. */
+.shelf__item {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.shelf__title {
+  overflow-wrap: anywhere;
+  font-family: var(--clubi-font-display);
+  font-size: var(--text-base);
+  font-weight: 600;
+  line-height: var(--leading-tight);
+  letter-spacing: var(--tracking-display);
+}
+
+.shelf__author {
+  font-size: var(--text-sm);
+}
+
+/* Words, not drag handles (DESIGN.md 6.3) — which is also what keeps reordering operable by
+   keyboard and by thumb. */
+.shelf__controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1);
+  margin-top: auto;
+  padding-top: var(--space-2);
+}
+
+.shelf-editor {
+  display: grid;
+  gap: var(--space-5);
+}
+
+.shelf-editor__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+}
+
+/* ---------------------------------------------------------------- reading history
+   One row per past month. The cover is a 5rem thumbnail (E-13) — the same width the empty-state
+   graphic element uses, so a past reading never reads as a second hero. */
+.history {
+  display: grid;
+  gap: var(--space-6);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.history__item {
+  display: grid;
+  grid-template-columns: 5rem minmax(0, 1fr);
+  gap: var(--space-5);
+  align-items: start;
+}
+
+.history__item:not(:last-child) {
+  padding-bottom: var(--space-6);
+  border-bottom: 1px solid var(--clubi-line);
+}
+
+.history__text {
+  display: grid;
+  justify-items: start;
+  gap: var(--space-2);
+  max-width: var(--measure);
+}
+
+.history__month,
+.history__author,
+.history__progress {
+  font-size: var(--text-sm);
+}
+
+.history__title {
+  font-size: var(--text-lg);
+}
+
+.history__review {
+  white-space: pre-wrap;
+}
+
+/* ---------------------------------------------------------------- photo upload
+   No "Remover foto": upload_photo only writes and ProfileIn has no photo field, so the API
+   cannot express it (see EditProfile). */
+.photo-form {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: var(--space-5);
+}
+
+.photo-form__controls {
+  display: grid;
+  justify-items: start;
+  gap: var(--space-3);
 }
 
 /* ---------------------------------------------------------------- page states */

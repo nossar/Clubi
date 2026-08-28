@@ -4,13 +4,12 @@ import type { Post } from "../api/types";
 import { formatDateTime, initials } from "../format";
 
 /**
- * Renders on Home, Feed and PostDetail's "you might also read" — well, just Home and Feed for
- * now (DESIGN.md 6.3, guide 7.4: "write it once; three near-copies is how they diverge").
+ * Renders on Home and Feed (guide 7.4: "write it once; three near-copies is how they diverge").
+ * The guide expected Profile to be its third caller; it is not, because `GET /api/posts` has no
+ * author filter — see frontend/CLAUDE.md's note under Profile.
  *
- * The author's name is plain text, not a link: `/u/:username` doesn't exist until Fase 6, and a
- * click that lands on the not-found screen is worse than no link at all. This is functional
- * core, not frame (DESIGN.md 7) — no checker, no tilt, no stamp; the card itself is a plain
- * cream surface.
+ * This is functional core, not frame (DESIGN.md 7) — no checker, no tilt, no stamp; the card
+ * itself is a plain cream surface.
  */
 export function PostCard({ post }: { post: Post }) {
   return (
@@ -24,7 +23,11 @@ export function PostCard({ post }: { post: Post }) {
           </span>
         )}
         <div>
-          <p className="post-card__author">{post.author.full_name}</p>
+          <p className="post-card__author">
+            <Link className="post-card__author-link" to={`/u/${post.author.username}`}>
+              {post.author.full_name}
+            </Link>
+          </p>
           <p className="muted post-card__date">{formatDateTime(post.created_at)}</p>
         </div>
       </header>
