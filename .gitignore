@@ -38,3 +38,6 @@ Thumbs.db
 # O .ai tem 103 MiB (o GitHub recusa acima de 100 MiB) e e uma versao superada
 # da identidade. O que ele tinha de util ja foi extraido para frontend/src/assets/.
 /frontend/clubi/arquivos abertos/
+
+# Intermediario gerado pelo `make types` (vira frontend/src/api/generated.ts).
+/openapi.json
