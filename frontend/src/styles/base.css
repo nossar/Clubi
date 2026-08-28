@@ -1,0 +1,653 @@
+/* clubi — SPA base styles. Every value here comes from styles/tokens.css, which is section 11 of
+   frontend/DESIGN.md. Do not introduce a colour, size, radius, shadow or duration outside the
+   tokens: a value born in a component is a process bug even when it looks fine (ADR-17). */
+
+/* ---------------------------------------------------------------- brand typography
+   The four weights the brandbook names, served by Django from /static/brand/fonts/
+   (DESIGN.md 2.1 and 4.2) — one copy for both the rendered /accounts/ pages and the SPA.
+   Clash Semibold declares itself as family "Clash Display Semibold"; renaming it here to
+   "Clash Display" weight 600 is what keeps font-weight working at all. */
+@font-face {
+  font-family: "Clash Display";
+  src: url("/static/brand/fonts/ClashDisplay-Regular.woff2") format("woff2");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Clash Display";
+  src: url("/static/brand/fonts/ClashDisplay-Semibold.woff2") format("woff2");
+  font-weight: 600;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Manrope";
+  src: url("/static/brand/fonts/Manrope-Regular.woff2") format("woff2");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Manrope";
+  src: url("/static/brand/fonts/Manrope-Bold.woff2") format("woff2");
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+
+:root {
+  /* The logotype is hand-drawn lettering, never type (DESIGN.md 4.6 and 5.4). It lives in the
+     backend because the rendered pages use it too; painted as a mask so it inherits
+     currentColor, which is what lets one file cover all three brandbook variants (5.5). */
+  --logo-src: url("/static/brand/logo-clubi.svg");
+  --logo-ratio: 553.19 / 258.53;
+
+  /* Paper grain: every brand piece has it (DESIGN.md 7). The opacity is ours and the documented
+     ceiling is 3% (E-08), above which it would start eating the measured contrast. */
+  --paper-grain: url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22160%22%20height%3D%22160%22%3E%3Cfilter%20id%3D%22g%22%3E%3CfeTurbulence%20type%3D%22fractalNoise%22%20baseFrequency%3D%220.9%22%20numOctaves%3D%222%22%20stitchTiles%3D%22stitch%22%2F%3E%3C%2Ffilter%3E%3Crect%20width%3D%22160%22%20height%3D%22160%22%20filter%3D%22url(%23g)%22%2F%3E%3C%2Fsvg%3E");
+
+  /* Decorative tilt. E-09 fixes it at +/-1.5deg and only outside the functional core. */
+  --tilt: 1.5deg;
+}
+
+/* ---------------------------------------------------------------- short reset */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  margin: 0;
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  background: var(--clubi-bg);
+  color: var(--clubi-ink);
+  font-family: var(--clubi-font-text);
+  font-size: var(--text-base);
+  line-height: var(--leading-body);
+  letter-spacing: var(--tracking-text);
+}
+
+/* The grain covers the whole page, wine bands included. It sits outside the flow and takes no
+   pointer events; at 3% it does not move the ratios measured in DESIGN.md 3.2. */
+body::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  pointer-events: none;
+  opacity: 0.03;
+  background-image: var(--paper-grain);
+}
+
+#root {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+}
+
+main {
+  flex: 1;
+}
+
+img {
+  max-width: 100%;
+}
+
+/* Never outline: none (DESIGN.md 10.2). Over wine the ring turns yellow, which measures 6.84. */
+:focus-visible {
+  outline: 2px solid var(--clubi-focus);
+  outline-offset: 2px;
+}
+
+.on-invert :focus-visible {
+  outline-color: var(--clubi-highlight);
+}
+
+/* ---------------------------------------------------------------- typography */
+h1,
+h2,
+h3,
+h4 {
+  margin: 0;
+  font-family: var(--clubi-font-display);
+  font-weight: 600;
+  line-height: var(--leading-display);
+  letter-spacing: var(--tracking-display);
+}
+
+h4 {
+  font-weight: 400;
+  font-size: var(--text-lg);
+  line-height: var(--leading-tight);
+}
+
+p {
+  margin: 0;
+}
+
+a {
+  color: var(--clubi-ink-brand);
+  text-decoration-thickness: 1px;
+  text-underline-offset: 2px;
+}
+
+.on-invert a {
+  color: var(--clubi-highlight);
+}
+
+.muted {
+  color: var(--clubi-ink-muted);
+}
+
+.on-invert .muted {
+  color: var(--clubi-ink-muted-on-invert);
+}
+
+/* ---------------------------------------------------------------- layout */
+.container {
+  width: 100%;
+  max-width: var(--container-max);
+  margin-inline: auto;
+  padding-inline: max(var(--space-4), var(--container-gutter));
+}
+
+.section {
+  padding-block: var(--space-7);
+}
+
+.section + .section {
+  border-top: 1px solid var(--clubi-line);
+}
+
+/* Full-page sections alternating cream and wine — the rhythm device of the carousel pieces
+   (DESIGN.md 3.4). Never inside a list of cards: the zebra belongs to the page, not the item. */
+.section--invert {
+  background: var(--clubi-bg-invert);
+  color: var(--clubi-ink-on-invert);
+  border-top: 0;
+}
+
+.section-title {
+  font-size: var(--text-xl);
+  color: var(--clubi-ink-brand);
+}
+
+.section-title + * {
+  margin-top: var(--space-4);
+}
+
+@media (min-width: 768px) {
+  .section {
+    padding-block: var(--space-8);
+  }
+}
+
+/* ---------------------------------------------------------------- brand marks */
+.brand-mark {
+  display: block;
+  width: clamp(104px, 26vw, 132px); /* 96px floor, 120-140 target in a header (DESIGN.md 5.3) */
+  aspect-ratio: var(--logo-ratio); /* its own 2.14 ratio — never distort */
+  background-color: currentColor;
+  -webkit-mask: var(--logo-src) center / contain no-repeat;
+  mask: var(--logo-src) center / contain no-repeat;
+}
+
+/* Graphic elements are decoration: always aria-hidden, at most two per screen (DESIGN.md 6.2).
+   The SVGs paint with currentColor, so the same artwork serves cream-on-wine and wine-on-cream
+   without a second file. */
+.brand-element {
+  display: block;
+  color: inherit;
+}
+
+.brand-element svg {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+/* ---------------------------------------------------------------- controls */
+.button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 44px; /* touch target (DESIGN.md 10.4) */
+  padding: var(--space-2) var(--space-5);
+  border: 0;
+  border-radius: var(--radius-md);
+  background: var(--clubi-action);
+  color: var(--clubi-action-ink);
+  font-family: var(--clubi-font-text);
+  font-size: var(--text-base);
+  font-weight: 700;
+  letter-spacing: var(--tracking-text);
+  cursor: pointer;
+  transition: background var(--motion-base) var(--motion-ease);
+}
+
+.button:hover {
+  background: var(--clubi-action-hover);
+}
+
+.button:active {
+  background: var(--clubi-action-active);
+}
+
+.button[disabled] {
+  cursor: progress;
+  opacity: 0.7;
+}
+
+/* Secondary control. The label stays a word, never a glyph (DESIGN.md 6.3). */
+.button--quiet {
+  padding-inline: var(--space-3);
+  background: transparent;
+  color: var(--clubi-ink-brand);
+  font-size: var(--text-sm);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.button--quiet:hover,
+.button--quiet:active {
+  background: var(--clubi-tint-wine);
+}
+
+.field-label {
+  display: block;
+  font-size: var(--text-sm);
+  font-weight: 700;
+}
+
+.field-number {
+  width: 6rem;
+  min-height: 44px;
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--clubi-line-strong);
+  border-radius: var(--radius-sm);
+  background: var(--clubi-surface-sunken);
+  color: inherit;
+  font: inherit;
+  letter-spacing: inherit;
+}
+
+/* ---------------------------------------------------------------- header */
+.site-header {
+  background: var(--clubi-bg);
+  border-bottom: 1px solid var(--clubi-line);
+}
+
+.site-header__inner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+  padding-block: var(--space-4);
+}
+
+.site-header__brand {
+  color: var(--clubi-ink-brand);
+}
+
+.site-header__account {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.site-header__greeting {
+  font-size: var(--text-sm);
+  color: var(--clubi-ink-muted);
+}
+
+@media (max-width: 479px) {
+  .site-header__greeting {
+    display: none;
+  }
+}
+
+/* ---------------------------------------------------------------- footer */
+.site-footer {
+  background: var(--clubi-bg-invert);
+  color: var(--clubi-ink-on-invert);
+  padding-block: var(--space-7);
+}
+
+.site-footer__inner {
+  display: grid;
+  gap: var(--space-3);
+}
+
+.site-footer__brand {
+  color: var(--clubi-ink-on-invert);
+}
+
+.site-footer__note {
+  max-width: var(--measure);
+  font-family: var(--clubi-font-display);
+  font-size: var(--text-md);
+  line-height: var(--leading-tight);
+  letter-spacing: var(--tracking-display);
+}
+
+/* ---------------------------------------------------------------- monthly highlight
+   Collage lives in the frame (DESIGN.md 7): the checker, the cream-bordered cutout and the
+   tilted stamp all belong to this hero. From the progress bar down everything stays clean. */
+.pick {
+  padding-block: var(--space-8);
+}
+
+.pick__eyebrow {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  margin-bottom: var(--space-6);
+  color: var(--clubi-highlight); /* yellow on wine: 6.84, the only background it is allowed */
+  font-size: var(--text-sm);
+  font-weight: 700;
+}
+
+.pick__eyebrow .brand-element {
+  width: 2rem;
+  flex: none;
+}
+
+.pick__inner {
+  display: grid;
+  gap: var(--space-7);
+  align-items: start;
+}
+
+@media (min-width: 768px) {
+  .pick__inner {
+    grid-template-columns: minmax(0, 17rem) minmax(0, 1fr);
+    gap: var(--space-8);
+    /* The cutout is a good deal taller than the text beside it; centring keeps the two halves
+       reading as one composition instead of leaving a void under the blurb. */
+    align-items: center;
+  }
+}
+
+/* The pasted-in cutout: an offset checkered patch behind, the cover in a thick cream border with
+   a warm shadow, and a highlighter stamp tilted at the corner. The one bold place on the page. */
+.pick__cutout {
+  position: relative;
+  width: min(15rem, 62vw);
+}
+
+@media (min-width: 768px) {
+  .pick__cutout {
+    width: 100%;
+  }
+}
+
+.pick__cutout::before {
+  content: "";
+  position: absolute;
+  z-index: 0;
+  inset: var(--space-3) auto auto calc(var(--space-3) * -1);
+  width: 100%;
+  height: 100%;
+  border-radius: var(--radius-none); /* a highlight block never rounds (DESIGN.md 8.2) */
+  background-image: repeating-conic-gradient(
+    var(--clubi-line-invert) 0% 25%,
+    transparent 0% 50%
+  );
+  background-size: 1rem 1rem;
+  transform: rotate(var(--tilt));
+}
+
+.pick__stamp {
+  position: absolute;
+  z-index: 2;
+  right: calc(var(--space-3) * -1);
+  bottom: var(--space-5);
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-none); /* the highlighter mark has square corners (DESIGN.md 7) */
+  background: var(--clubi-highlight);
+  color: var(--clubi-highlight-ink);
+  font-family: var(--clubi-font-display);
+  font-size: var(--text-sm);
+  font-weight: 600;
+  line-height: var(--leading-tight);
+  letter-spacing: var(--tracking-display);
+  box-shadow: var(--shadow-paper);
+  transform: rotate(calc(var(--tilt) * -1));
+}
+
+.pick__title {
+  font-size: clamp(var(--text-xl), 9vw, var(--text-3xl));
+}
+
+.pick__author {
+  margin-top: var(--space-3);
+  font-size: var(--text-md);
+  line-height: var(--leading-tight);
+  color: var(--clubi-ink-muted-on-invert);
+}
+
+.pick__blurb {
+  max-width: var(--measure);
+  margin-top: var(--space-5);
+}
+
+.pick__dates {
+  margin-top: var(--space-5);
+  font-size: var(--text-sm);
+  color: var(--clubi-ink-muted-on-invert);
+}
+
+/* ---------------------------------------------------------------- book cover */
+.book-cover {
+  position: relative;
+  z-index: 1;
+  display: block;
+  width: 100%;
+  aspect-ratio: 2 / 3;
+  border: var(--space-2) solid var(--clubi-cream); /* cutout with a light border (DESIGN.md 7) */
+  border-radius: var(--radius-lg);
+  background: var(--clubi-surface-sunken);
+  box-shadow: var(--shadow-lifted);
+  overflow: hidden;
+}
+
+.book-cover img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+/* With no cover on file the cover becomes type — no brand element spent on a placeholder. */
+.book-cover--blank {
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  gap: var(--space-2);
+  padding: var(--space-4);
+  /* clears the stamp, which is pinned to the bottom-right of the cutout */
+  padding-bottom: var(--space-8);
+  color: var(--clubi-ink-brand);
+}
+
+.book-cover__title {
+  font-family: var(--clubi-font-display);
+  font-size: var(--text-lg);
+  font-weight: 600;
+  line-height: var(--leading-tight);
+  letter-spacing: var(--tracking-display);
+}
+
+.book-cover__author {
+  font-size: var(--text-sm);
+  color: var(--clubi-ink-muted);
+}
+
+/* ---------------------------------------------------------------- progress
+   Functional core: clean, aligned, no collage. And anti-metric by product decision
+   (DESIGN.md 9) — the bar informs, it does not nag, and its colour never varies with the value. */
+.progress {
+  max-width: var(--measure);
+}
+
+.progress__track {
+  height: 0.875rem;
+  border-radius: var(--radius-pill);
+  background: var(--clubi-tint-wine);
+  overflow: hidden;
+}
+
+.progress__fill {
+  height: 100%;
+  border-radius: var(--radius-pill);
+  background: var(--clubi-action);
+  transition: width var(--motion-slow) var(--motion-ease);
+}
+
+.progress__readout {
+  margin-top: var(--space-3);
+  font-size: var(--text-sm);
+  color: var(--clubi-ink-muted);
+}
+
+.progress__readout strong {
+  font-size: var(--text-md);
+  color: var(--clubi-ink);
+}
+
+.progress__form {
+  display: grid;
+  gap: var(--space-2);
+  margin-top: var(--space-6);
+}
+
+.progress__row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+}
+
+.progress__note {
+  max-width: var(--measure);
+  margin-top: var(--space-4);
+  font-size: var(--text-sm);
+  color: var(--clubi-ink-muted);
+}
+
+/* ---------------------------------------------------------------- notices
+   State is never signalled by colour alone (DESIGN.md 3.3 and 10.3): every notice opens with a
+   word saying what happened, because danger sits close to the brand wine in lightness. */
+.notice {
+  margin-top: var(--space-4);
+  padding-left: var(--space-4);
+  border-left: 3px solid currentColor;
+  font-size: var(--text-sm);
+}
+
+.notice--ok {
+  color: var(--clubi-success);
+}
+
+.notice--error {
+  color: var(--clubi-danger);
+}
+
+.notice__label {
+  font-weight: 700;
+}
+
+/* ---------------------------------------------------------------- who is reading
+   Presence, not a scoreboard: no ordering by progress and no per-person number (DESIGN.md 9). */
+.readers__list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3) var(--space-5);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.reader {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  font-size: var(--text-sm);
+}
+
+.reader__avatar {
+  display: grid;
+  place-items: center;
+  width: 2.75rem;
+  height: 2.75rem;
+  flex: none;
+  border: 2px solid var(--clubi-cream);
+  border-radius: var(--radius-pill);
+  background: var(--clubi-tint-wine);
+  box-shadow: var(--shadow-paper);
+  color: var(--clubi-ink-brand);
+  font-weight: 700;
+  object-fit: cover;
+  overflow: hidden;
+}
+
+.reader--me {
+  font-weight: 700;
+}
+
+/* ---------------------------------------------------------------- page states */
+.state {
+  display: grid;
+  justify-items: start;
+  gap: var(--space-4);
+  max-width: var(--measure);
+}
+
+.state .brand-element {
+  width: 5rem;
+  transform: rotate(calc(var(--tilt) * -1));
+}
+
+.state__title {
+  font-size: var(--text-2xl);
+}
+
+.splash {
+  display: grid;
+  place-items: center;
+  align-content: center;
+  gap: var(--space-5);
+  min-height: 100dvh;
+  padding: var(--space-6) var(--space-4);
+  text-align: center;
+  color: var(--clubi-ink-muted);
+}
+
+.splash .brand-mark {
+  color: var(--clubi-ink-brand);
+}
+
+/* ---------------------------------------------------------------- motion
+   Short and without elasticity (E-11), and none of it is essential: under
+   prefers-reduced-motion the decorative rotation and the transitions go (DESIGN.md 10.7). */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    transition: none !important;
+    animation: none !important;
+  }
+
+  .pick__cutout::before,
+  .pick__stamp,
+  .state .brand-element {
+    transform: none;
+  }
+}

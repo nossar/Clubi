@@ -11,7 +11,7 @@ escolha arbitrária que este documento existe para impedir.
 
 | | |
 |---|---|
-| **Status** | Fechado para a Fase 4. **As 12 extrapolações foram revisadas pelo fundador em 2026-08-27** — nenhuma em aberto. |
+| **Status** | Fechado para a Fase 4. **As 12 primeiras extrapolações foram revisadas pelo fundador em 2026-08-27.** A **E-13** (dimensões de componente, seção 8.7) nasceu durante a Fase 4 e é a única em aberto. |
 | **Fonte primária** | `frontend/clubi/clubi  canva_brandbook.pdf` (6 páginas) |
 | **Autoridade** | Em conflito, vence o brandbook. Depois dele, as peças de redes sociais. Depois, este documento. |
 | **Idioma** | Documento em pt-BR (convenção do projeto); nomes de token em inglês. |
@@ -614,6 +614,25 @@ Rápido e sem elasticidade: `--motion-fast: 120ms`, `--motion-base: 200ms`,
 `--motion-slow: 320ms`, todos com `ease-out`. A marca é desenhada à mão, não animada; exagero de
 movimento contradiz o "espaço para desacelerar" da seção 9. Respeite `prefers-reduced-motion`.
 
+### 8.7 Dimensões de componente (E-13)
+
+O resto da seção 8 dá espaçamento, raio, container e breakpoints, mas não desce ao tamanho dos
+componentes em si — e a Fase 4 precisou desses tamanhos. Ficam registrados aqui para não
+renascerem no CSS a cada tela nova. **Nenhum é do brandbook**; cada um se apoia numa regra que já
+existia neste documento.
+
+| Medida | Valor | De onde saiu |
+|---|---|---|
+| Logotipo no cabeçalho e no rodapé | `clamp(104px, 26vw, 132px)` | A faixa de 5.3 (mínimo 96px, alvo 120–140px). O piso subiu para 104px porque em 390px o logo divide a linha com o "Sair" |
+| Capa de livro | proporção `2 / 3`, borda de `--space-2`, `--radius-lg` | Proporção corrente de capa; a borda creme grossa é o "recorte com borda branca" da seção 7 e o raio é o que 8.2 atribui a capa de livro |
+| Coluna da capa no herói (≥768px) | `17rem` | Cerca de um quarto do `--container-max`, o suficiente para a capa não competir com o `h1` |
+| Capa no celular | `min(15rem, 62vw)` | 62vw deixa o retalho xadrez deslocado e o selo caberem na coluna em 390px sem estourar a goteira |
+| Elemento gráfico | `2rem` embutido em linha, `5rem` em estado vazio | Muito abaixo do teto de ~240px de 6.2, onde o traço texturizado esgarça |
+| Avatar de leitor | `2.75rem` (44px) | É o alvo de toque de 10.4 reusado como diâmetro |
+| Trilho da barra de progresso | `0.875rem` de altura, `--radius-pill` | Fino o bastante para informar sem virar medidor (seção 9); o raio é o do selo |
+| Campo numérico | `6rem` de largura, `44px` de altura | Cabe quatro dígitos; a altura é o alvo de toque |
+| Fio de aviso / borda de avatar | `3px` / `2px` | Mais grossos que o fio de 1px de `--clubi-line`, porque marcam estado e não podem depender só de cor (3.3) |
+
 ---
 
 ## 9. Tom da interface
@@ -813,6 +832,7 @@ apoiou e o que faria revisá-lo.
 | **E-10** | Espaçamento, raio, breakpoints, container | Sem respaldo. Grade de 4px é convenção; o raio duplo (0 e pílula) foi observado nas peças; o container vem da margem de ~5% do brandbook | Convenção web padrão; baixo risco |
 | **E-11** | Durações e curva de movimento | Sem respaldo — a marca é estática. Valores curtos por coerência com "leve" e "desacelerar" | Se entrar animação de marca |
 | **E-12** ✅ | **Mantida (2026-08-27): sem tema escuro.** | A inversão creme ⇄ vinho já é o modo escuro da marca. Um dark neutro exigiria cores fora do brandbook. **O fundador revisou e manteve** | Se for pedido explicitamente — volta como ADR, não como ajuste de token |
+| **E-13** ⏳ | **Dimensões de componente** — largura de logotipo, capa, avatar, trilho de progresso e campo numérico (seção 8.7) | Nasceu na Fase 4: a seção 8 dava espaçamento, raio, container e breakpoints, mas nenhum tamanho de componente, e a Home precisava deles. Cada medida se apoia numa regra que já existia — o alvo de toque de 10.4, a faixa de logotipo de 5.3, o teto de ~240px de 6.2, o `--container-max` | **Pendente de revisão pelo fundador**, a única em aberto. Rever quando um componente novo pedir medida que não caiba nessas |
 
 ---
 
@@ -837,7 +857,10 @@ Em aberto:
 7. **Otimizar os SVGs** (SVGO ou equivalente) se o peso incomodar. `estrela-8` (28,8 KB) e
    `livro-fechado` (27,1 KB) carregam muito nó por causa da textura de pincel; os outros oito somam
    ~41 KB juntos. Não é urgente — é menos que uma foto de capa.
-8. **Incluir `/static` no proxy do `vite.config.ts`** quando a Fase 4 começar — ver o aviso em 2.1.
+8. ~~Incluir `/static` no proxy do `vite.config.ts`~~ — **feito** na Fase 4. Fontes e logotipo
+   chegam à SPA em `:5173` pelo proxy. Junto veio uma correção que o aviso de 2.1 não previa: o
+   proxy também reescreve `Origin` e `Host` para o alvo, senão a verificação de origem do CSRF do
+   Django recusa todo POST vindo de `:5173` — login, logout e o `PUT` de progresso inclusive.
 
 ## 14. O que de `frontend/clubi/` está no Git
 
