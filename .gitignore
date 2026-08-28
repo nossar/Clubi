@@ -30,3 +30,11 @@ node_modules/
 Thumbs.db
 .idea/
 .vscode/
+
+# Identidade visual (frontend/clubi/) — ver frontend/DESIGN.md secao 14.
+# A identidade entra no Git; dado de pessoa e arquivo-mestre gigante, nao.
+# Dados pessoais de membros: lista de interessados e financeiro do clube.
+/frontend/clubi/documentos/
+# O .ai tem 103 MiB (o GitHub recusa acima de 100 MiB) e e uma versao superada
+# da identidade. O que ele tinha de util ja foi extraido para frontend/src/assets/.
+/frontend/clubi/arquivos abertos/
