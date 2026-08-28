@@ -19,7 +19,7 @@ Written and working:
 
 Not written yet:
 - `frontend/` — no code. What is there is `frontend/DESIGN.md` (the visual source of truth, ADR-17) and `frontend/clubi/` (brandbook and brand assets). `backend/templates/index.html` is a declared placeholder for the SPA shell, to be replaced by the Vite build.
-- The root `Makefile` and the Neon Postgres wiring (see below).
+- The Neon Postgres wiring (see below). The root `Makefile` now exists.
 
 Known divergence: `core/static/css/auth.css` shipped with an improvised palette that predates the brandbook. ADR-17 replaces it with the brand tokens; realigning it is a prerequisite of the first SPA CSS commit, not later cleanup.
 
@@ -68,7 +68,11 @@ Test discovery is `test_*.py` (pyproject `[tool.pytest.ini_options]`), so a `tes
 
 Ruff: line-length 100, migrations excluded. `select` is unset, so linting uses the default `E4`/`E7`/`E9`/`F`. Trailing-newline enforcement comes from `ruff format`, not from the linter — `ruff check` alone will not catch it, so run both.
 
-The implementation guide specifies a root `Makefile` (`make install|dev-backend|dev-frontend|types|migrate|build|check`); it does not exist yet. Create it when the frontend lands rather than growing ad-hoc scripts.
+The root `Makefile` exists and is the preferred entry point: `install`, `dev-backend`, `dev-frontend`, `types`, `migrate`, `build`, `check`, `lint`. Use it instead of growing ad-hoc scripts.
+
+**The binary is not called `make` on this machine.** Make ships from MSYS2 here and is installed as `mingw32-make` (`C:\msys64\ucrt64\bin`) — there is no plain `make` on PATH, and Git Bash does not bundle one. So it is `mingw32-make check`, not `make check`. On Linux, macOS, WSL, or a Windows box that got make from Chocolatey or Scoop, the binary is `make`. If `make` returns "command not found", that is the reason — the Makefile is fine; reach for `mingw32-make` before concluding anything is broken.
+
+While `frontend/package.json` is absent, the Makefile skips the frontend steps and echoes a `Skipped …` line for each. That gating is scaffolding: delete the `FRONTEND` variable and the `ifneq` blocks when the frontend is scaffolded, or a later `make check` can pass green having tested only the backend.
 
 ## Architecture — the load-bearing decisions
 

@@ -1,4 +1,4 @@
-# Clubi — root task runner. Every target is invoked as `make <target>`.
+# Clubi — root task runner. Every target is invoked as `make <target>` — `mingw32-make <target>` on this system.
 #
 # Backend recipes go through `uv run`, which resolves the venv on its own —
 # never activate one by hand. Each recipe line runs in its own shell, so the
