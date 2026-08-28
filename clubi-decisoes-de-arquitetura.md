@@ -24,6 +24,7 @@ Formato: cada decisão traz **contexto**, **decisão**, **alternativas considera
 | ADR-14 | Admin como produto da primeira entrega |
 | ADR-15 | Apps autocontidos, não um app de API central |
 | ADR-16 | Ferramental de desenvolvimento do frontend |
+| ADR-17 | Brandbook como fonte da verdade visual |
 
 ---
 
@@ -352,6 +353,8 @@ O ganho previsto é específico: as duas armadilhas conhecidas da integração d
 
 Adotada para produzir o `styles/tokens.css` da seção 7.7 do guia, uma vez. Depois disso não entra no fluxo: o registro dela puxa para o editorial e o ousado, que não é o de um site de clube de leitura universitário.
 
+> ⚠️ **Revisado pelo ADR-17 (2026-08-27).** A premissa de que "a paleta já existe e não está em disputa" era falsa: a paleta que existia estava no *código*, não na *marca*. O brandbook em `frontend/clubi/` define outra paleta e outra dupla tipográfica, e é anterior a este ADR. **A paleta a fixar no briefing da skill é a do `frontend/DESIGN.md`, não a do `auth.css`.** O resto de 16b — uso único, na Fase 4, com a paleta fixada e a liberdade gasta em escala tipográfica, espaçamento, layout e elemento assinatura — continua valendo, e agora com respaldo melhor: a paleta é da marca, não uma preferência.
+
 **A restrição que a torna utilizável aqui: a paleta já existe e não está em disputa.** `backend/core/static/css/auth.css` já define `--clubi-bg: #f6f2ea`, `--clubi-ink: #1d1a17`, `--clubi-accent: #7a2e2e`, mais uma serifada e uma sans, e essas páginas já estão no ar. Trocar a paleta reabre exatamente a costura entre `/accounts/` e a SPA que o ADR-05 assume como sua única desvantagem real, e cuja mitigação declarada é os dois lados usarem os mesmos tokens.
 
 Isso importa porque a skill nomeia, entre os três clichês de design gerado por IA que manda evitar, um que descreve a nossa paleta quase no hex: fundo creme quente perto de `#F4F1EA`, serifada de alto contraste, acento terroso. **Assumimos essa coincidência conscientemente.** A skill diz que o briefing vence quando ele fixa uma direção, então o briefing fixa a paleta e a gasta liberdade dela no que ainda está aberto: escala tipográfica, escala de espaçamento, conceito de layout e o "elemento assinatura". Se um dia a proximidade com o clichê incomodar, o que se revisa é o acento — e a mudança é nos dois arquivos, nunca em um só.
@@ -375,6 +378,38 @@ O pré-requisito técnico já está satisfeito: o `get_openapi_operation_id` foi
 
 ---
 
+## ADR-17 — Brandbook como fonte da verdade visual
+
+**Contexto.** O clube tem identidade visual pronta, produzida antes do site e já em uso nas redes sociais: brandbook de 6 páginas, três variantes de logotipo, duas famílias tipográficas licenciadas, dez elementos gráficos e nove peças aplicadas, tudo em `frontend/clubi/`. O código, enquanto isso, foi para o ar com outra coisa. O `auth.css` das páginas de `/accounts/` define `#f6f2ea` de fundo, `#7a2e2e` de acento, Inter e uma serifada — valores improvisados na Fase de autenticação, quando ninguém tinha aberto o brandbook.
+
+São duas paletas diferentes no mesmo produto. O ADR-16b partiu da que estava no código e escreveu que ela "não está em disputa"; essa afirmação não sobrevive a abrir o PDF.
+
+**Decisão.** O brandbook é a fonte da verdade visual do projeto. `frontend/DESIGN.md` é a destilação normativa dele para a web e é **leitura obrigatória antes de qualquer trabalho de frontend**. O `auth.css` se realinha aos tokens de lá.
+
+Três regras decorrem:
+
+1. **Rastreabilidade.** Toda cor, fonte, medida e escolha de tom no frontend precisa ser literal do brandbook, derivada dele por fórmula registrada, ou estar na tabela de extrapolações do `DESIGN.md`. Valor que nasce no componente é bug de processo, mesmo que fique bonito.
+2. **As extrapolações são explícitas e revisáveis.** A seção 12 do `DESIGN.md` lista as doze decisões sem respaldo direto — estados de hover, cores de erro/sucesso, escala tipográfica, espaçamento, breakpoints, movimento. Elas existem porque a web precisa delas e o brandbook é mídia estática. Ficam separadas para que o fundador possa contestá-las uma a uma.
+3. **A costura do ADR-05 continua sendo mitigada por tokens compartilhados.** `styles/tokens.css` e `auth.css` carregam os mesmos valores. A diferença é qual paleta: agora a da marca.
+
+**O que muda na prática.** `--clubi-bg` passa de `#f6f2ea` para `#fdfae7`; `--clubi-accent` de `#7a2e2e` para `#88013e`; a dupla Inter/serifada vira Manrope/Clash Display, ambas self-hosted; e entram amarelo `#ffd071` e laranja `#ed6630`, que não tinham equivalente no CSS atual. **O realinhamento do `auth.css` é pré-requisito do primeiro commit de CSS da SPA**, não faxina posterior — enquanto os dois arquivos discordarem, a costura entre `/accounts/` e a SPA fica visível, que é exatamente o que o ADR-05 aceitou como sua única desvantagem real e prometeu mitigar.
+
+**Alternativas consideradas.**
+
+- *Manter o `auth.css` e adaptar o brandbook a ele.* Descartada: inverte a hierarquia. A identidade do clube não se ajusta ao que foi improvisado numa fase de autenticação, e as peças de rede social já estão publicadas com a paleta da marca.
+- *Deixar a SPA com a paleta do brandbook e `/accounts/` com a antiga.* Descartada: é a costura do ADR-05 assumida sem mitigação, e num fluxo que todo membro atravessa no primeiro acesso.
+- *Não documentar e ir direto ao CSS.* Descartada: é como o `auth.css` surgiu. O brandbook não cobre estado de hover, erro, breakpoint nem escala — sem um documento que registre o que foi derivado e o que foi inventado, a próxima pessoa não distingue marca de improviso e o problema se repete.
+
+**Consequências.**
+
+- Positivas: o site passa a parecer com o clube que já existe no Instagram; some a paleta de origem desconhecida; a skill do 16b recebe um briefing com respaldo real; e a preocupação do 16b com "paleta próxima de um default de IA reconhecível" perde objeto — `#88013e` sobre `#fdfae7` com Clash Display não é o creme-e-serifada genérico. O par vinho/creme mede 9.43:1, melhor do que a paleta que ele substitui.
+- Negativas: `auth.css` precisa de retrabalho antes da Fase 4; entram duas famílias self-hosted onde antes havia fontes de sistema, com custo de banda e de conversão para `woff2`; e o `DESIGN.md` vira mais um documento a manter em dia.
+- O ADR-16b tem nota de revisão apontando para cá.
+
+**Quando revisar.** Se o brandbook for atualizado — aí o `DESIGN.md` é reescrito a partir dele, nunca o contrário. Ou quando as extrapolações da seção 12 forem revisadas pelo fundador: as aprovadas deixam de ser extrapolação e viram marca, e as recusadas voltam para cá. A E-03 (cores de estado, que exigiram um verde inexistente na marca) é a candidata mais provável a mudar.
+
+---
+
 ## Resumo executivo
 
 Se for para levar uma frase de cada decisão:
@@ -386,3 +421,4 @@ Se for para levar uma frase de cada decisão:
 5. **Modelagem em torno de `MonthlyPick` e `MonthlyReading`** porque o histórico é requisito e o booleano o destruiria.
 6. **Admin como primeira entrega** porque é o seguro barato contra o único risco real do projeto.
 7. **Apps autocontidos, com só as projeções compartilhadas** porque schema de resposta pertence à rota, não à entidade que ele cita.
+8. **Brandbook como fonte da verdade visual** porque a identidade do clube é anterior ao site — e o que a web precisa e ele não cobre fica registrado como extrapolação, não decidido no CSS.
