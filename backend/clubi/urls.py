@@ -10,6 +10,7 @@ from django.conf import settings
 from django.conf.urls.static import static
 from django.contrib import admin
 from django.urls import include, path, re_path
+from django.views.decorators.csrf import ensure_csrf_cookie
 from django.views.generic import TemplateView
 
 from api.api import api
@@ -21,10 +22,13 @@ urlpatterns = [
     # Must come before the include() so it wins over auth's own patterns.
     path("accounts/signup/", SignupView.as_view(), name="signup"),
     path("accounts/", include("django.contrib.auth.urls")),
-    # everything else is handled by the SPA
+    # everything else is handled by the SPA.
+    # ensure_csrf_cookie is load-bearing: the SPA reads the csrftoken cookie to set the
+    # X-CSRFToken header (ADR-04), and without it a visitor who already has a session but has
+    # never submitted a rendered form gets every write rejected.
     re_path(
         r"^(?!static/|media/|api/|admin/|accounts/).*$",
-        TemplateView.as_view(template_name="index.html"),
+        ensure_csrf_cookie(TemplateView.as_view(template_name="index.html")),
         name="spa",
     ),
 ]

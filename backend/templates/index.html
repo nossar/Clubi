@@ -13,7 +13,8 @@ frontend/dist exists — it must load assets/index.css and assets/index.js.
 </head>
 <body>
   <main class="auth-card">
-    <a class="auth-brand" href="/">clubi</a>
+    <a class="auth-brand" href="/" aria-label="clubi"
+       style="--logo-src: url('{% static 'brand/logo-clubi.svg' %}')"></a>
     <h1>Clube do Livro da ESPM</h1>
     {% if user.is_authenticated %}
       <p class="auth-lead">
