@@ -20,25 +20,39 @@ process bug even when it looks fine — the fix is to add it to DESIGN.md with i
 
 ## Current state
 
-**Fase 4 is done.** Vite with the proxy, `client.ts`, TanStack Query, `styles/tokens.css` and
-`base.css`, `Header`, `Footer`, and `Home` with the monthly highlight and a working `ProgressBar`.
-You open `/`, see the book of the month, and update your progress through the UI.
+**Fases 4 and 5 are done.** Vite with the proxy, `client.ts`, TanStack Query, `styles/tokens.css`
+and `base.css`, `Header`, `Footer`, `Home` with the monthly highlight and a working `ProgressBar`,
+and now `Feed`, `NewPost`, `PostDetail` and `PostCard` — which also renders on the Home under a
+"Publicações recentes" section (`RecentPosts`). You open `/`, see the book of the month, update
+your progress, and publish, read, edit and delete posts with images, all through the UI.
 
 What is here:
 
 - [DESIGN.md](DESIGN.md) — the visual source of truth (ADR-17). E-01 … E-12 were reviewed by the
-  founder on 2026-08-27; **E-13 (component dimensions, section 8.7) came out of Fase 4 and is the
-  only one still open.**
+  founder on 2026-08-27; **E-13 (component dimensions, section 8.7) came out of Fase 4, grew three
+  rows in Fase 5, and is the only one still open.**
 - `clubi/` — the brand assets themselves: brandbook PDF, logo variants, the two font families,
   graphic elements, and the published social pieces. Read-only input to DESIGN.md; never edit
   these, and never derive a value from them without recording it in DESIGN.md.
-- `src/` — the SPA. `Home` is the only route mounted; `App.tsx` answers everything else with a
-  pt-BR not-found screen, because Django's catch-all hands the shell every path it does not own.
+- `src/` — the SPA. `Home`, `/posts`, `/posts/new` and `/posts/:id` are mounted; `App.tsx` answers
+  everything else with a pt-BR not-found screen, because Django's catch-all hands the shell every
+  path it does not own.
 
-Next up is the guide's **Fase 5** (posts): `Feed`, `NewPost`, `PostDetail` and `PostCard` — and
-that is when `PostCard` starts rendering on the Home, which has no posts today. The backend for it
-has been finished since before Fase 4; only the screens are missing. Follow the phase order rather
-than building screens out of sequence.
+Next up is the guide's **Fase 6** (profiles): `Profile`, `EditProfile`, `StarRating` and
+`FavoritesShelf`. The backend for it has been finished since before Fase 4; only the screens are
+missing. Follow the phase order rather than building screens out of sequence.
+
+Two things Fase 5 changed in files Fase 4 had already written, worth knowing before assuming
+those files are frozen:
+
+- **`client.ts` learned to handle a 204.** `DELETE /api/posts/{id}` answers with no body;
+  `response.json()` on that throws, so a successful delete used to report as a failed mutation.
+  It also widened its `headers` param to accept `{ "Content-Type": undefined }`, which it turns
+  into an actual `Headers.delete()` — the only way a `FormData` upload gets the browser to write
+  its own multipart boundary instead of shipping the default `application/json`.
+- **The reader avatar's CSS class is `.avatar`, not `.reader__avatar`.** `PostCard` and
+  `PostDetail` reuse it for the post author. `ReadersList.tsx` was updated to match, and the
+  `initials()` helper it used to define locally moved to `format.ts` so both call sites share it.
 
 Three things that already bit once, so they are worth knowing before touching the setup:
 
@@ -118,6 +132,12 @@ generator. Read that ADR before proposing one.
 through TanStack Query and never touch `fetch`, `axios`, or an absolute URL. That 401 redirect is
 the whole login flow (ADR-05) — the SPA has no `/login` route.
 
+Fase 5 taught it two things the guide's snippet doesn't cover, both needed by posts: a 204 (from
+`DELETE /api/posts/{id}`) returns `undefined` instead of calling `.json()` on an empty body, and
+`init.headers` accepts `{ "Content-Type": undefined }` to let a `FormData` upload remove the
+default JSON header so the browser can write its own multipart boundary. Both are additive — no
+existing caller needed to change.
+
 Logout is not a fetch either: `Header` posts a plain HTML form to `/accounts/logout/` with the
 `csrfmiddlewaretoken` read from the same cookie, because `LogoutView` refuses GET and the view
 belongs to `django.contrib.auth`, not to the API.
@@ -152,13 +172,15 @@ frontend/
     │              BookOfTheMonth, PickHistory, Search
     ├── components/ Header, Footer, PostCard, MonthlyPickHighlight,
     │              ProgressBar, StarRating, FavoritesShelf, BookCover,
-    │              BrandElement, ReadersList
+    │              BrandElement, ReadersList, RecentPosts, BookPicker
     └── styles/    tokens.css, base.css
 ```
 
-Written so far: everything above except `PostCard`, `StarRating`, `FavoritesShelf`, and every
-route other than `Home`. `BrandElement` (inlines a brand SVG so `currentColor` applies) and
-`ReadersList` ("quem está lendo", on the Home) were added in Fase 4 and are not in guide 7.4.
+Written so far: everything above except `Profile`, `EditProfile`, `BookOfTheMonth`, `PickHistory`,
+`Search`, `StarRating` and `FavoritesShelf` — Fase 6 and 7 territory. `BrandElement` (inlines a
+brand SVG so `currentColor` applies), `ReadersList` ("quem está lendo", on the Home), `RecentPosts`
+(the Home's feed preview) and `BookPicker` (the search-select behind `PostIn.book_id`, shared by
+`NewPost` and `PostDetail`'s inline edit) were added in Fases 4 and 5 and are not in guide 7.4.
 
 | Route | Component | | Route | Component |
 |---|---|---|---|---|
@@ -168,7 +190,8 @@ route other than `Home`. `BrandElement` (inlines a brand SVG so `currentColor` a
 | `/posts/:id` | `PostDetail` | | `/search` | `Search` |
 | `/u/:username` | `Profile` | | | |
 
-`PostCard` renders on Home, Feed and Profile. Write it once; three near-copies is how they diverge.
+`PostCard` renders on Home (via `RecentPosts`) and Feed; Profile will be its third caller in Fase
+6. Write it once; three near-copies is how they diverge.
 
 ## State rules
 
@@ -187,8 +210,15 @@ Three disciplines Django used to enforce for free (guide 7.5):
 | My reading | `["reading", "current"]` | saving progress or a rating |
 | Who is reading | `["readers", "current"]` | saving progress |
 | Feed | `["posts", page]` | creating, editing or deleting a post |
+| Single post | `["post", id]` | editing that post (`setQueryData` on the mutation response; deleted on a successful delete) |
+| Book search (NewPost, edit) | `["books", "search", query]` | never — read-only, and `staleTime` alone keeps retyping the same term cheap |
 | Profile | `["user", username]` | editing the profile, saving favorites |
 | Current user | `["me"]` | editing the profile |
+
+`RecentPosts` (the Home) and `Feed`'s first page both read `["posts", 1]` — one cache entry, not
+two. Invalidation after a write uses the `["posts"]` prefix, which covers every page of the feed
+at once; do not invalidate a single `["posts", page]` tuple, since the write may have changed
+which page an item belongs on.
 
 `main.tsx` defaults: `staleTime: 30_000`, `refetchOnWindowFocus: false`, and `retry: false`. The
 last one is not in guide 7.5 and is deliberate: this API's non-200s are states, not blips. A 404 on
