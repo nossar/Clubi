@@ -1,20 +1,91 @@
 /* Design tokens for the rendered auth pages.
-   The SPA reuses the same values so the seam between /accounts/ and / is not visible. */
+   Source of truth: frontend/DESIGN.md section 11 (ADR-17).
+   The SPA's styles/tokens.css carries these same values — the rendered /accounts/ pages and the
+   SPA are one site, and shared tokens are ADR-05's stated mitigation for the seam between them.
+   Changing a value here means changing it there, and in DESIGN.md first. */
+
+/* Brandbook typography (DESIGN.md 4.1). Only the four weights the brandbook names are shipped.
+   Clash Semibold declares itself as family "Clash Display Semibold", so it is renamed here —
+   without this the browser treats it as a separate family and font-weight silently stops working. */
+@font-face {
+  font-family: "Clash Display";
+  src: url("../brand/fonts/ClashDisplay-Regular.woff2") format("woff2");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Clash Display";
+  src: url("../brand/fonts/ClashDisplay-Semibold.woff2") format("woff2");
+  font-weight: 600;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Manrope";
+  src: url("../brand/fonts/Manrope-Regular.woff2") format("woff2");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Manrope";
+  src: url("../brand/fonts/Manrope-Bold.woff2") format("woff2");
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
 
 :root {
-  --clubi-bg: #f6f2ea;
-  --clubi-surface: #ffffff;
-  --clubi-ink: #1d1a17;
-  --clubi-muted: #6d6459;
-  --clubi-line: #e2dace;
-  --clubi-accent: #7a2e2e;
-  --clubi-accent-ink: #ffffff;
-  --clubi-danger: #a3312a;
+  /* Brand, literal from the brandbook (DESIGN.md 3.1) */
+  --clubi-wine: #88013e;
+  --clubi-cream: #fdfae7;
+  --clubi-yellow: #ffd071;
+  --clubi-orange: #ed6630;
 
-  --clubi-radius: 10px;
-  --clubi-gap: 1rem;
-  --clubi-font-sans: "Inter", system-ui, -apple-system, "Segoe UI", sans-serif;
-  --clubi-font-serif: "Iowan Old Style", "Palatino Linotype", Georgia, serif;
+  /* Surfaces */
+  --clubi-bg: var(--clubi-cream);
+  --clubi-surface: #fefdf4;
+  --clubi-surface-sunken: #f7eedf;
+  --clubi-line: #edd7cf;
+  --clubi-line-strong: #e1bebe;
+
+  /* Text */
+  --clubi-ink: #26161d;
+  --clubi-ink-brand: var(--clubi-wine);
+  --clubi-ink-muted: #716664;
+
+  /* Action */
+  --clubi-action: var(--clubi-wine);
+  --clubi-action-hover: #780137;
+  --clubi-action-active: #6a0130;
+  --clubi-action-ink: var(--clubi-cream);
+  --clubi-focus: var(--clubi-orange);
+
+  /* State (DESIGN.md E-03) */
+  --clubi-danger: #b83620;
+
+  /* Type */
+  --clubi-font-display: "Clash Display", "Trebuchet MS", system-ui, sans-serif;
+  --clubi-font-text: "Manrope", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --leading-tight: 1.1;
+  --leading-body: 1.6;
+  --tracking-display: 0;
+  --tracking-text: -0.02em;
+
+  /* Space and shape */
+  --space-2: 0.5rem;
+  --space-3: 0.75rem;
+  --space-4: 1rem;
+  --space-5: 1.5rem;
+  --space-6: 2rem;
+  --radius-sm: 4px;
+  --radius-md: 8px;
+  --radius-lg: 16px;
+  --shadow-paper: 0 1px 2px rgb(38 22 29 / 0.06), 0 6px 16px rgb(38 22 29 / 0.08);
+
+  --motion-base: 200ms;
+  --motion-ease: cubic-bezier(0.2, 0, 0.2, 1);
 }
 
 *,
@@ -29,118 +100,158 @@ body {
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 2rem 1rem;
+  padding: var(--space-6) var(--space-4);
   background: var(--clubi-bg);
   color: var(--clubi-ink);
-  font-family: var(--clubi-font-sans);
-  line-height: 1.5;
+  font-family: var(--clubi-font-text);
+  font-size: 1rem;
+  line-height: var(--leading-body);
+  letter-spacing: var(--tracking-text);
 }
 
 .auth-card {
   width: 100%;
   max-width: 26rem;
-  padding: 2rem;
+  padding: var(--space-6);
   background: var(--clubi-surface);
   border: 1px solid var(--clubi-line);
-  border-radius: var(--clubi-radius);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-paper);
 }
 
+/* The logotype is hand-drawn lettering, never type (DESIGN.md 4.6 and 5.4).
+   Painted as a mask rather than an <img>: the SVG fills with currentColor, which an external
+   <img> cannot inherit, and masking keeps one file covering all three brandbook variants.
+   --logo-src comes from the template, which is what knows the hashed {% static %} URL. */
 .auth-brand {
   display: block;
-  margin-bottom: 1.5rem;
-  font-family: var(--clubi-font-serif);
-  font-size: 1.5rem;
-  letter-spacing: 0.02em;
-  color: var(--clubi-accent);
-  text-decoration: none;
+  width: 128px; /* above the 96px minimum of DESIGN.md 5.3 */
+  aspect-ratio: 553 / 259; /* the logo's own 2.14 ratio (DESIGN.md 5.1) — never distort */
+  margin-bottom: var(--space-5);
+  background-color: var(--clubi-ink-brand);
+  -webkit-mask: var(--logo-src) center / contain no-repeat;
+  mask: var(--logo-src) center / contain no-repeat;
 }
 
 .auth-card h1 {
-  margin: 0 0 0.25rem;
-  font-family: var(--clubi-font-serif);
-  font-size: 1.35rem;
+  margin: 0 0 var(--space-2);
+  font-family: var(--clubi-font-display);
+  font-size: 1.5rem;
   font-weight: 600;
+  line-height: var(--leading-tight);
+  letter-spacing: var(--tracking-display);
+  color: var(--clubi-ink-brand);
 }
 
 .auth-lead {
-  margin: 0 0 1.5rem;
-  color: var(--clubi-muted);
-  font-size: 0.925rem;
+  margin: 0 0 var(--space-5);
+  color: var(--clubi-ink-muted);
 }
 
 .auth-form p {
-  margin: 0 0 var(--clubi-gap);
+  margin: 0 0 var(--space-4);
 }
 
 label {
   display: block;
-  margin-bottom: 0.35rem;
+  margin-bottom: var(--space-2);
   font-size: 0.875rem;
-  font-weight: 500;
+  font-weight: 700;
 }
 
 input[type="text"],
 input[type="email"],
 input[type="password"] {
   width: 100%;
-  padding: 0.6rem 0.7rem;
-  border: 1px solid var(--clubi-line);
-  border-radius: var(--clubi-radius);
-  background: var(--clubi-surface);
+  padding: var(--space-3);
+  border: 1px solid var(--clubi-line-strong);
+  border-radius: var(--radius-sm);
+  background: var(--clubi-surface-sunken);
   color: inherit;
   font: inherit;
+  letter-spacing: inherit;
 }
 
 input:focus-visible,
 button:focus-visible,
 a:focus-visible {
-  outline: 2px solid var(--clubi-accent);
+  outline: 2px solid var(--clubi-focus);
   outline-offset: 2px;
 }
 
-.helptext,
-.helptext ul {
+.helptext {
   display: block;
-  margin: 0.35rem 0 0;
-  padding-left: 1rem;
-  color: var(--clubi-muted);
+  margin: var(--space-2) 0 0;
+  color: var(--clubi-ink-muted);
   font-size: 0.8125rem;
+  line-height: 1.4;
 }
 
-.helptext ul {
-  margin: 0;
+/* Django puts the password rules in a <ul> inside <span class="helptext">, but <ul> is not
+   phrasing content, so the HTML parser hoists it out — it lands as a sibling of the <p>, and a
+   descendant selector never matches it. Style it where it actually ends up. */
+.auth-form > ul {
+  margin: -0.5rem 0 var(--space-4);
+  padding-left: var(--space-4);
+  color: var(--clubi-ink-muted);
+  font-size: 0.8125rem;
+  line-height: 1.4;
 }
 
+.auth-form > ul li + li {
+  margin-top: var(--space-2);
+}
+
+/* Never signal state by colour alone (DESIGN.md 3.3): danger sits close to the brand wine in
+   lightness, so the error list keeps its marker and its wording. */
 .errorlist {
-  margin: 0 0 var(--clubi-gap);
-  padding-left: 1.1rem;
+  margin: 0 0 var(--space-4);
+  padding: var(--space-3) var(--space-3) var(--space-3) var(--space-5);
+  border-left: 3px solid var(--clubi-danger);
+  border-radius: var(--radius-sm);
+  background: #fbeeea;
   color: var(--clubi-danger);
   font-size: 0.875rem;
 }
 
 .button {
   width: 100%;
-  margin-top: 0.5rem;
-  padding: 0.7rem 1rem;
+  margin-top: var(--space-2);
+  padding: var(--space-3) var(--space-4);
   border: 0;
-  border-radius: var(--clubi-radius);
-  background: var(--clubi-accent);
-  color: var(--clubi-accent-ink);
-  font: inherit;
-  font-weight: 500;
+  border-radius: var(--radius-md);
+  background: var(--clubi-action);
+  color: var(--clubi-action-ink);
+  font-family: var(--clubi-font-text);
+  font-size: 1rem;
+  font-weight: 700;
+  letter-spacing: var(--tracking-text);
   cursor: pointer;
+  transition: background var(--motion-base) var(--motion-ease);
 }
 
 .button:hover {
-  filter: brightness(1.1);
+  background: var(--clubi-action-hover);
+}
+
+.button:active {
+  background: var(--clubi-action-active);
 }
 
 .auth-links {
-  margin: 1.25rem 0 0;
+  margin: var(--space-5) 0 0;
   font-size: 0.875rem;
-  color: var(--clubi-muted);
+  color: var(--clubi-ink-muted);
 }
 
 .auth-links a {
-  color: var(--clubi-accent);
+  color: var(--clubi-ink-brand);
+  text-decoration-thickness: 1px;
+  text-underline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .button {
+    transition: none;
+  }
 }

@@ -115,7 +115,8 @@ class TestSpaShell:
         response = client.get("/perfil/ana")
 
         assert response.status_code == 200
-        assert "Clubi" in response.content.decode()
+        # Lowercase on purpose: the brand name is always "clubi" (DESIGN.md 4.6).
+        assert "clubi" in response.content.decode()
 
     def test_api_prefix_is_not_swallowed_by_the_shell(self, client):
         # An unmounted /api/ path must 404 rather than render the SPA.

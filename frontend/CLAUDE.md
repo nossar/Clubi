@@ -36,11 +36,16 @@ Next up is the guide's **Fase 4**: Vite with proxy, `client.ts`, TanStack Query,
 you open `/`, see the book of the month, and update your progress through the UI. Follow the phase
 order rather than building screens out of sequence.
 
-The asset prep that used to gate this is **done** — `src/assets/` holds the four brandbook font
-weights as `woff2` (242 KB → 93 KB) and SVGs of the logo and all ten elements, every one of them
-using `currentColor` so CSS sets the colour. DESIGN.md section 4.2 has the `@font-face` block,
-including the one trap: Clash Semibold declares itself as family `"Clash Display Semibold"`, so it
-must be renamed to `"Clash Display"` weight 600 or `font-weight` silently stops working.
+The asset prep that used to gate this is **done**, and so is the `auth.css` realignment — the
+rendered `/accounts/` pages already run on the brand tokens, so the tokens are proven in a browser
+before the SPA exists. Copy them from DESIGN.md section 11; `auth.css` is the working reference.
+
+Two things there that will bite otherwise. Clash Semibold declares itself as family `"Clash Display
+Semibold"`, so `@font-face` must rename it to `"Clash Display"` weight 600 or `font-weight`
+silently stops working. And **`vite.config.ts` must proxy `/static` too**, alongside `/api`,
+`/admin`, `/accounts` and `/media` — fonts and the logo are served by Django from
+`/static/brand/` (DESIGN.md 2.1), and without the proxy the dev server renders in system fonts with
+no error to tell you why.
 
 Every string the SPA renders is user-facing, so it is pt-BR — labels, buttons, empty states, error
 copy, `aria-label`, and `Intl` formatting for dates and numbers. Identifiers stay English.
@@ -126,7 +131,8 @@ frontend/
 └── src/
     ├── main.tsx                  # QueryClient + router mount
     ├── App.tsx                   # routes
-    ├── assets/    fonts/ (4 woff2), brand/logo-clubi.svg, elements/ (10 svg) — all currentColor
+    ├── assets/    elements/ (10 svg, currentColor). Fonts and the logo live in
+    │              backend/core/static/brand/ — one copy, both surfaces (DESIGN.md 2.1)
     ├── api/       client.ts, generated.ts, types.ts
     ├── context/   CurrentUser.tsx
     ├── routes/    Home, Feed, NewPost, PostDetail, Profile, EditProfile,

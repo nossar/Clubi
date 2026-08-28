@@ -32,9 +32,8 @@ Inventário completo da pasta `frontend/clubi/`, com o que cada parte contribuiu
 | `documentos/` | Planilhas de gestão | Nada de visual — não é fonte de design |
 | `arquivos abertos/` | O `.ai` editável (14 pranchetas, PDF por dentro) | Os vetores do logo e dos elementos (5.5, 5.6). **Paleta e tipografia de lá estão superadas** — ver o aviso em 5.6 |
 
-Os assets já derivados desse material vivem em `frontend/src/assets/` (`fonts/`, `brand/`,
-`elements/`) e são os que o código consome. A pasta `clubi/` é o arquivo-mestre: entrada, nunca
-dependência de build.
+Os assets derivados desse material são os que o código consome, e estão repartidos por quem os usa
+(ver 2.1). A pasta `clubi/` é o arquivo-mestre: entrada, nunca dependência de build.
 
 > A pasta `paleta/` mencionada no briefing não existe. A paleta está na **página 3 do brandbook**,
 > e é de lá que vêm os hex desta documentação.
@@ -60,10 +59,36 @@ anterior e é a identidade real do clube.
 **Decisão:** o brandbook vence; `auth.css` se realinha. Ver **ADR-17** em
 `clubi-decisoes-de-arquitetura.md`, que registra a decisão e a nota de revisão em 16b.
 
-**Consequência operacional:** `styles/tokens.css` e `auth.css` continuam obrigados a carregar os
-mesmos valores (é a mitigação da costura do ADR-05). Portanto o realinhamento do `auth.css` é
-**pré-requisito do primeiro commit de CSS da SPA**, não um item de limpeza para depois. Mudar um
-token significa mudar os dois arquivos, sempre.
+**Consequência operacional:** `styles/tokens.css` e `auth.css` carregam os mesmos valores (é a
+mitigação da costura do ADR-05). Mudar um token significa mudar os dois arquivos, sempre — e este
+documento primeiro.
+
+**Feito em 2026-08-27.** O `auth.css` já está realinhado: paleta da marca, Manrope e Clash Display
+self-hosted, logotipo como SVG mascarado em vez de palavra digitada, e o nome do clube em minúsculo
+em todos os templates. Duas correções entraram junto, e nenhuma era de cor: a lista de regras de
+senha não recebia estilo nenhum, porque o parser do HTML tira o `<ul>` de dentro do
+`<span class="helptext">` e o seletor descendente nunca casava; e o `login.html` mostrava a mesma
+mensagem de erro duas vezes, uma do template e outra do `as_p`.
+
+### 2.1 Onde os assets compartilhados moram
+
+As páginas renderizadas de `/accounts/` e a SPA usam **as mesmas fontes e o mesmo logotipo**. Duas
+cópias divergiriam, que é exatamente o risco que o ADR-05 manda evitar. Então há uma cópia só,
+servida pelo Django:
+
+| Onde | O quê | URL |
+|---|---|---|
+| `backend/core/static/brand/fonts/` | as 4 fontes em `woff2` | `/static/brand/fonts/…` |
+| `backend/core/static/brand/logo-clubi.svg` | o logotipo | `/static/brand/logo-clubi.svg` |
+| `frontend/src/assets/elements/` | os 10 elementos | empacotados pelo Vite |
+
+Os elementos ficam no frontend porque só a SPA os usa. Fontes e logotipo ficam no backend porque os
+dois lados precisam deles, e em produção é o Django (com WhiteNoise, que já versiona por hash) que
+serve tudo.
+
+> ⚠️ **O `vite.config.ts` precisa incluir `/static` na lista de proxy**, junto de `/api`, `/admin`,
+> `/accounts` e `/media`. Sem isso, a SPA em `:5173` fica sem fonte e sem logo em desenvolvimento —
+> e o sintoma é tipografia de sistema, não erro.
 
 ---
 
@@ -220,7 +245,8 @@ O `--clubi-font-serif` que existe hoje no `auth.css` está errado no nome e no v
 **Self-host as duas, a partir do repositório.** Não use CDN do Google Fonts: o ADR-04 estabelece
 origem única, e uma terceira origem no caminho crítico de renderização contradiz isso sem ganho.
 
-**Feito.** Os quatro pesos já estão convertidos para `woff2` em `frontend/src/assets/fonts/`:
+**Feito.** Os quatro pesos estão convertidos para `woff2` em `backend/core/static/brand/fonts/`,
+servidos pelo Django em `/static/brand/fonts/` — ver 2.1 para o porquê de morarem no backend:
 
 | Arquivo | Origem | Peso |
 |---|---|---|
@@ -239,22 +265,22 @@ origem única, e uma terceira origem no caminho crítico de renderização contr
 ```css
 @font-face {
   font-family: "Clash Display";
-  src: url("../assets/fonts/ClashDisplay-Regular.woff2") format("woff2");
+  src: url("/static/brand/fonts/ClashDisplay-Regular.woff2") format("woff2");
   font-weight: 400; font-style: normal; font-display: swap;
 }
 @font-face {
   font-family: "Clash Display";   /* renomeada: o arquivo se chama "Clash Display Semibold" */
-  src: url("../assets/fonts/ClashDisplay-Semibold.woff2") format("woff2");
+  src: url("/static/brand/fonts/ClashDisplay-Semibold.woff2") format("woff2");
   font-weight: 600; font-style: normal; font-display: swap;
 }
 @font-face {
   font-family: "Manrope";
-  src: url("../assets/fonts/Manrope-Regular.woff2") format("woff2");
+  src: url("/static/brand/fonts/Manrope-Regular.woff2") format("woff2");
   font-weight: 400; font-style: normal; font-display: swap;
 }
 @font-face {
   font-family: "Manrope";
-  src: url("../assets/fonts/Manrope-Bold.woff2") format("woff2");
+  src: url("/static/brand/fonts/Manrope-Bold.woff2") format("woff2");
   font-weight: 700; font-style: normal; font-display: swap;
 }
 ```
@@ -362,8 +388,10 @@ gradiente · não encaixar em forma geométrica como "ícone" · não reconstrui
 foram extraídos do `arquivos abertos/clubi id visual.ai` (que é PDF por dentro) e estão em:
 
 ```
-frontend/src/assets/brand/logo-clubi.svg     25 paths, 25,8 KB, viewBox 0 0 553.19 258.53
+backend/core/static/brand/logo-clubi.svg    25 paths, 25,8 KB, viewBox 0 0 553.19 258.53
 ```
+Servido em `/static/brand/logo-clubi.svg`. Mora no backend porque as páginas de `/accounts/`
+também o usam — ver 2.1.
 
 Proporção 2.140, contra 2.139 medido nos PNGs — é o mesmo logotipo, com toda a textura de pincel
 preservada.
@@ -804,10 +832,12 @@ Em aberto:
 5. ~~Decidir a família de ícones funcionais~~ — **decidido: não haverá.** Elementos da marca no
    conteúdo, palavra no controle (6.3, E-07). Os dois glifos residuais (`×` e menu) se desenham
    quando forem necessários, não antes.
-6. **Realinhar `backend/core/static/css/auth.css`** aos tokens da seção 11 — seção 2 e ADR-17.
+6. ~~Realinhar `backend/core/static/css/auth.css`~~ — **feito** (seção 2). As páginas de
+   `/accounts/` já estão na identidade da marca.
 7. **Otimizar os SVGs** (SVGO ou equivalente) se o peso incomodar. `estrela-8` (28,8 KB) e
    `livro-fechado` (27,1 KB) carregam muito nó por causa da textura de pincel; os outros oito somam
    ~41 KB juntos. Não é urgente — é menos que uma foto de capa.
+8. **Incluir `/static` no proxy do `vite.config.ts`** quando a Fase 4 começar — ver o aviso em 2.1.
 
 ## 14. O que de `frontend/clubi/` está no Git
 

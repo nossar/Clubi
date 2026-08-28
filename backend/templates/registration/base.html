@@ -3,12 +3,15 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>{% block title %}Clubi{% endblock %}</title>
+  <title>{% block title %}clubi{% endblock %}</title>
+  <link rel="preload" href="{% static 'brand/fonts/Manrope-Regular.woff2' %}" as="font" type="font/woff2" crossorigin>
+  <link rel="preload" href="{% static 'brand/fonts/ClashDisplay-Semibold.woff2' %}" as="font" type="font/woff2" crossorigin>
   <link rel="stylesheet" href="{% static 'css/auth.css' %}">
 </head>
 <body>
   <main class="auth-card">
-    <a class="auth-brand" href="/">Clubi</a>
+    <a class="auth-brand" href="/" aria-label="clubi"
+       style="--logo-src: url('{% static 'brand/logo-clubi.svg' %}')"></a>
     <h1>{% block heading %}{% endblock %}</h1>
     {% block content %}{% endblock %}
   </main>

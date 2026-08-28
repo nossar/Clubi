@@ -1,16 +1,15 @@
 {% extends "registration/base.html" %}
 
-{% block title %}Entrar · Clubi{% endblock %}
+{% block title %}Entrar · clubi{% endblock %}
 {% block heading %}Entrar{% endblock %}
 
 {% block content %}
   <p class="auth-lead">Bem-vindo de volta ao clube.</p>
 
-  {% if form.errors %}
-    <ul class="errorlist">
-      <li>Usuário ou senha incorretos. Tente novamente.</li>
-    </ul>
-  {% endif %}
+  {% comment %}
+    Não adicione um errorlist aqui: o as_p abaixo já renderiza os erros do formulário, e um
+    bloco extra duplica a mesma mensagem na tela.
+  {% endcomment %}
 
   <form class="auth-form" method="post">
     {% csrf_token %}
