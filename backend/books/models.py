@@ -101,7 +101,7 @@ class MonthlyReading(models.Model):
         total = self.pick.book.pages
         if not total:
             return None
-        return min(100, round(self.pages_read * 100 / total))
+        return min(100, self.pages_read * 100 // total)
 
 
 class Favorite(models.Model):
