@@ -6,7 +6,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 Clubi — the ESPM book club website. Django + Django Ninja backend serving a React/TypeScript SPA from a single origin.
 
-**Current state: the whole backend is done — models, admin, auth and the API. The frontend is not.**
+**Current state: the whole backend is done — models, admin, auth and the API. The frontend has its first screen (Fase 4); Fases 5 to 7 are the remaining screens.**
 
 Written and working:
 - `users` — custom `User` (`full_name`, `birth_date`, `photo`, `quote`) plus a `favorites` M2M through `books.Favorite`; `users/schemas.py`, `users/api.py` (`me_router`, `users_router`).
@@ -17,11 +17,11 @@ Written and working:
 - `api` — no models, no routes of its own; only `api/api.py` (the `NinjaAPI` instance and the `add_router` calls) and `api/schemas.py` (the two shared projections). All 22 endpoints of the guide's section 6.2 map are mounted; docs at `/api/docs`.
 - API tests live with their app — `books/test_api.py`, `users/test_api.py`, `posts/test_api.py`, `api/test_api.py` — over shared fixtures in `backend/conftest.py`.
 
-Not written yet:
-- `frontend/` — no code. What is there is `frontend/DESIGN.md` (the visual source of truth, ADR-17) and `frontend/clubi/` (brandbook and brand assets). `backend/templates/index.html` is a declared placeholder for the SPA shell, to be replaced by the Vite build.
-- The Neon Postgres wiring (see below). The root `Makefile` now exists.
+- `frontend/` — Fase 4 is done: Vite with the proxy, `src/api/client.ts`, TanStack Query, `styles/tokens.css` and `base.css` on the brand tokens, `Header`, `Footer`, and `Home` with the monthly highlight and a working `ProgressBar`. `backend/templates/index.html` is now the real SPA shell, loading the pinned Vite bundle. See `frontend/CLAUDE.md` for the folder's contract and `frontend/DESIGN.md` for anything visual.
 
-Known divergence: `core/static/css/auth.css` shipped with an improvised palette that predates the brandbook. ADR-17 replaces it with the brand tokens; realigning it is a prerequisite of the first SPA CSS commit, not later cleanup.
+Not written yet:
+- The other SPA screens — `Feed`, `NewPost`, `PostDetail`, `Profile`, `EditProfile`, `BookOfTheMonth`, `PickHistory`, `Search`, and `PostCard` (Fases 5 to 7). Their endpoints already exist; only the screens are missing.
+- The Neon Postgres wiring (see below). The root `Makefile` now exists and no longer gates the frontend steps.
 
 Follow the phase order in the implementation guide rather than inventing structure.
 

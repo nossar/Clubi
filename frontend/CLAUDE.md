@@ -20,39 +20,47 @@ process bug even when it looks fine — the fix is to add it to DESIGN.md with i
 
 ## Current state
 
-**No code here yet.** What exists is documentation and assets:
+**Fase 4 is done.** Vite with the proxy, `client.ts`, TanStack Query, `styles/tokens.css` and
+`base.css`, `Header`, `Footer`, and `Home` with the monthly highlight and a working `ProgressBar`.
+You open `/`, see the book of the month, and update your progress through the UI.
 
-- [DESIGN.md](DESIGN.md) — the visual source of truth (ADR-17). Written; extrapolations in its
-  section 12 are still pending the founder's review.
+What is here:
+
+- [DESIGN.md](DESIGN.md) — the visual source of truth (ADR-17). E-01 … E-12 were reviewed by the
+  founder on 2026-08-27; **E-13 (component dimensions, section 8.7) came out of Fase 4 and is the
+  only one still open.**
 - `clubi/` — the brand assets themselves: brandbook PDF, logo variants, the two font families,
   graphic elements, and the published social pieces. Read-only input to DESIGN.md; never edit
   these, and never derive a value from them without recording it in DESIGN.md.
+- `src/` — the SPA. `Home` is the only route mounted; `App.tsx` answers everything else with a
+  pt-BR not-found screen, because Django's catch-all hands the shell every path it does not own.
 
-This file and DESIGN.md are the contract the code will be held to. The backend is finished and the
-club already runs on `/admin/` (ADR-14), so nothing here blocks the club.
+Next up is the guide's **Fase 5** (posts): `Feed`, `NewPost`, `PostDetail` and `PostCard` — and
+that is when `PostCard` starts rendering on the Home, which has no posts today. The backend for it
+has been finished since before Fase 4; only the screens are missing. Follow the phase order rather
+than building screens out of sequence.
 
-Next up is the guide's **Fase 4**: Vite with proxy, `client.ts`, TanStack Query, CSS tokens,
-`Header`, `Footer`, and `Home` with the monthly highlight and a working `ProgressBar`. Done when
-you open `/`, see the book of the month, and update your progress through the UI. Follow the phase
-order rather than building screens out of sequence.
+Three things that already bit once, so they are worth knowing before touching the setup:
 
-The asset prep that used to gate this is **done**, and so is the `auth.css` realignment — the
-rendered `/accounts/` pages already run on the brand tokens, so the tokens are proven in a browser
-before the SPA exists. Copy them from DESIGN.md section 11; `auth.css` is the working reference.
+- Clash Semibold declares itself as family `"Clash Display Semibold"`, so `@font-face` renames it
+  to `"Clash Display"` weight 600. Undo that and `font-weight` silently stops working.
+- **`vite.config.ts` proxies `/static` too**, alongside `/api`, `/admin`, `/accounts` and `/media`
+  — fonts and the logo are served by Django from `/static/brand/` (DESIGN.md 2.1), and without it
+  the dev server renders in system fonts with no error to tell you why.
+- **That proxy also rewrites `Origin` and `Host` to the Django target.** The browser is right that
+  a POST from the SPA is same-origin, but Django is handed `Origin: http://localhost:5173` while
+  answering on `:8000`, and its CSRF origin check rejects the mismatch. Without the rewrite every
+  unsafe request in development 403s — login, logout and the progress `PUT` included.
 
-Two things there that will bite otherwise. Clash Semibold declares itself as family `"Clash Display
-Semibold"`, so `@font-face` must rename it to `"Clash Display"` weight 600 or `font-weight`
-silently stops working. And **`vite.config.ts` must proxy `/static` too**, alongside `/api`,
-`/admin`, `/accounts` and `/media` — fonts and the logo are served by Django from
-`/static/brand/` (DESIGN.md 2.1), and without the proxy the dev server renders in system fonts with
-no error to tell you why.
+`typescript` is pinned to the 5.x line on purpose: TypeScript 7's native port drops the
+`ts.factory` API that `openapi-typescript` builds on, so `make types` dies on it.
 
 Every string the SPA renders is user-facing, so it is pt-BR — labels, buttons, empty states, error
 copy, `aria-label`, and `Intl` formatting for dates and numbers. Identifiers stay English.
 
 ## Commands
 
-Nothing is scaffolded yet; these are the commands as they will exist. Run them from `frontend/`.
+Run them from `frontend/`, or prefer the root `Makefile` targets that wrap them.
 
 ```bash
 npm install                # npm ci in CI/deploy
@@ -108,7 +116,11 @@ generator. Read that ADR before proposing one.
 `/api`, sends `credentials: "same-origin"`, attaches `X-CSRFToken` from the cookie, redirects to
 `/accounts/login/?next=…` on 401, throws `ApiError(status, detail)` otherwise. Components go
 through TanStack Query and never touch `fetch`, `axios`, or an absolute URL. That 401 redirect is
-the whole login flow (ADR-05) — the SPA has no `/login` route, and logout is a link, not a fetch.
+the whole login flow (ADR-05) — the SPA has no `/login` route.
+
+Logout is not a fetch either: `Header` posts a plain HTML form to `/accounts/logout/` with the
+`csrfmiddlewaretoken` read from the same cookie, because `LogoutView` refuses GET and the view
+belongs to `django.contrib.auth`, not to the API.
 
 **`src/api/generated.ts` is generated and never edited by hand** (ADR-12), not even to fix a type.
 `src/api/types.ts` is the thin hand-written layer over it:
@@ -131,6 +143,7 @@ frontend/
 └── src/
     ├── main.tsx                  # QueryClient + router mount
     ├── App.tsx                   # routes
+    ├── format.ts                 # pt-BR date formatting (Intl), shared by components
     ├── assets/    elements/ (10 svg, currentColor). Fonts and the logo live in
     │              backend/core/static/brand/ — one copy, both surfaces (DESIGN.md 2.1)
     ├── api/       client.ts, generated.ts, types.ts
@@ -138,9 +151,14 @@ frontend/
     ├── routes/    Home, Feed, NewPost, PostDetail, Profile, EditProfile,
     │              BookOfTheMonth, PickHistory, Search
     ├── components/ Header, Footer, PostCard, MonthlyPickHighlight,
-    │              ProgressBar, StarRating, FavoritesShelf, BookCover
+    │              ProgressBar, StarRating, FavoritesShelf, BookCover,
+    │              BrandElement, ReadersList
     └── styles/    tokens.css, base.css
 ```
+
+Written so far: everything above except `PostCard`, `StarRating`, `FavoritesShelf`, and every
+route other than `Home`. `BrandElement` (inlines a brand SVG so `currentColor` applies) and
+`ReadersList` ("quem está lendo", on the Home) were added in Fase 4 and are not in guide 7.4.
 
 | Route | Component | | Route | Component |
 |---|---|---|---|---|
@@ -172,7 +190,10 @@ Three disciplines Django used to enforce for free (guide 7.5):
 | Profile | `["user", username]` | editing the profile, saving favorites |
 | Current user | `["me"]` | editing the profile |
 
-`main.tsx` defaults: `staleTime: 30_000`, `refetchOnWindowFocus: false`.
+`main.tsx` defaults: `staleTime: 30_000`, `refetchOnWindowFocus: false`, and `retry: false`. The
+last one is not in guide 7.5 and is deliberate: this API's non-200s are states, not blips. A 404 on
+`/monthly-picks/current` means there is no pick this month, and a 401 has already sent the browser
+to `/accounts/login/` — retrying either only fires requests at a page that is navigating away.
 
 ## Response shapes that decide component design
 
@@ -209,10 +230,10 @@ must carry the same values. The rendered `/accounts/` pages and the SPA are the 
 visible seam between them is ADR-05's one real downside, and shared tokens are the stated
 mitigation. Changing a token means changing both files — and DESIGN.md first.
 
-**`auth.css` currently disagrees with DESIGN.md.** It shipped with an improvised palette
-(`#f6f2ea`, `#7a2e2e`, Inter) that predates anyone reading the brandbook. Realigning it to the
-brand tokens is a **prerequisite of the first SPA CSS commit**, not later cleanup (ADR-17): while
-the two files disagree, the seam ADR-05 promised to hide is visible on every member's first login.
+`auth.css` used to disagree with DESIGN.md — it shipped with an improvised palette (`#f6f2ea`,
+`#7a2e2e`, Inter) that predated anyone reading the brandbook. It was realigned on 2026-08-27, and
+`tokens.css` was copied from DESIGN.md section 11 to match. The two files are in step; keep them
+that way (ADR-17), because the seam ADR-05 promised to hide is on every member's first login.
 
 Three rules from DESIGN.md that decide component structure, so they are worth knowing before you
 open a file:
@@ -234,16 +255,21 @@ open a file:
 ## Build and the SPA shell
 
 `npm run build` writes `frontend/dist`, which `settings.py` adds to `STATICFILES_DIRS` once it
-exists. `backend/templates/index.html` is a placeholder and gets replaced by the real shell (guide
-section 8) as part of the first frontend slice. Two things to get right when that lands:
+exists. `backend/templates/index.html` is the real shell (guide section 8) since Fase 4. Two things
+it depends on, both easy to undo by accident:
 
-- **Vite hashes asset filenames**, but the guide's shell hardcodes `assets/index.css` and
-  `assets/index.js`. Either pin the names in `rollupOptions.output` or read
-  `dist/.vite/manifest.json` from the template. Do not ship a shell pointing at names Vite is not
-  emitting.
-- **The shell view must set the CSRF cookie.** `clubi/urls.py` serves it with a bare
-  `TemplateView`; a visitor with a valid session but no `csrftoken` cookie has every write
-  rejected. Wrap it in `ensure_csrf_cookie`, or keep a `{% csrf_token %}` in the template.
+- **Vite hashes asset filenames by default**, and the shell asks `{% static %}` for
+  `assets/index.css` and `assets/index.js`. The names are pinned in `rollupOptions.output` to match;
+  WhiteNoise's manifest storage re-hashes them in production, so cache busting is not lost. If you
+  unpin them, read `dist/.vite/manifest.json` from the template instead — never ship a shell
+  pointing at names Vite is not emitting.
+- **The shell view sets the CSRF cookie.** `clubi/urls.py` wraps the `TemplateView` in
+  `ensure_csrf_cookie`; a visitor with a valid session but no `csrftoken` cookie would have every
+  write rejected, since `client.ts` reads the header from it.
+
+The `@font-face` and logo URLs in `base.css` are absolute `/static/…` paths, which Vite leaves
+alone (it warns that they "didn't resolve at build time" — that is expected, Django owns them) and
+which Django's manifest storage rewrites to the hashed names at `collectstatic`.
 
 If a `fetch` ever returns this shell's HTML, the URL is wrong — the catch-all excludes `api/` on
 purpose.
