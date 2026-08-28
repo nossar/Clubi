@@ -18,17 +18,23 @@ Written and working:
 - API tests live with their app — `books/test_api.py`, `users/test_api.py`, `posts/test_api.py`, `api/test_api.py` — over shared fixtures in `backend/conftest.py`.
 
 Not written yet:
-- `frontend/` — `backend/templates/index.html` is a declared placeholder for the SPA shell, to be replaced by the Vite build.
+- `frontend/` — no code. What is there is `frontend/DESIGN.md` (the visual source of truth, ADR-17) and `frontend/clubi/` (brandbook and brand assets). `backend/templates/index.html` is a declared placeholder for the SPA shell, to be replaced by the Vite build.
 - The root `Makefile` and the Neon Postgres wiring (see below).
+
+Known divergence: `core/static/css/auth.css` shipped with an improvised palette that predates the brandbook. ADR-17 replaces it with the brand tokens; realigning it is a prerequisite of the first SPA CSS commit, not later cleanup.
 
 Follow the phase order in the implementation guide rather than inventing structure.
 
 ## Reference documents (read before non-trivial work)
 
-Two documents at the repo root are gitignored but present locally, and are the spec for this project:
+Two documents at the repo root are the spec for this project. The guide is gitignored (present locally only); the ADRs are versioned:
 
 - `clubi-guia-de-implementacao.md` — the roadmap: repo structure, model code, admin, auth, endpoint map, schemas, frontend layout, deploy, and the phase-by-phase implementation order (section 9).
-- `clubi-decisoes-de-arquitetura.md` — ADR-01 … ADR-14, the *why* behind each choice, including what was deliberately rejected.
+- `clubi-decisoes-de-arquitetura.md` — ADR-01 … ADR-17, the *why* behind each choice, including what was deliberately rejected.
+
+A third document governs anything visual:
+
+- `frontend/DESIGN.md` — the visual source of truth (ADR-17), distilled from the brandbook and assets in `frontend/clubi/`. Tokens, logo and element rules, interface tone, and a numbered register of extrapolations. **Mandatory reading before any frontend or CSS work**, including `backend/core/static/css/auth.css`, which the SPA shares tokens with. No colour, font, size, radius, shadow or tone may enter the code unless it is traceable to that document.
 
 When a task touches modeling, API shape, or auth, check these first — the answer is usually already decided there. If you're about to contradict an ADR, say so explicitly rather than silently diverging.
 
