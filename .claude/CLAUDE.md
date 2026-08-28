@@ -25,10 +25,10 @@ Follow the phase order in the implementation guide rather than inventing structu
 
 ## Reference documents (read before non-trivial work)
 
-Two documents at the repo root are gitignored but present locally, and are the spec for this project:
+Two documents at the repo root are the spec for this project. The guide is gitignored (present locally only); the ADRs are versioned:
 
 - `clubi-guia-de-implementacao.md` — the roadmap: repo structure, model code, admin, auth, endpoint map, schemas, frontend layout, deploy, and the phase-by-phase implementation order (section 9).
-- `clubi-decisoes-de-arquitetura.md` — ADR-01 … ADR-14, the *why* behind each choice, including what was deliberately rejected.
+- `clubi-decisoes-de-arquitetura.md` — ADR-01 … ADR-16, the *why* behind each choice, including what was deliberately rejected.
 
 When a task touches modeling, API shape, or auth, check these first — the answer is usually already decided there. If you're about to contradict an ADR, say so explicitly rather than silently diverging.
 
