@@ -20,30 +20,97 @@ process bug even when it looks fine — the fix is to add it to DESIGN.md with i
 
 ## Current state
 
-**Fases 4, 5 and 6 are done.** Vite with the proxy, `client.ts`, TanStack Query,
+**Fases 4, 5, 6 and 7 are done.** Vite with the proxy, `client.ts`, TanStack Query,
 `styles/tokens.css` and `base.css`, `Header`, `Footer`, `Home` with the monthly highlight and a
 working `ProgressBar`, `Feed`, `NewPost`, `PostDetail` and `PostCard` — which also renders on the
-Home under a "Publicações recentes" section (`RecentPosts`) — and now `Profile`, `EditProfile`,
-`StarRating` and `FavoritesShelf`. You open `/`, see the book of the month, update your progress
-and rate it, publish, read, edit and delete posts with images, and open any member's profile to
-see their shelf and every reading they have logged.
+Home under a "Publicações recentes" section (`RecentPosts`) — `Profile`, `EditProfile`,
+`StarRating` and `FavoritesShelf`, and now `Search`, the header's `MemberSearch` autocomplete and
+`PickHistory`. You open `/`, see the book of the month, update your progress and rate it, publish,
+read, edit and delete posts with images, open any member's profile to see their shelf and every
+reading they have logged, find a member by name or `@handle` from any screen, and read back every
+book the club has ever picked.
 
 What is here:
 
 - [DESIGN.md](DESIGN.md) — the visual source of truth (ADR-17). E-01 … E-12 were reviewed by the
   founder on 2026-08-27; **E-13 (component dimensions, section 8.7) came out of Fase 4, grew three
-  rows in Fase 5 and four more in Fase 6 (profile photo, rating star, shelf slot, history cover),
-  and is the only one still open.**
+  rows in Fase 5, four more in Fase 6 (profile photo, rating star, shelf slot, history cover) and
+  two more in Fase 7 (the header's search field, the member card), and is the only one still
+  open.**
 - `clubi/` — the brand assets themselves: brandbook PDF, logo variants, the two font families,
   graphic elements, and the published social pieces. Read-only input to DESIGN.md; never edit
   these, and never derive a value from them without recording it in DESIGN.md.
-- `src/` — the SPA. `Home`, `/posts`, `/posts/new`, `/posts/:id`, `/u/:username` and
-  `/profile/edit` are mounted; `App.tsx` answers everything else with a pt-BR not-found screen,
-  because Django's catch-all hands the shell every path it does not own.
+- `src/` — the SPA. Every route in guide 7.4 is mounted (see the table below); `App.tsx` answers
+  everything else with a pt-BR not-found screen, because Django's catch-all hands the shell every
+  path it does not own.
 
-Next up is the guide's **Fase 7** (search): the `Search` screen and the `Header` autocomplete, over
-`search_users` (`GET /api/users`, with `q` and `limit`). The backend for it is already there; only
-the screens are missing. Follow the phase order rather than building screens out of sequence.
+Next up is the guide's **Fase 8** (deploy) — Render, Neon, R2 — which is the one remaining phase
+with backend work in it (`DATABASE_URL` is still not in `settings.py`, ADR-13). **Fase 9** is
+frontend-only again: the external-book autocomplete in the book form, over `search_external_books`
+(`GET /api/books/external`). Follow the phase order rather than building screens out of sequence.
+
+### The scope disagreement Fase 7 decided
+
+The documents did not agree on what Fase 7 contains. Guide section 9 says the phase is "a tela
+`Search` e o autocomplete no `Header`"; guide 7.4's route table and this file's own layout tree
+listed **three** unwritten screens — `BookOfTheMonth`, `PickHistory` and `Search`. Decided by what
+already existed on screen, and written down rather than chosen in silence:
+
+1. **`Search` and the header autocomplete are Fase 7 proper**, over `search_users`
+   (`GET /api/users`, with `q` and `limit`).
+2. **`PickHistory` was written too — as balance owed from Fases 4–6, not as Fase 7 scope.**
+   `GET /api/monthly-picks` had no caller at all: the Home shows the *current* pick and a profile
+   shows *your* readings, so the club's own list of choices had no page anywhere. DESIGN.md 6.3
+   had already assigned it the `livro-fechado` element, which is a document expecting the screen.
+   It reuses `BookCover`, `formatMonth` and the profile's `.history` row, so it cost one route
+   file and no new machinery.
+3. **`BookOfTheMonth` was *not* written, and `/book-of-the-month` redirects to `/`.** The Home
+   already **is** that screen: guide 7.4 defines it as "destaque do mês + posts recentes", and it
+   renders `MonthlyPickHighlight`, `ProgressBar` and `ReadersList` over the same pick, blurb and
+   synopsis included. A second screen would have been the near-copy 7.4 warns about two lines
+   below its own route table — and it would have been a URL with nothing of its own to say. The
+   redirect keeps the documented address alive and gives `/book-of-the-month/history` a parent
+   that resolves instead of 404-ing. **Write the real screen the day the Home turns into a mixed
+   landing page**; then the deep page has content the Home no longer carries.
+
+One more decision, about the field rather than the screens: **there is one search box, not two.**
+`MemberSearch` lives in the `Header`, so search is reachable from everywhere, and on `/search` it
+binds straight to `?q=` — the screen has no field of its own. State rule 1 wants the term in the
+URL, and a screen-level `useState` mirroring the header is exactly the duplicate that breaks F5,
+the back button and a shared link. Off `/search` the same field is a draft with no screen behind
+it yet, which becomes URL state the moment it is submitted; that is also why the suggestions panel
+is suppressed on `/search`, where the results list already does its job. The `type="search"` input
+keeps the browser's own clear button: that is user-agent chrome, not an icon this project drew
+(DESIGN.md 6.3 governs what we author, and E-07 is honoured — the control is the word in the
+placeholder, "Buscar membros", and there is no magnifier anywhere).
+
+Two behaviours worth keeping if this component is ever rewritten, because both were found by
+driving it rather than by reading it:
+
+- **`@ana` and `ana` have to find the same person.** Every profile prints the handle with the `@`,
+  but `search_users` matches `username__icontains` against the stored value, which has none —
+  `searchTerm()` strips it before the request.
+- **Escape has to close the panel from inside it.** With the key handler on the input, Escape
+  stopped working the moment ArrowDown moved focus into a suggestion; it is on the wrapper. And
+  the field opens the panel on `onClick`, not `onFocus`, because Escape hands focus back to the
+  field and an `onFocus` would immediately reopen what the member just dismissed.
+
+Four things Fase 7 changed in files Fases 4–6 had already written:
+
+- **The avatar ternary is now `MemberAvatar`.** `PostCard`, `PostDetail` and `ReadersList` each
+  had their own copy of "photo, or initials in a `.avatar`" before the search needed it twice
+  more. Same reasoning that moved `initials()` into `format.ts` in Fase 5.
+- **`BookPicker`'s debounce is now `useDebouncedValue`** (`src/useDebouncedValue.ts`), shared with
+  `MemberSearch` and `Search`. Three copies of the same `useEffect` was the alternative.
+- **`.feed__title` is now `.page-title`.** `Feed`, `Search` and `PickHistory` head their screens
+  the same way; one class, so the three cannot drift. `.feed__heading` (the row with "Publicar")
+  is still feed-specific.
+- **The header wraps and is a stacking context.** `.site-header__inner` gained `flex-wrap`, and at
+  phone width the search field takes its own row under the logotype (DESIGN.md 8.5: the member
+  arrives by phone). `.site-header` gained `position: relative; z-index: 30` so the suggestions
+  paint over the page instead of behind the first card below them. `MonthlyPickHighlight` and the
+  Home's "ainda não há livro do mês" state also gained the link into `PickHistory` — a screen
+  nothing links to is a screen nobody finds.
 
 ### Three places the API and the documents disagree, decided in Fase 6
 
@@ -115,6 +182,15 @@ npm run dev                # Vite dev server; needs manage.py runserver on :8000
 npm run build              # emits frontend/dist, which Django picks up as a staticfiles dir
 npx tsc --noEmit           # the contract guard (ADR-12) — run after touching API types
 ```
+
+**Node 20.19+ is a hard floor**, and the failures do not say so. Vite 8 bundles rolldown, whose
+ESM entry imports `styleText` from `node:util` — on Node 18 both `npm run dev` and `npm run build`
+die with `SyntaxError: ... does not provide an export named 'styleText'`, which reads like a
+corrupt install. `chrome-devtools-mcp` refuses Node 18 outright, so the MCP server of ADR-16 shows
+up as a connection failure rather than a version error. `npx tsc --noEmit` is the one command that
+still runs on 18. Also install with the same Node you develop on: an `npm install` under npm 9
+rewrites `package-lock.json` (it drops the `libc` fields) and skips the platform-native rolldown
+binary, and the build then reports `Cannot find native binding`.
 
 `make types` is the only supported way to regenerate `src/api/generated.ts`:
 
@@ -197,30 +273,35 @@ frontend/
     ├── main.tsx                  # QueryClient + router mount
     ├── App.tsx                   # routes
     ├── format.ts                 # pt-BR date formatting (Intl), shared by components
+    ├── useDebouncedValue.ts      # one value, one request per pause — BookPicker and the search
     ├── assets/    elements/ (10 svg, currentColor). Fonts and the logo live in
     │              backend/core/static/brand/ — one copy, both surfaces (DESIGN.md 2.1)
     ├── api/       client.ts, generated.ts, types.ts
     ├── context/   CurrentUser.tsx
     ├── routes/    Home, Feed, NewPost, PostDetail, Profile, EditProfile,
-    │              BookOfTheMonth, PickHistory, Search
+    │              PickHistory, Search
     ├── components/ Header, Footer, PostCard, MonthlyPickHighlight,
     │              ProgressBar, StarRating, FavoritesShelf, BookCover,
-    │              BrandElement, ReadersList, RecentPosts, BookPicker
+    │              BrandElement, ReadersList, RecentPosts, BookPicker,
+    │              MemberSearch, MemberAvatar
     └── styles/    tokens.css, base.css
 ```
 
-Written so far: everything above except `BookOfTheMonth`, `PickHistory` and `Search` — Fase 7
-territory. Four components are not in guide 7.4: `BrandElement` (inlines a brand SVG so
-`currentColor` applies), `ReadersList` ("quem está lendo", on the Home), `RecentPosts` (the
-Home's feed preview) and `BookPicker` — the search-select behind `PostIn.book_id`, written for
-`NewPost`, reused by `PostDetail`'s inline edit and, since Fase 6, by `FavoritesShelf`. Its input
-`id` is a prop with a default: two pickers on one screen would otherwise share an `id` and the
-second `<label htmlFor>` would address the first field.
+Everything above is written. **`BookOfTheMonth.tsx` is not in the tree on purpose** — see the
+Fase 7 decision above; `/book-of-the-month` redirects to the Home, which is that screen.
+
+Six components are not in guide 7.4: `BrandElement` (inlines a brand SVG so `currentColor`
+applies), `ReadersList` ("quem está lendo", on the Home), `RecentPosts` (the Home's feed preview),
+`BookPicker` — the search-select behind `PostIn.book_id`, written for `NewPost`, reused by
+`PostDetail`'s inline edit and, since Fase 6, by `FavoritesShelf` (its input `id` is a prop with a
+default: two pickers on one screen would otherwise share an `id` and the second `<label htmlFor>`
+would address the first field) — and, from Fase 7, `MemberSearch` (the header's field, which also
+exports `searchTerm()` and the `useMemberSearch()` query that `Search` reuses) and `MemberAvatar`.
 
 | Route | Component | | Route | Component |
 |---|---|---|---|---|
 | `/` | `Home` | | `/profile/edit` | `EditProfile` |
-| `/posts` | `Feed` | | `/book-of-the-month` | `BookOfTheMonth` |
+| `/posts` | `Feed` | | `/book-of-the-month` | → redirects to `/` |
 | `/posts/new` | `NewPost` | | `/book-of-the-month/history` | `PickHistory` |
 | `/posts/:id` | `PostDetail` | | `/search` | `Search` |
 | `/u/:username` | `Profile` | | | |
@@ -250,6 +331,12 @@ Three disciplines Django used to enforce for free (guide 7.5):
 | Book search (NewPost, edit) | `["books", "search", query]` | never — read-only, and `staleTime` alone keeps retyping the same term cheap |
 | Profile | `["user", username]` | editing the profile, saving favorites, saving a rating (the history prints it) |
 | Current user | `["me"]` | editing the profile, **and saving favorites** — `UserOut` embeds `favorites`, so the `/api/me` behind `CurrentUserProvider` goes stale too |
+| Member search (header, `/search`) | `["users", "search", term, limit]` | never — read-only, like the book search |
+| Every pick the club made | `["monthly-picks"]` | never — picks are elected in the Admin (ADR-14), not from the SPA |
+
+**`limit` is in the search key because it is in the request:** the header asks for five results
+and `/search` for fifty, and one key for both would hand the screen the header's five. The term in
+the key is the debounced, `@`-stripped one, so `@ana` and `ana` share a cache entry.
 
 `RecentPosts` (the Home) and `Feed`'s first page both read `["posts", 1]` — one cache entry, not
 two. Invalidation after a write uses the `["posts"]` prefix, which covers every page of the feed
@@ -284,6 +371,10 @@ to `/accounts/login/` — retrying either only fires requests at a page that is 
 - **`BookOut.id` is `number | null | undefined`** in the generated types, because `ModelSchema`
   derives it from Django's AutoField. Everything the API returns is saved, so narrow once at the
   boundary (`FavoritesShelf` does) rather than asserting at each use.
+- **`GET /api/users` with an empty `q` returns the whole club**, active members only, ordered by
+  `full_name` (`User.Meta.ordering`) — which is why `/search` with no term lists everyone instead
+  of sitting empty, and why nothing in that list is ordered by activity. `limit` is clamped to
+  50 server-side, so asking for more silently gets 50.
 - **On `PATCH`, clear a text field with `""`, not `null`** — only `birth_date` and `Post.book_id`
   accept `null`.
 - **Uploads are multipart**: `PUT /api/me/photo` (max 8 MB) and `POST /api/posts/{id}/images`

@@ -11,7 +11,7 @@ escolha arbitrária que este documento existe para impedir.
 
 | | |
 |---|---|
-| **Status** | Fechado para a Fase 4. **As 12 primeiras extrapolações foram revisadas pelo fundador em 2026-08-27.** A **E-13** (dimensões de componente, seção 8.7) nasceu durante a Fase 4, ganhou três linhas na Fase 5 (área de texto, botão de remover imagem, proporção de imagem de post) e mais quatro na Fase 6 (foto de perfil, estrela de nota, slot da estante, capa do histórico), e é a única em aberto. |
+| **Status** | Fechado para a Fase 4. **As 12 primeiras extrapolações foram revisadas pelo fundador em 2026-08-27.** A **E-13** (dimensões de componente, seção 8.7) nasceu durante a Fase 4, ganhou três linhas na Fase 5 (área de texto, botão de remover imagem, proporção de imagem de post), mais quatro na Fase 6 (foto de perfil, estrela de nota, slot da estante, capa do histórico) e mais duas na Fase 7 (campo de busca do cabeçalho, cartão de membro), e é a única em aberto. |
 | **Fonte primária** | `frontend/clubi/clubi  canva_brandbook.pdf` (6 páginas) |
 | **Autoridade** | Em conflito, vence o brandbook. Depois dele, as peças de redes sociais. Depois, este documento. |
 | **Idioma** | Documento em pt-BR (convenção do projeto); nomes de token em inglês. |
@@ -521,7 +521,11 @@ segundo arquivo, sem variante preenchida/vazada.
 | seta de voltar | **"← Voltar"** |
 
 Botão com rótulo é mais acessível que ícone sozinho e conversa com o tom da seção 9. **As Fases 4 a
-6 saem inteiras com zero ícone funcional.**
+7 saem inteiras com zero ícone funcional.** A Fase 7 era o teste mais provável dessa regra, porque
+é a fase da busca: o campo do cabeçalho ficou com o `placeholder` "Buscar membros" e nenhuma lupa,
+exatamente como a linha desta tabela previa. O `×` que o Chrome desenha dentro de um
+`<input type="search">` é do navegador, não nosso — a semântica do campo vale mais que o pixel, e
+esta seção governa o que o projeto desenha.
 
 **3. O resíduo: dois glifos.** Sobram `×` (fechar) e o menu do celular, onde palavra fica desajeitada
 num canto. Quando forem necessários, **desenhe-os no traço da marca** — linha irregular, ponta
@@ -639,6 +643,8 @@ existia neste documento.
 | Estrela de nota (Fase 6, `StarRating`) | glifo de `1.5rem` dentro de um alvo de `44px` | O alvo de toque de 10.4 — que nomeia as estrelas como um dos dois candidatos a errá-lo. O glifo em si fica muito abaixo do teto de ~240px de 6.2 e alinha com uma linha de texto |
 | Slot da estante de favoritos (Fase 6) | coluna mínima de `7rem`; 2 colunas até 768px, 4 acima | A estante tem quatro lugares fixos (ADR-08), então a grade é fixa e não auto-ajustável — uma grade que se ajusta sozinha diria que cabem mais. Abaixo de 7rem o título de um livro sem capa não cabe no placeholder tipográfico |
 | Capa no histórico de leituras (Fase 6) | `5rem` | O mesmo valor que 6.2 dá ao elemento gráfico em estado vazio, reusado aqui para que um mês passado seja miniatura e não um segundo herói |
+| Campo de busca no cabeçalho (Fase 7) | linha inteira até 768px; `22rem` acima | Em 390px o cabeçalho já estava cheio com logotipo e conta (ver a linha do logotipo acima), então o campo desce para a segunda linha em vez de espremer os dois. Acima de 768px, `22rem` cabe um nome completo com folga e ainda deixa o logotipo e a conta com a parte delas do `--container-max`. O painel de sugestões não tem medida própria: nasce da largura do campo, e o limite de cinco resultados é o que o impede de precisar de rolagem |
+| Cartão de membro na busca (Fase 7) | coluna mínima de `16rem` | É a menor largura em que um nome de duas palavras ainda fica ao lado do avatar de `2.75rem` em vez de quebrar embaixo dele. Ao contrário da estante (quatro lugares fixos, ADR-08), aqui a grade *é* auto-ajustável: a lista de membros não tem número certo de lugares |
 
 ---
 
@@ -839,7 +845,7 @@ apoiou e o que faria revisá-lo.
 | **E-10** | Espaçamento, raio, breakpoints, container | Sem respaldo. Grade de 4px é convenção; o raio duplo (0 e pílula) foi observado nas peças; o container vem da margem de ~5% do brandbook | Convenção web padrão; baixo risco |
 | **E-11** | Durações e curva de movimento | Sem respaldo — a marca é estática. Valores curtos por coerência com "leve" e "desacelerar" | Se entrar animação de marca |
 | **E-12** ✅ | **Mantida (2026-08-27): sem tema escuro.** | A inversão creme ⇄ vinho já é o modo escuro da marca. Um dark neutro exigiria cores fora do brandbook. **O fundador revisou e manteve** | Se for pedido explicitamente — volta como ADR, não como ajuste de token |
-| **E-13** ⏳ | **Dimensões de componente** — largura de logotipo, capa, avatar, trilho de progresso, campo numérico (seção 8.7, Fase 4), mais área de texto, botão de remover imagem e proporção de imagem de post (Fase 5), mais foto de perfil, estrela de nota, slot da estante e capa do histórico (Fase 6) | Nasceu na Fase 4: a seção 8 dava espaçamento, raio, container e breakpoints, mas nenhum tamanho de componente, e a Home precisava deles. Cresceu na Fase 5 e de novo na Fase 6 pelo mesmo motivo — formulários de post, e depois perfil e estante, precisavam de medidas que a seção 8 não cobria. Cada medida se apoia numa regra que já existia — o alvo de toque de 10.4, a faixa de logotipo de 5.3, o teto de ~240px de 6.2, o `--container-max` | **Pendente de revisão pelo fundador**, a única em aberto. Rever quando um componente novo pedir medida que não caiba nessas |
+| **E-13** ⏳ | **Dimensões de componente** — largura de logotipo, capa, avatar, trilho de progresso, campo numérico (seção 8.7, Fase 4), mais área de texto, botão de remover imagem e proporção de imagem de post (Fase 5), mais foto de perfil, estrela de nota, slot da estante e capa do histórico (Fase 6), mais campo de busca do cabeçalho e cartão de membro (Fase 7) | Nasceu na Fase 4: a seção 8 dava espaçamento, raio, container e breakpoints, mas nenhum tamanho de componente, e a Home precisava deles. Cresceu na Fase 5, na Fase 6 e na Fase 7 pelo mesmo motivo — formulários de post, depois perfil e estante, depois a busca, precisavam de medidas que a seção 8 não cobria. Cada medida se apoia numa regra que já existia — o alvo de toque de 10.4, a faixa de logotipo de 5.3, o teto de ~240px de 6.2, o `--container-max` | **Pendente de revisão pelo fundador**, a única em aberto. Rever quando um componente novo pedir medida que não caiba nessas |
 
 ---
 
