@@ -28,14 +28,20 @@ class ExternalBookOut(Schema):
 
 class MonthlyReadingIn(Schema):
     pages_read: int | None = Field(default=None, ge=0)
-    rating: int | None = Field(default=None, ge=0, le=5)
+    # Half stars, in the units a member sees: 0 to 5 in steps of 0.5. `multiple_of` is what
+    # turns a 5.3 into a 422 instead of a rounded write. The column behind this holds twice the
+    # number (books.models.MonthlyReading.rating_halves), and that is deliberately invisible
+    # here — the contract is stars, not storage.
+    rating: float | None = Field(default=None, ge=0, le=5, multiple_of=0.5)
     review: str | None = None
 
 
 class MonthlyReadingOut(Schema):
     pages_read: int
     percent: int | None
-    rating: int | None
+    # Resolved from the model's `rating` property, so the halving happens once, in the model,
+    # for every reader — not in a computed field only the API would benefit from.
+    rating: float | None
     review: str
     finished_at: datetime | None
     updated_at: datetime

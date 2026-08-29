@@ -1078,23 +1078,37 @@ a {
 
 /* ---------------------------------------------------------------- star rating
    The brand's five-pointed star (DESIGN.md 6.3), painted with currentColor so "não avaliado" is
-   the same drawing in --clubi-line. Anti-metric by product decision (DESIGN.md 9): no club
-   average, no ranking, nothing gated behind giving a note. */
+   the same drawing in --clubi-line. A *half* star is that same drawing twice: an empty one, and a
+   filled copy stacked over it inside a box clipped to 50% of its width (DESIGN.md 8.7).
+   Anti-metric by product decision (DESIGN.md 9): no club average, no ranking, nothing gated
+   behind giving a note. */
 .star-rating {
   display: grid;
   gap: var(--space-2);
   justify-items: start;
 }
 
-.star-rating__group {
-  margin: 0;
-  padding: 0;
-  border: 0;
+/* The control. One slider, not five inputs, so the value is read off this box's own rectangle —
+   which is what makes the row continuous: no dead pixel between two stars, and 22px of slack for
+   each half of each star. */
+.star-rating__bar {
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  /* The page still scrolls vertically off the stars, but a horizontal drag is ours. Without it
+     a drag on touch scrolls the page instead of setting a rating. */
+  touch-action: pan-y;
 }
 
-.star-rating__group legend {
-  padding: 0;
-  margin-bottom: var(--space-2);
+/* The bar is the focusable element now that there are no radio inputs behind the glyphs, so it
+   carries the focus ring itself (DESIGN.md 10.2). */
+.star-rating__bar:focus-visible {
+  outline: 2px solid var(--clubi-focus);
+  outline-offset: 2px;
+}
+
+.star-rating__bar[aria-disabled="true"] {
+  cursor: default;
+  opacity: 0.6;
 }
 
 .star-rating__stars {
@@ -1105,7 +1119,6 @@ a {
 /* 44px is the touch target of DESIGN.md 10.4, which names the stars as one of the two places
    most likely to miss it. The glyph is 1.5rem; the rest of the square is target. */
 .star-rating__star {
-  position: relative;
   display: grid;
   place-items: center;
   width: 44px;
@@ -1113,39 +1126,50 @@ a {
   color: var(--clubi-line);
 }
 
-label.star-rating__star {
-  cursor: pointer;
-}
-
-.star-rating__star .brand-element {
+/* The stack. It is the glyph's own size rather than the target's, so the clip below cuts the
+   drawing down its middle instead of somewhere in the slack around it. */
+.star-rating__glyphs {
+  position: relative;
   width: 1.5rem;
+  line-height: 0;
 }
 
 /* Filled is orange — 3.06 on cream, above the 3:1 minimum for a non-text mark. Empty is the
    rule line. The caption spells the number out, so colour is never the only signal
    (DESIGN.md 10.3). */
-.star-rating__star.is-on {
+.star-rating__fill {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 0;
+  height: 100%;
+  overflow: hidden;
   color: var(--clubi-accent);
 }
 
-.on-invert .star-rating__star.is-on {
+/* The width is the whole trick, and it is why the copy inside keeps a fixed 1.5rem: at 100% it
+   would shrink with the box instead of being cut in half by it. */
+.star-rating__fill .brand-element {
+  width: 1.5rem;
+}
+
+.star-rating__star.is-half .star-rating__fill {
+  width: 50%;
+}
+
+.star-rating__star.is-on .star-rating__fill {
+  width: 100%;
+}
+
+.on-invert .star-rating__fill {
   color: var(--clubi-highlight);
 }
 
-/* Real radio inputs, hidden but focusable: that is what buys arrow-key navigation and the
-   checked state without reimplementing either. */
-.star-rating__input {
-  position: absolute;
-  width: 1px;
-  height: 1px;
-  margin: -1px;
-  clip-path: inset(50%);
-  overflow: hidden;
-}
-
-.star-rating__input:focus-visible + .brand-element {
-  outline: 2px solid var(--clubi-focus);
-  outline-offset: 2px;
+/* The preview — where the pointer is, not what the member chose. Fading it apart from the
+   committed fill is the visual half of that distinction; the caption's "prévia:" is the half
+   that does not depend on colour (DESIGN.md 10.3). */
+.star-rating__bar.is-preview .star-rating__fill {
+  opacity: 0.55;
 }
 
 .star-rating__caption {

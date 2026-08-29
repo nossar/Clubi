@@ -4,6 +4,10 @@ from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
 from django.utils import timezone
 
+MAX_RATING = 5
+# One unit of MonthlyReading.rating_halves is half a star (ADR-06 keeps the column an integer).
+HALVES_PER_STAR = 2
+
 
 class Book(models.Model):
     title = models.CharField(max_length=200)
@@ -78,10 +82,16 @@ class MonthlyReading(models.Model):
     )
     pick = models.ForeignKey(MonthlyPick, on_delete=models.CASCADE, related_name="readings")
     pages_read = models.PositiveIntegerField(default=0)
-    rating = models.PositiveSmallIntegerField(
+    # Stored in half-stars, so a member's 3.5 is a 7 in this column: it keeps the field an
+    # integer (no float rounding on a value that is compared and displayed) while allowing the
+    # half steps the stars draw. Base 10 is an implementation detail of this column and of
+    # nothing else — read and write it through the `rating` property below, which is the one
+    # place the doubling happens and the reason the API never sees a 7.
+    rating_halves = models.PositiveSmallIntegerField(
         null=True,
         blank=True,
-        validators=[MinValueValidator(0), MaxValueValidator(5)],
+        validators=[MinValueValidator(0), MaxValueValidator(HALVES_PER_STAR * MAX_RATING)],
+        help_text="Half-stars: 7 means 3.5 stars. Use MonthlyReading.rating to read or write it.",
     )
     review = models.TextField(blank=True)
     finished_at = models.DateTimeField(null=True, blank=True)
@@ -90,11 +100,47 @@ class MonthlyReading(models.Model):
     class Meta:
         ordering = ["-pick__month"]
         constraints = [
-            models.UniqueConstraint(fields=["user", "pick"], name="one_reading_per_pick")
+            models.UniqueConstraint(fields=["user", "pick"], name="one_reading_per_pick"),
+            # The validators above only run on full_clean, which the API never calls; this is
+            # what actually holds the column to the 0–5 star range. A NULL passes, as it must —
+            # a reading with no rating is the normal case.
+            models.CheckConstraint(
+                condition=models.Q(
+                    rating_halves__gte=0,
+                    rating_halves__lte=HALVES_PER_STAR * MAX_RATING,
+                ),
+                name="rating_between_0_and_10_halves",
+            ),
         ]
 
     def __str__(self):
         return f"{self.user} — {self.pick}"
+
+    @property
+    def rating(self) -> float | None:
+        """The rating as the club talks about it: 0 to 5 in steps of 0.5, or None for no rating.
+
+        This property, not the schema, is where base 10 is undone. A computed field on
+        `MonthlyReadingOut` would have converted for the API and left every other reader —
+        the admin, a shell session, a future template, an aggregate — holding a 7 and having
+        to remember to halve it. Here the ORM object itself speaks the domain's units, and
+        both the schema and the admin get the right number by plain attribute access.
+        """
+        if self.rating_halves is None:
+            return None
+        return self.rating_halves / HALVES_PER_STAR
+
+    @rating.setter
+    def rating(self, value: float | None) -> None:
+        if value is None:
+            self.rating_halves = None
+            return
+        halves = value * HALVES_PER_STAR
+        if halves != int(halves):
+            raise ValidationError("A rating must be a multiple of 0.5.")
+        if not 0 <= halves <= HALVES_PER_STAR * MAX_RATING:
+            raise ValidationError(f"A rating must be between 0 and {MAX_RATING}.")
+        self.rating_halves = int(halves)
 
     @property
     def percent(self) -> int | None:

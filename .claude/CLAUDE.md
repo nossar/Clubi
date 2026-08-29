@@ -10,14 +10,14 @@ Clubi — the ESPM book club website. Django + Django Ninja backend serving a Re
 
 Written and working:
 - `users` — custom `User` (`full_name`, `birth_date`, `photo`, `quote`) plus a `favorites` M2M through `books.Favorite`; `users/schemas.py`, `users/api.py` (`me_router`, `users_router`).
-- `books` — `Book`, `MonthlyPick`, `MonthlyReading`, `Favorite`, with migrations and admin; `books/schemas.py`, `books/api.py` (`books_router`, `picks_router`).
+- `books` — `Book`, `MonthlyPick`, `MonthlyReading`, `Favorite`, with migrations and admin; `books/schemas.py`, `books/api.py` (`books_router`, `picks_router`). `MonthlyReading` stores its rating in half-stars (`rating_halves`, 0–10, with a `CheckConstraint`) and exposes it as 0–5 in steps of 0.5 through a `rating` property — see the ratings note below.
 - `posts` — `Post`, `PostImage`, with migrations and admin; `posts/schemas.py`, `posts/api.py` (`posts_router`).
 - `core` — no models; holds `core/images.py` (`compress_image`) and `core/static/css/auth.css`.
 - Auth end to end: `SignupView`, `django.contrib.auth.urls`, pt-BR templates under `backend/templates/registration/`, email settings for password reset, and 17 tests in `users/test_auth.py`.
 - `api` — no models, no routes of its own; only `api/api.py` (the `NinjaAPI` instance and the `add_router` calls) and `api/schemas.py` (the two shared projections). All 22 endpoints of the guide's section 6.2 map are mounted; docs at `/api/docs`.
 - API tests live with their app — `books/test_api.py`, `users/test_api.py`, `posts/test_api.py`, `api/test_api.py` — over shared fixtures in `backend/conftest.py`.
 
-- `frontend/` — Fases 4 to 7 are done: Vite with the proxy, `src/api/client.ts`, TanStack Query, `styles/tokens.css` and `base.css` on the brand tokens, `Header`, `Footer`, `Home` with the monthly highlight and a working `ProgressBar`, the posts screens (`Feed`, `NewPost`, `PostDetail`, `PostCard`), the profile screens (`Profile`, `EditProfile`, `StarRating`, `FavoritesShelf`), and the search (`Search` at `/search`, the `MemberSearch` field in the header, and `PickHistory` at `/book-of-the-month/history`). `backend/templates/index.html` is the real SPA shell, loading the pinned Vite bundle. See `frontend/CLAUDE.md` for the folder's contract and `frontend/DESIGN.md` for anything visual.
+- `frontend/` — Fases 4 to 7 are done: Vite with the proxy, `src/api/client.ts`, TanStack Query, `styles/tokens.css` and `base.css` on the brand tokens, `Header`, `Footer`, `Home` with the monthly highlight and a working `ProgressBar`, the posts screens (`Feed`, `NewPost`, `PostDetail`, `PostCard`), the profile screens (`Profile`, `EditProfile`, `StarRating` — a `role="slider"` with click, drag and arrow keys over the half-star scale — `FavoritesShelf`), and the search (`Search` at `/search`, the `MemberSearch` field in the header, and `PickHistory` at `/book-of-the-month/history`). `backend/templates/index.html` is the real SPA shell, loading the pinned Vite bundle. See `frontend/CLAUDE.md` for the folder's contract and `frontend/DESIGN.md` for anything visual.
 
 Not written yet:
 - The book form's external-catalogue autocomplete (Fase 9), over `search_external_books`. `BookOfTheMonth` is not missing — it was decided against in Fase 7, because the Home already is that screen and `/book-of-the-month` redirects to it; the reasoning is in `frontend/CLAUDE.md`.
@@ -71,7 +71,7 @@ Ruff: line-length 100, migrations excluded. `select` is unset, so linting uses t
 
 The root `Makefile` exists and is the preferred entry point: `install`, `dev-backend`, `dev-frontend`, `types`, `migrate`, `build`, `check`, `lint`. Use it instead of growing ad-hoc scripts.
 
-**The binary is not called `make` on this machine.** Make ships from MSYS2 here and is installed as `mingw32-make` (`C:\msys64\ucrt64\bin`) — there is no plain `make` on PATH, and Git Bash does not bundle one. So it is `mingw32-make check`, not `make check`. On Linux, macOS, WSL, or a Windows box that got make from Chocolatey or Scoop, the binary is `make`. If `make` returns "command not found", that is the reason — the Makefile is fine; reach for `mingw32-make` before concluding anything is broken.
+**The binary is possibly not called `make` on this machine.** Make ships from MSYS2 here and is installed as `mingw32-make` (`C:\msys64\ucrt64\bin`) — there is no plain `make` on PATH, and Git Bash does not bundle one. So it is `mingw32-make check`, not `make check`. On Linux, macOS, WSL, or a Windows box that got make from Chocolatey or Scoop, the binary is `make`. If `make` returns "command not found", that is the reason — the Makefile is fine; reach for `mingw32-make` before concluding anything is broken.
 
 While `frontend/package.json` is absent, the Makefile skips the frontend steps and echoes a `Skipped …` line for each. That gating is scaffolding: delete the `FRONTEND` variable and the `ifneq` blocks when the frontend is scaffolded, or a later `make check` can pass green having tested only the backend.
 
@@ -111,6 +111,8 @@ Three things about the Ninja wiring that are easy to get wrong:
 - `Book` — bibliographic record, no notion of "month". `author` is a `CharField`, not an FK (ADR-10).
 - `MonthlyPick` — the club's choice for one month (`month` unique, first day of month). There is **no** `is_book_of_the_month` boolean; that would destroy history. Current pick via `MonthlyPick.current()`.
 - `MonthlyReading` — one member's reading of one pick (progress, rating, review), unique per `(user, pick)`. It *is* the profile history; created lazily by `get_or_create` on the first progress click. Accessors: `user.monthly_readings`, `pick.readings`.
+
+**Ratings are half-stars in the column and whole stars in the contract.** `MonthlyReading.rating_halves` is an integer 0–10 where one unit is half a star, bounded by a `CheckConstraint` (a NULL passes — most readings have no rating). Nothing outside the model should touch that column: the `rating` property converts both ways, so the admin, a shell session and `MonthlyReadingOut` all see 0–5 in steps of 0.5, and `MonthlyReadingIn` rejects anything off that grid with `multiple_of=0.5` (a 3.3 or an 11 is a 422). Doing the conversion in a schema instead would have left every non-API reader holding a 7. `0` still means "sem nota" and is still the only way to clear a rating, since `update_reading` discards a `null`.
 - `Favorite` / `PostImage` — fixed 4-slot lists modeled as rows with `position` and a 1–4 `CheckConstraint`. The shelf is saved by atomic replacement (`PUT /api/me/favorites`), not add/remove/reorder endpoints.
 
 **Custom user from day one (ADR-09).** `AUTH_USER_MODEL = "users.User"` was set before the first migration. Never reference `auth.User`; use `settings.AUTH_USER_MODEL` in FKs.

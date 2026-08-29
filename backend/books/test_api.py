@@ -145,3 +145,68 @@ class TestMonthlyPicks:
 
     def test_reading_requires_login(self, client, pick):
         assert client.get("/api/monthly-picks/current/reading").status_code == 401
+
+
+class TestRating:
+    """The rating is 0-5 in steps of 0.5 on the wire, and twice that in the column.
+
+    Every assertion here is on the contract, not the storage — except where it deliberately
+    reaches into `rating_halves` to prove the doubling never escapes the model.
+    """
+
+    def rate(self, auth, rating):
+        return auth.put(
+            "/api/monthly-picks/current/reading",
+            {"rating": rating},
+            content_type="application/json",
+        )
+
+    def test_half_star_round_trips(self, auth, member, pick):
+        response = self.rate(auth, 3.5)
+
+        assert response.status_code == 200
+        assert response.json()["rating"] == 3.5
+        assert MonthlyReading.objects.get(user=member, pick=pick).rating_halves == 7
+
+    def test_whole_star_is_stored_doubled(self, auth, member, pick):
+        assert self.rate(auth, 5).json()["rating"] == 5
+        assert MonthlyReading.objects.get(user=member, pick=pick).rating_halves == 10
+
+    def test_zero_is_still_how_a_rating_is_cleared(self, auth, member, pick):
+        self.rate(auth, 4.5)
+
+        assert self.rate(auth, 0).json()["rating"] == 0
+        assert MonthlyReading.objects.get(user=member, pick=pick).rating_halves == 0
+
+    def test_null_still_leaves_the_rating_alone(self, auth, member, pick):
+        self.rate(auth, 2.5)
+
+        assert self.rate(auth, None).json()["rating"] == 2.5
+
+    @pytest.mark.parametrize("rating", [5.3, 2.3, 0.1, 1.25, 4.99])
+    def test_rejects_anything_off_the_half_step(self, auth, member, pick, rating):
+        assert self.rate(auth, rating).status_code == 422
+        assert not MonthlyReading.objects.filter(rating_halves__isnull=False).exists()
+
+    @pytest.mark.parametrize("rating", [-1, -0.5, 5.5, 6, 11])
+    def test_rejects_anything_off_the_scale(self, auth, member, pick, rating):
+        assert self.rate(auth, rating).status_code == 422
+        assert not MonthlyReading.objects.filter(rating_halves__isnull=False).exists()
+
+    def test_ten_is_out_of_range_on_the_wire(self, auth, pick):
+        """The base the column uses is not a value the API accepts — that is the whole point."""
+        assert self.rate(auth, 10).status_code == 422
+
+    def test_the_reading_reads_back_in_stars(self, auth, member, pick):
+        MonthlyReading.objects.create(user=member, pick=pick, rating_halves=9)
+
+        body = auth.get("/api/monthly-picks/current/reading").json()
+
+        assert body["rating"] == 4.5
+
+    def test_the_profile_history_reads_back_in_stars(self, client, member, pick):
+        MonthlyReading.objects.create(user=member, pick=pick, pages_read=300, rating_halves=1)
+
+        body = client.get("/api/users/ana").json()
+
+        assert body["readings"][0]["rating"] == 0.5

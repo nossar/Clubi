@@ -16,7 +16,7 @@ help:
 	@echo make types - regenerate frontend/src/api/generated.ts from the API schema
 	@echo make migrate - make and apply migrations
 	@echo make build - build the SPA and collect static files
-	@echo make check - Django check + pytest, then tsc + the SPA build
+	@echo make check - Django check + pytest, then tsc, the frontend tests and the SPA build
 	@echo make lint - ruff check and format over the backend
 
 install:
@@ -42,7 +42,7 @@ build:
 
 check:
 	cd backend && uv run manage.py check && uv run pytest
-	cd frontend && npx tsc --noEmit && npm run build
+	cd frontend && npx tsc --noEmit && npm test && npm run build
 
 lint:
 	cd backend && uv run ruff check . && uv run ruff format .

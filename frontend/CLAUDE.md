@@ -124,9 +124,10 @@ Each of these was a real conflict, and the resolution is deliberate rather than 
    `author` query param to `list_posts` first.**
 2. **A rating of `0` means "sem nota", and is the only way to clear one.** `update_reading` guards
    every field with `if payload.<field> is not None`, so `{"rating": null}` is discarded in silence
-   and the old number survives; `MonthlyReadingIn` allows `ge=0` and the model validator allows 0,
-   so 0 is a real value. DESIGN.md 9 requires the rating to be reversible, and this is the one
-   shape the API offers that delivers it. `StarRating` renders `0` and `null` identically.
+   and the old number survives; `MonthlyReadingIn` allows `ge=0` and the model allows 0, so 0 is a
+   real value. DESIGN.md 9 requires the rating to be reversible, and this is the one shape the API
+   offers that delivers it. `StarRating` renders `0` and `null` identically, and dragging off the
+   left end of the bar is the gesture that reaches it.
 3. **`PatchDict` drops `ProfileIn`'s `max_length`.** A 200-character `full_name` (column: 120) and
    a 200-character `quote` (column: 180) both answer 200 OK and are written — SQLite does not
    enforce varchar length, but the Neon Postgres of ADR-13 would raise `DataError` → 500. So the
@@ -179,6 +180,7 @@ Run them from `frontend/`, or prefer the root `Makefile` targets that wrap them.
 ```bash
 npm install                # npm ci in CI/deploy
 npm run dev                # Vite dev server; needs manage.py runserver on :8000
+npm test                   # vitest, once — the pure logic beside a component (starRating.ts)
 npm run build              # emits frontend/dist, which Django picks up as a staticfiles dir
 npx tsc --noEmit           # the contract guard (ADR-12) — run after touching API types
 ```
@@ -203,6 +205,11 @@ types:
 ## Stack
 
 React, TypeScript, Vite, React Router, TanStack Query, and plain CSS. That is the whole list.
+Vitest is the one dev-only addition — it came in with the half-star rating, whose position-to-value
+arithmetic is the first thing here worth testing without a browser. It reads `vite.config.ts`, so
+it has no config of its own, and it does not render components: there is no jsdom and no Testing
+Library, and adding either is a decision to raise. Pure logic goes in a `.ts` beside the component
+and gets a `.test.ts`; behaviour that needs a real browser is driven through the DevTools MCP below.
 
 Deliberately absent: no CORS config, no JWT or token storage, no auth screens in React, no SSR or
 meta-framework, no state library beyond the Query cache, no UI kit or CSS framework (7.7 — a kit is
@@ -281,7 +288,9 @@ frontend/
     ├── routes/    Home, Feed, NewPost, PostDetail, Profile, EditProfile,
     │              PickHistory, Search
     ├── components/ Header, Footer, PostCard, MonthlyPickHighlight,
-    │              ProgressBar, StarRating, FavoritesShelf, BookCover,
+    │              ProgressBar, StarRating (+ starRating.ts, its pure
+    │              position-to-value logic, tested in starRating.test.ts),
+    │              FavoritesShelf, BookCover,
     │              BrandElement, ReadersList, RecentPosts, BookPicker,
     │              MemberSearch, MemberAvatar
     └── styles/    tokens.css, base.css
@@ -363,6 +372,11 @@ to `/accounts/login/` — retrying either only fires requests at a page that is 
   livro do mês" state rather than breaking.
 - **Progress is one `PUT`** to `/monthly-picks/current/reading` with any of `pages_read`, `rating`,
   `review`. `percent` is `null` when the book has no page count; over the total is a 400.
+- **`rating` is 0 to 5 in steps of 0.5**, and `multiple_of=0.5` on the schema means a 3.3 or a 5.3
+  is a 422, not a rounded write. The column behind it stores half-stars as an integer (a 3.5 is a
+  7 in `rating_halves`); that is undone by a property on the model, so the wire never carries it
+  and nothing on this side should double or halve anything. `starRating.ts` is where the 0.5 grid
+  lives on the client.
 - **The shelf is replaced whole**: `PUT /api/me/favorites` with positions 1–4. Reorder in local
   state, then PUT. `UserOut.favorites` comes back as a bare `BookOut[]` already in slot order — no
   `position` on the way out — so the order *is* the array index, and saving rebuilds `position` as
@@ -419,6 +433,15 @@ open a file:
 - **The tone is anti-metric and it is load-bearing** (DESIGN.md section 9). No ranking, no streaks,
   no "you're behind", no red for low progress. `ProgressBar` and `StarRating` are the two
   components most likely to get this wrong.
+
+**`StarRating` is a `role="slider"`, not a radio group.** Half stars would have needed ten inputs,
+and a radio ring cannot show a value the member has not committed to — the preview under the
+cursor is the whole point of dragging. What the radios used to give for free is now explicit and
+must stay: arrow keys (±0.5), PageUp/PageDown (±1), Home/End, `aria-valuenow`/`aria-valuetext`,
+and a focus ring on the bar itself. The value is read off the bar's own rectangle rather than from
+one element per half, so the row is continuous — **the left half of a star fills *that* star
+halfway, it does not complete the one before it**, which is what keeps the drawing under the
+finger. `touch-action: pan-y` is load-bearing on touch: without it a drag scrolls the page.
 
 ## Build and the SPA shell
 

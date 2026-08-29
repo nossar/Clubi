@@ -51,8 +51,11 @@ export function ProgressBar({ pick }: { pick: MonthlyPick }) {
    * A rating of 0 is how the API expresses "sem nota", and the only way to clear one: the route
    * guards every field with `if payload.<field> is not None`, so `{"rating": null}` is discarded
    * in silence and the old number stays. `MonthlyReadingIn` allows `ge=0`, and the model's
-   * validator allows 0 too, so 0 is a real value rather than a trick. DESIGN.md 9 requires the
+   * property allows 0 too, so 0 is a real value rather than a trick. DESIGN.md 9 requires the
    * rating to be reversible; this is the one shape that delivers it.
+   *
+   * The number is 0 to 5 in steps of 0.5 — `multiple_of=0.5` on the schema, so a 3.3 is a 422.
+   * `StarRating` only ever produces values on that grid.
    */
   const rate = useMutation({
     mutationFn: (rating: number) =>
@@ -164,7 +167,6 @@ export function ProgressBar({ pick }: { pick: MonthlyPick }) {
             <StarRating
               value={reading.rating}
               label="Se quiser, dê uma nota"
-              name="monthly-rating"
               onRate={(rating) => rate.mutate(rating)}
               onClear={() => rate.mutate(0)}
               disabled={rate.isPending}
