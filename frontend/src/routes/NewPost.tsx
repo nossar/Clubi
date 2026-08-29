@@ -159,7 +159,7 @@ export function NewPost() {
           <div className="field">
             <label className="field-label" htmlFor="post-images">
               <BrandElement name="clips" />
-              Anexar imagens (opcional, até 4, 8 MB cada)
+              Anexar imagens (opcional — até 4 imagens de 8 MB cada)
             </label>
             <input
               id="post-images"

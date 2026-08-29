@@ -159,14 +159,14 @@ export function Profile() {
 
       <section className="section">
         <div className="container">
-          <h2 className="section-title">{isMe ? "Sua estante" : "A estante"}</h2>
+          <h2 className="section-title">{isMe ? "Sua estante" : "Estante"}</h2>
           <FavoritesShelf books={profile.favorites} canEdit={isMe} />
         </div>
       </section>
 
       <section className="section">
         <div className="container">
-          <h2 className="section-title">{isMe ? "Suas leituras" : "As leituras"}</h2>
+          <h2 className="section-title">{isMe ? "Suas leituras" : "Leituras"}</h2>
 
           {profile.readings.length === 0 ? (
             <div className="state">
