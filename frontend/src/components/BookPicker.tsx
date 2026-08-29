@@ -1,8 +1,9 @@
 import { useQuery } from "@tanstack/react-query";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 
 import { api } from "../api/client";
 import type { Book } from "../api/types";
+import { useDebouncedValue } from "../useDebouncedValue";
 
 /**
  * The book selector behind `PostIn.book_id` — used by `NewPost` and by `PostDetail`'s inline
@@ -31,13 +32,10 @@ export function BookPicker({
   inputId?: string;
 }) {
   const [query, setQuery] = useState("");
-  const [debouncedQuery, setDebouncedQuery] = useState("");
-
   // A short debounce keeps every keystroke from firing its own request against the catalog.
-  useEffect(() => {
-    const timeout = setTimeout(() => setDebouncedQuery(query.trim()), 250);
-    return () => clearTimeout(timeout);
-  }, [query]);
+  // Fase 5 wrote this as a local effect; Fase 7 needed the same thing for the member search, so
+  // it now comes from the shared hook.
+  const debouncedQuery = useDebouncedValue(query.trim());
 
   const { data: results } = useQuery({
     queryKey: ["books", "search", debouncedQuery],
@@ -64,7 +62,6 @@ export function BookPicker({
   function pick(book: Book) {
     onSelect(book);
     setQuery("");
-    setDebouncedQuery("");
   }
 
   return (

@@ -3,7 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { api } from "../api/client";
 import type { Reader, User } from "../api/types";
 import { useCurrentUser } from "../context/CurrentUser";
-import { initials } from "../format";
+import { MemberAvatar } from "./MemberAvatar";
 
 type Companion = Pick<User, "username" | "full_name" | "photo">;
 
@@ -67,13 +67,7 @@ export function ReadersList() {
             const isMe = person.username === me.username;
             return (
               <li className={isMe ? "reader reader--me" : "reader"} key={person.username}>
-                {person.photo ? (
-                  <img className="avatar" src={person.photo} alt="" width={44} height={44} />
-                ) : (
-                  <span className="avatar" aria-hidden="true">
-                    {initials(person.full_name || person.username)}
-                  </span>
-                )}
+                <MemberAvatar person={person} />
                 <span>{isMe ? "você" : person.full_name}</span>
               </li>
             );

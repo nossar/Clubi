@@ -10,6 +10,7 @@ import balao from "../assets/elements/balao.svg?raw";
 import clips from "../assets/elements/clips.svg?raw";
 import estrela5 from "../assets/elements/estrela-5.svg?raw";
 import livroAberto from "../assets/elements/livro-aberto.svg?raw";
+import livroFechado from "../assets/elements/livro-fechado.svg?raw";
 import nuvem from "../assets/elements/nuvem.svg?raw";
 import x from "../assets/elements/x.svg?raw";
 
@@ -24,6 +25,8 @@ const ELEMENTS = {
   // with currentColor, "not rated" is the same drawing in --clubi-line — no filled/hollow pair.
   "estrela-5": estrela5,
   "livro-aberto": livroAberto,
+  // The closed book is what DESIGN.md 6.3 assigns to a history of choices: PickHistory.
+  "livro-fechado": livroFechado,
   nuvem,
   x,
 } as const;

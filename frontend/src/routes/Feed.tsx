@@ -35,7 +35,7 @@ export function Feed() {
     <section className="section">
       <div className="container">
         <div className="feed__heading">
-          <h1 className="feed__title">
+          <h1 className="page-title">
             <BrandElement name="balao" />
             Publicações
           </h1>

@@ -1,4 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
+import { Link } from "react-router-dom";
 
 import { ApiError, api } from "../api/client";
 import type { MonthlyPick } from "../api/types";
@@ -20,6 +21,9 @@ function NoMonthlyPick() {
           sinopse e o prazo de leitura.
         </p>
         <p className="muted">Enquanto isso, vale terminar aquele que ficou pela metade.</p>
+        <p>
+          <Link to="/book-of-the-month/history">Ver as escolhas anteriores</Link>
+        </p>
       </div>
     </section>
   );

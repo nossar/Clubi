@@ -6,6 +6,8 @@ import type { components } from "./generated";
 
 export type Book = components["schemas"]["BookOut"];
 export type User = components["schemas"]["UserOut"];
+/** The embedded projection: a member as a post author, a reader or a search hit. */
+export type UserBrief = components["schemas"]["UserBrief"];
 export type UserProfile = components["schemas"]["UserProfileOut"];
 export type ProfilePatch = components["schemas"]["ProfileInPatch"];
 export type ReadingHistory = components["schemas"]["ReadingHistoryOut"];

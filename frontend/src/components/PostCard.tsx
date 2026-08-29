@@ -1,7 +1,8 @@
 import { Link } from "react-router-dom";
 
 import type { Post } from "../api/types";
-import { formatDateTime, initials } from "../format";
+import { formatDateTime } from "../format";
+import { MemberAvatar } from "./MemberAvatar";
 
 /**
  * Renders on Home and Feed (guide 7.4: "write it once; three near-copies is how they diverge").
@@ -15,13 +16,7 @@ export function PostCard({ post }: { post: Post }) {
   return (
     <article className="post-card">
       <header className="post-card__header">
-        {post.author.photo ? (
-          <img className="avatar" src={post.author.photo} alt="" width={44} height={44} />
-        ) : (
-          <span className="avatar" aria-hidden="true">
-            {initials(post.author.full_name || post.author.username)}
-          </span>
-        )}
+        <MemberAvatar person={post.author} />
         <div>
           <p className="post-card__author">
             <Link className="post-card__author-link" to={`/u/${post.author.username}`}>

@@ -1,3 +1,5 @@
+import { Link } from "react-router-dom";
+
 import type { MonthlyPick } from "../api/types";
 import { formatDay, formatMonth } from "../format";
 import { BookCover } from "./BookCover";
@@ -44,6 +46,11 @@ export function MonthlyPickHighlight({ pick }: { pick: MonthlyPick }) {
             <p className="pick__dates">
               A leitura vai até {formatDay(pick.ends_on)}
               {book.pages ? ` · ${book.pages} páginas` : ""}
+            </p>
+
+            {/* The club's memory is one link away from its present (Fase 7). */}
+            <p className="pick__more">
+              <Link to="/book-of-the-month/history">Ver as escolhas anteriores</Link>
             </p>
           </div>
         </div>

@@ -6,8 +6,9 @@ import { Link, useNavigate, useParams } from "react-router-dom";
 import { ApiError, api } from "../api/client";
 import type { Book, Post, PostPatch } from "../api/types";
 import { BookPicker } from "../components/BookPicker";
+import { MemberAvatar } from "../components/MemberAvatar";
 import { useCurrentUser } from "../context/CurrentUser";
-import { formatDateTime, initials } from "../format";
+import { formatDateTime } from "../format";
 
 function NotFoundState() {
   return (
@@ -149,13 +150,7 @@ export function PostDetail() {
         </p>
 
         <header className="post-card__header">
-          {post.author.photo ? (
-            <img className="avatar" src={post.author.photo} alt="" width={44} height={44} />
-          ) : (
-            <span className="avatar" aria-hidden="true">
-              {initials(post.author.full_name || post.author.username)}
-            </span>
-          )}
+          <MemberAvatar person={post.author} />
           <div>
             <p className="post-card__author">{post.author.full_name}</p>
             <p className="muted post-card__date">{formatDateTime(post.created_at)}</p>
