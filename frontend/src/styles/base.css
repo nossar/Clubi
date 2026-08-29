@@ -979,6 +979,84 @@ a {
   font-size: var(--text-sm);
 }
 
+/* ---- the external catalogue half (Fase 8)
+   Same panel, same rows: the Open Library results reuse .book-picker__results and
+   .book-picker__result so the two lists read as one field, and only the row's own layout
+   changes to make room for a cover. */
+.book-picker__external {
+  display: grid;
+  justify-items: start;
+  gap: var(--space-2);
+  margin-top: var(--space-3);
+}
+
+.book-picker__external > .book-picker__results {
+  justify-self: stretch;
+  margin-top: 0;
+}
+
+.book-picker__external-note {
+  font-size: var(--text-sm);
+}
+
+/* The local row is two baselines pushed apart; this one is a cover beside two lines, so the
+   justify-content and the wrap both have to go. */
+.book-picker__result--external {
+  flex-wrap: nowrap;
+  align-items: center;
+  justify-content: flex-start;
+  gap: var(--space-3);
+}
+
+/* E-13: 3rem. The cover keeps the thick cream border DESIGN.md 8.7 gives every cover, which
+   spends 1rem of the width, so below this the picture stops being one. */
+.book-picker__external-cover {
+  flex: none;
+  width: 3rem;
+}
+
+.book-picker__external-cover .book-cover {
+  box-shadow: var(--shadow-paper); /* a row, not a card lifted off the page (8.3) */
+}
+
+/* At 3rem the typographic placeholder has nothing to say: --space-4 of padding alone is wider
+   than the 2rem the cream border leaves, so the type is clipped to nothing anyway. The row
+   already prints the title and the author right beside the frame, so a hit with no cover is an
+   empty frame — which is the "sem capa" signal, without a second, broken copy of the title. */
+.book-picker__external-cover .book-cover--blank {
+  padding: 0;
+}
+
+.book-picker__external-cover .book-cover__title,
+.book-picker__external-cover .book-cover__author {
+  display: none;
+}
+
+.book-picker__external-names {
+  display: grid;
+  gap: var(--space-1);
+  min-width: 0;
+  font-size: var(--text-sm);
+  /* The catalogue is not ours and its titles are not bounded: a 200-character title with no
+     space in it would otherwise push the panel past the form. Same reason .book-cover__title
+     carries this. */
+  overflow-wrap: anywhere;
+}
+
+/* Not the danger colour: the row is not an error, it is a book the acervo cannot hold. The
+   sentence is the signal and the disabled row is the second one (DESIGN.md 3.3). */
+.book-picker__external-problem {
+  color: var(--clubi-warning);
+}
+
+.book-picker__result--external[disabled] {
+  cursor: default;
+}
+
+.book-picker__result--external[disabled]:hover {
+  background: transparent;
+}
+
 .book-picker__selected {
   display: flex;
   flex-wrap: wrap;

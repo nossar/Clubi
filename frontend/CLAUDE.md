@@ -20,23 +20,25 @@ process bug even when it looks fine — the fix is to add it to DESIGN.md with i
 
 ## Current state
 
-**Fases 4, 5, 6 and 7 are done.** Vite with the proxy, `client.ts`, TanStack Query,
-`styles/tokens.css` and `base.css`, `Header`, `Footer`, `Home` with the monthly highlight and a
-working `ProgressBar`, `Feed`, `NewPost`, `PostDetail` and `PostCard` — which also renders on the
-Home under a "Publicações recentes" section (`RecentPosts`) — `Profile`, `EditProfile`,
-`StarRating` and `FavoritesShelf`, and now `Search`, the header's `MemberSearch` autocomplete and
-`PickHistory`. You open `/`, see the book of the month, update your progress and rate it, publish,
-read, edit and delete posts with images, open any member's profile to see their shelf and every
-reading they have logged, find a member by name or `@handle` from any screen, and read back every
-book the club has ever picked.
+**Fases 4, 5, 6, 7 and 8 are done — every frontend phase the guide has.** Vite with the proxy,
+`client.ts`, TanStack Query, `styles/tokens.css` and `base.css`, `Header`, `Footer`, `Home` with
+the monthly highlight and a working `ProgressBar`, `Feed`, `NewPost`, `PostDetail` and `PostCard`
+— which also renders on the Home under a "Publicações recentes" section (`RecentPosts`) —
+`Profile`, `EditProfile`, `StarRating` and `FavoritesShelf`, `Search`, the header's `MemberSearch`
+autocomplete and `PickHistory`, and now the external-catalogue half of `BookPicker`. You open `/`,
+see the book of the month, update your progress and rate it, publish, read, edit and delete posts
+with images, open any member's profile to see their shelf and every reading they have logged, find
+a member by name or `@handle` from any screen, read back every book the club has ever picked, and
+— when the acervo does not have the book you mean — find it in the Open Library and register it
+without leaving the form you were filling in.
 
 What is here:
 
 - [DESIGN.md](DESIGN.md) — the visual source of truth (ADR-17). E-01 … E-12 were reviewed by the
   founder on 2026-08-27; **E-13 (component dimensions, section 8.7) came out of Fase 4, grew three
-  rows in Fase 5, four more in Fase 6 (profile photo, rating star, shelf slot, history cover) and
-  two more in Fase 7 (the header's search field, the member card), and is the only one still
-  open.**
+  rows in Fase 5, four more in Fase 6 (profile photo, rating star, shelf slot, history cover), two
+  more in Fase 7 (the header's search field, the member card) and one more in Fase 8 (the cover in
+  an external result), and is the only one still open.**
 - `clubi/` — the brand assets themselves: brandbook PDF, logo variants, the two font families,
   graphic elements, and the published social pieces. Read-only input to DESIGN.md; never edit
   these, and never derive a value from them without recording it in DESIGN.md.
@@ -44,10 +46,81 @@ What is here:
   everything else with a pt-BR not-found screen, because Django's catch-all hands the shell every
   path it does not own.
 
-Next up is the guide's **Fase 8** (deploy) — Render, Neon, R2 — which is the one remaining phase
-with backend work in it (`DATABASE_URL` is still not in `settings.py`, ADR-13). **Fase 9** is
-frontend-only again: the external-book autocomplete in the book form, over `search_external_books`
-(`GET /api/books/external`). Follow the phase order rather than building screens out of sequence.
+Next up is the guide's **Fase 9** (deploy) — Render, Neon, R2 — the last phase, and the one that
+still has backend work in it (`DATABASE_URL` is not in `settings.py` yet, ADR-13). Nothing in
+`frontend/` is owed to it beyond `npm run build`.
+
+> **The phase numbers used to disagree, and Fase 8 settled it.** Guide section 9 numbers the
+> external-catalogue work **8** and the deploy **9**; this file and the root `.claude/CLAUDE.md`
+> had them the other way round. The guide is the spec (see the top of this file), so its numbering
+> won and both files were corrected. If you find an older note calling the deploy "Fase 8", that is
+> the losing side of this — the deploy is **Fase 9**.
+
+### The scope disagreement Fase 8 decided
+
+Guide section 9 calls Fase 8 "integração com API de livros" and says what is missing is "o
+autocomplete no cadastro de livro". **There is no cadastro de livro.** `POST /api/books`
+(`create_book`) had no caller anywhere in the SPA, guide 7.4's route table has no screen for it,
+and the picker that three screens already use searched the local acervo only. So the phase was not
+"add autocomplete to an existing form" — it was "decide where a book gets registered, and write
+that". Decided as follows, and written down rather than chosen in silence:
+
+1. **The registration lives in `BookPicker`, not on a screen of its own.** The picker searches
+   `GET /api/books?q=` as before; once the acervo comes up short the member can ask for
+   `GET /api/books/external`, and choosing one of those hits `POST /api/books` and hands the saved
+   `BookOut` to `onSelect`. That fixes `NewPost`, `PostDetail`'s inline edit and `FavoritesShelf`
+   in one component, adds no route outside 7.4, and is literally what the endpoint map's own line
+   for `POST /api/books` describes — "cadastra livro (manual ou vindo da API externa)".
+2. **A `/books/new` screen was rejected.** It costs a route the documented table does not have,
+   and it breaks the only flow that actually wants this: the member is halfway through writing a
+   post, or filling a shelf slot, and needs a book that is not there yet. Sending them to another
+   screen to come back is the interruption the picker exists to avoid.
+3. **There is still no manual book form, and that is on purpose.** Everything a member can
+   register comes from the external catalogue; a book the Open Library does not have is a job for
+   the Admin, which is a shipped product (ADR-14). Writing a free-text book form would have been a
+   second way to create the same row, with no validation the API does not already do and every
+   chance of two spellings of one book.
+
+Four things that decided how the external half behaves, all of them from the contract rather than
+from taste:
+
+- **It is opt-in, and it starts at three letters after a 600ms pause.** The local search keeps the
+  shared 250ms default. The external one is a proxied third-party call the backend gives eight
+  seconds (guide 6.7), so it is the only search in the SPA that can take seconds: at 250ms a normal
+  typing rhythm queues several of those against the Open Library before the member finishes a
+  title. `useDebouncedValue` is simply called a second time with a longer delay — one hook, two
+  callers, no copy.
+- **`ExternalBookOut` is not quite postable as-is, and `externalBook.ts` is where that is handled.**
+  Guide 6.7 says it carries exactly `BookIn`'s fields, and it does — but the two disagree on
+  *ranges*. `title` is capped at 200 and `author` at 140, and an over-long one is a 422 whose
+  `detail` is a Pydantic array, which `client.ts` flattens to "Os dados enviados não foram
+  aceitos." — a sentence that names neither the result nor the fix. So identity that does not fit
+  **blocks** the row with a Portuguese reason (`externalBookProblem`), and metadata that does not
+  fit is **dropped** (`bookPayload`): a negative `first_publish_year` from an ancient work fails
+  `ge=0`, a `pages` of 0 fails `ge=1`, and `cover_url`/`external_id` are bounded by the *columns*
+  (200 and 60) but not by `BookIn` at all — SQLite would swallow those and the Neon Postgres of
+  ADR-13 would answer 500. Both functions are pure and live in `externalBook.test.ts`.
+- **`create_book` is idempotent on `(title, author)`, so the same book twice is not an error — but
+  the second time you get the row that already existed.** `get_or_create`'s `defaults` only apply
+  on creation, so a book someone registered before, with no cover, comes back without one even if
+  the Open Library now has one. That is the API's behaviour and the picker does not paper over it:
+  what reaches `onSelect` is always the saved `BookOut`, never the catalogue hit.
+- **A 502 has to leave the field usable.** The Open Library failing is a 502 with a pt-BR `detail`,
+  never a 500, and `retry: false` means it lands on the first try. It renders as a notice carrying
+  that `detail` plus where to go next, and the local search above it keeps working — verified by
+  driving it with the backend pointed at an unreachable host.
+
+One thing Fase 8 changed in a file Fase 4 had already written:
+
+- **`BookCover` falls back to its own placeholder when the image fails to load, and is built out of
+  phrasing content.** A cover from `covers.openlibrary.org` is a third party that can 404, be
+  blocked or be slow (it redirects through `archive.org`, which takes seconds), and without
+  `onError` the frame held the browser's broken-image glyph — neither the brand's stroke nor a
+  word (DESIGN.md 6.3). It remembers the URL that failed rather than a bare boolean, so a new cover
+  on the same component still gets its chance. The `<div>`/`<p>` became `<span>`s for the same
+  feature: the cover sits inside the result `<button>`, and a `<div>` there is not valid content.
+  Its prop narrowed from `Book` to the three fields it reads, which is what lets it draw a
+  catalogue hit that is not a row in the database yet.
 
 ### The scope disagreement Fase 7 decided
 
@@ -206,7 +279,8 @@ types:
 
 React, TypeScript, Vite, React Router, TanStack Query, and plain CSS. That is the whole list.
 Vitest is the one dev-only addition — it came in with the half-star rating, whose position-to-value
-arithmetic is the first thing here worth testing without a browser. It reads `vite.config.ts`, so
+arithmetic is the first thing here worth testing without a browser, and Fase 8 gave it a second
+subject in `externalBook.ts`. It reads `vite.config.ts`, so
 it has no config of its own, and it does not render components: there is no jsdom and no Testing
 Library, and adding either is a decision to raise. Pure logic goes in a `.ts` beside the component
 and gets a `.test.ts`; behaviour that needs a real browser is driven through the DevTools MCP below.
@@ -280,7 +354,8 @@ frontend/
     ├── main.tsx                  # QueryClient + router mount
     ├── App.tsx                   # routes
     ├── format.ts                 # pt-BR date formatting (Intl), shared by components
-    ├── useDebouncedValue.ts      # one value, one request per pause — BookPicker and the search
+    ├── useDebouncedValue.ts      # one value, one request per pause — the searches and both
+    │                             # halves of BookPicker, which calls it twice at two delays
     ├── assets/    elements/ (10 svg, currentColor). Fonts and the logo live in
     │              backend/core/static/brand/ — one copy, both surfaces (DESIGN.md 2.1)
     ├── api/       client.ts, generated.ts, types.ts
@@ -291,7 +366,9 @@ frontend/
     │              ProgressBar, StarRating (+ starRating.ts, its pure
     │              position-to-value logic, tested in starRating.test.ts),
     │              FavoritesShelf, BookCover,
-    │              BrandElement, ReadersList, RecentPosts, BookPicker,
+    │              BrandElement, ReadersList, RecentPosts,
+    │              BookPicker (+ externalBook.ts, the pure hit-to-BookIn
+    │              mapping, tested in externalBook.test.ts),
     │              MemberSearch, MemberAvatar
     └── styles/    tokens.css, base.css
 ```
@@ -304,8 +381,9 @@ applies), `ReadersList` ("quem está lendo", on the Home), `RecentPosts` (the Ho
 `BookPicker` — the search-select behind `PostIn.book_id`, written for `NewPost`, reused by
 `PostDetail`'s inline edit and, since Fase 6, by `FavoritesShelf` (its input `id` is a prop with a
 default: two pickers on one screen would otherwise share an `id` and the second `<label htmlFor>`
-would address the first field) — and, from Fase 7, `MemberSearch` (the header's field, which also
-exports `searchTerm()` and the `useMemberSearch()` query that `Search` reuses) and `MemberAvatar`.
+would address the first field), and since Fase 8 **the only place in the SPA that creates a book**
+— and, from Fase 7, `MemberSearch` (the header's field, which also exports `searchTerm()` and the
+`useMemberSearch()` query that `Search` reuses) and `MemberAvatar`.
 
 | Route | Component | | Route | Component |
 |---|---|---|---|---|
@@ -342,6 +420,13 @@ Three disciplines Django used to enforce for free (guide 7.5):
 | Current user | `["me"]` | editing the profile, **and saving favorites** — `UserOut` embeds `favorites`, so the `/api/me` behind `CurrentUserProvider` goes stale too |
 | Member search (header, `/search`) | `["users", "search", term, limit]` | never — read-only, like the book search |
 | Every pick the club made | `["monthly-picks"]` | never — picks are elected in the Admin (ADR-14), not from the SPA |
+| External catalogue (`BookPicker`) | `["books", "external", term, limit]` | never — read-only, and see the note below about *not* invalidating it |
+
+**Invalidate `["books", "search"]` after `POST /api/books`, not `["books"]`.** The acervo gained a
+row, so every local search entry may be missing it — but the `["books"]` prefix also covers
+`["books", "external", …]`, and refetching that means a second round trip to the Open Library, up
+to eight seconds long, for a list the member has already chosen from and is about to leave. It is
+the one place in this table where the shorter prefix is the wrong answer.
 
 **`limit` is in the search key because it is in the request:** the header asks for five results
 and `/search` for fifty, and one key for both would hand the screen the header's five. The term in
@@ -385,6 +470,14 @@ to `/accounts/login/` — retrying either only fires requests at a page that is 
 - **`BookOut.id` is `number | null | undefined`** in the generated types, because `ModelSchema`
   derives it from Django's AutoField. Everything the API returns is saved, so narrow once at the
   boundary (`FavoritesShelf` does) rather than asserting at each use.
+- **`GET /api/books/external` is the only authenticated *read* in the SPA, and the only slow one.**
+  `q` is required and an empty one is a 400; `limit` defaults to 10 and is clamped to 1–20; any
+  failure of the Open Library is a **502** with a pt-BR `detail` ("A busca externa de livros está
+  indisponível."), never a 500, and the backend caps the call at 8 seconds. A loading state is not
+  optional here.
+- **`POST /api/books` is idempotent on `(title, author)`** via `get_or_create`, so registering the
+  same book twice does not trip the unique constraint — but the `defaults` apply on creation only.
+  A book that already existed comes back with the data it already had, not with the Open Library's.
 - **`GET /api/users` with an empty `q` returns the whole club**, active members only, ordered by
   `full_name` (`User.Meta.ordering`) — which is why `/search` with no term lists everyone instead
   of sitting empty, and why nothing in that list is ordered by activity. `limit` is clamped to

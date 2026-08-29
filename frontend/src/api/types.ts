@@ -18,3 +18,11 @@ export type Reader = components["schemas"]["ReaderOut"];
 export type Post = components["schemas"]["PostOut"];
 export type PostPage = components["schemas"]["Page"];
 export type PostPatch = components["schemas"]["PostInPatch"];
+/** A hit from the external catalogue — `GET /api/books/external`, the Open Library proxy. */
+export type ExternalBook = components["schemas"]["ExternalBookOut"];
+/**
+ * The body of `POST /api/books`. `ExternalBookOut` was designed to carry exactly the fields this
+ * accepts (guide 6.7), so a catalogue hit is posted back without translation — see
+ * `components/externalBook.ts` for the two places that is not quite true.
+ */
+export type BookPayload = components["schemas"]["BookIn"];
