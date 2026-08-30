@@ -166,7 +166,7 @@ export function Profile() {
 
       <section className="section">
         <div className="container">
-          <h2 className="section-title">{isMe ? "Suas leituras" : "Leituras"}</h2>
+          <h2 className="section-title">{"Leituras do clubi"}</h2>
 
           {profile.readings.length === 0 ? (
             <div className="state">
