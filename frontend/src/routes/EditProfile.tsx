@@ -4,7 +4,7 @@ import type { ChangeEvent, FormEvent } from "react";
 import { Link } from "react-router-dom";
 
 import { api } from "../api/client";
-import type { ProfilePatch, User } from "../api/types";
+import type { Me, ProfilePatch } from "../api/types";
 import { FavoritesShelf } from "../components/FavoritesShelf";
 import { useCurrentUser } from "../context/CurrentUser";
 import { initials } from "../format";
@@ -55,7 +55,7 @@ export function EditProfile() {
 
   const saveProfile = useMutation({
     mutationFn: (payload: ProfilePatch) =>
-      api<User>("/me", { method: "PATCH", body: JSON.stringify(payload) }),
+      api<Me>("/me", { method: "PATCH", body: JSON.stringify(payload) }),
     onSuccess: invalidateMe,
   });
 
@@ -63,7 +63,7 @@ export function EditProfile() {
     mutationFn: (file: File) => {
       const formData = new FormData();
       formData.append("file", file);
-      return api<User>("/me/photo", {
+      return api<Me>("/me/photo", {
         method: "PUT",
         headers: { "Content-Type": undefined },
         body: formData,

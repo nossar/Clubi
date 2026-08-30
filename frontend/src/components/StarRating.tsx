@@ -27,11 +27,13 @@ import {
  * anything off that grid is a 422. The column behind it stores half-stars as an integer, and that
  * is the backend's business — nothing here doubles or halves anything.
  *
- * **0 means "sem nota", and it is how a rating is cleared.** The API cannot express this any other
- * way: `update_reading` ignores `{"rating": null}` outright (`if payload.rating is not None`), so
- * a null round-trips as "leave it alone" and only `{"rating": 0}` actually writes. Rendering
- * treats `0` and `null` identically — both are "sem nota". Dragging off the left end of the bar
- * reaches 0, so the gesture can undo itself without the button.
+ * **0 is a rating — zero stars — and `null` is the absence of one.** They used to be the same
+ * thing here, because `{"rating": 0}` was the only erasure the API offered. It is not any more:
+ * `MonthlyReadingIn.clear_rating` erases, so 0 was free to become the opinion it looks like, and
+ * the club's "quem já terminou" list counts a zero in. What follows from that split:
+ * dragging off the left end of the bar reaches 0 and *keeps* a note rather than removing it,
+ * Home is the minimum of the scale and not the way out of it, and **"Tirar a nota" is the only
+ * way back to `null`** — so it shows for a 0 as much as for a 5.
  *
  * Interaction is one `role="slider"` driven by Pointer Events, which is one handler for mouse,
  * touch and pen. It replaced five radio inputs: half steps would have needed ten of them, and the
@@ -51,18 +53,22 @@ export function StarRating({
   label: string;
   /** Omit to render a read-only row (the profile history). */
   onRate?: (rating: number) => void;
-  /** Sends `{"rating": 0}`. Omit to leave the rating unclearable. */
+  /** Sends `{"clear_rating": true}` — the only way back to `null`. Omit to leave it unclearable. */
   onClear?: () => void;
   disabled?: boolean;
 }) {
   // Two rows on one screen would otherwise share the label's id and the second slider would be
   // announced with the first one's name — the same trap BookPicker's input id fell into.
   const labelId = useId();
-  const serverRating = value ?? 0;
+  const serverRating = value;
 
   // What the member just asked for, until the server's answer catches up. Without it, two quick
   // arrow presses would both read the same stale prop and the second would undo the first.
-  const [pending, setPending] = useState<number | null>(null);
+  //
+  // It is a box around the value rather than the value itself because `null` is now a rating
+  // state ("sem nota") and could no longer double as "nothing pending" — an erasure in flight
+  // and an untouched row would have been the same state.
+  const [pending, setPending] = useState<{ rating: number | null } | null>(null);
   const [lastServerRating, setLastServerRating] = useState(serverRating);
   if (serverRating !== lastServerRating) {
     setLastServerRating(serverRating);
@@ -76,7 +82,7 @@ export function StarRating({
   // The value the pointer-down already sent, so the pointer-up does not re-send an unchanged one.
   const sent = useRef<number | null>(null);
 
-  const rating = pending ?? serverRating;
+  const rating = pending ? pending.rating : serverRating;
   const shown = preview ?? rating;
 
   if (!onRate) {
@@ -91,15 +97,18 @@ export function StarRating({
   }
 
   function commit(next: number) {
-    setPending(next);
+    setPending({ rating: next });
     sent.current = next;
     onRate?.(next);
   }
 
-  /** The button, not the drag: it goes through `onClear` so the caller keeps owning the request. */
+  /**
+   * The only path back to "sem nota". It goes through `onClear` so the caller keeps owning the
+   * request — and the request is not `{"rating": 0}` any more, it is `{"clear_rating": true}`.
+   */
   function clear() {
-    setPending(0);
-    sent.current = 0;
+    setPending({ rating: null });
+    sent.current = null;
     onClear?.();
   }
 
@@ -173,7 +182,11 @@ export function StarRating({
         aria-valuemax={MAX_RATING}
         // A drag is the member moving the control, so the value follows the finger. A mouse
         // merely hovering is not, and announcing every star it crosses would be noise.
-        aria-valuenow={dragging ? shown : rating}
+        //
+        // A slider must carry a number, so "sem nota" reads as 0 here and is spelled out in
+        // aria-valuetext — the one place the two still collapse, and the reason valuetext is
+        // not optional on this widget.
+        aria-valuenow={(dragging ? shown : rating) ?? 0}
         aria-valuetext={ratingCaption(dragging ? shown : rating)}
         aria-disabled={disabled || undefined}
         onPointerDown={onPointerDown}
@@ -188,7 +201,7 @@ export function StarRating({
 
       <p className="star-rating__caption">
         {previewing(preview) ? `prévia: ${ratingCaption(preview)}` : ratingCaption(rating)}
-        {onClear && rating > 0 ? (
+        {onClear && rating !== null ? (
           <>
             {" · "}
             <button
@@ -219,11 +232,13 @@ function previewing(preview: number | null): preview is number {
  * under the finger. Each star is a 44px target (DESIGN.md 10.4) around a 1.5rem glyph, which
  * leaves 22px of slack for each half.
  */
-function Stars({ value }: { value: number }) {
+function Stars({ value }: { value: number | null }) {
   return (
     <span className="star-rating__stars" aria-hidden="true">
       {STARS.map((star) => {
-        const fill = starFill(value, star);
+        // No rating draws like a zero — five empty stars. The caption beside them is what says
+        // which of the two it is, because colour and shape here cannot (DESIGN.md 10.3).
+        const fill = starFill(value ?? 0, star);
         return (
           <span
             key={star}
@@ -249,21 +264,26 @@ function Stars({ value }: { value: number }) {
 }
 
 /**
- * The APG slider keys: arrows by half a star, PageUp/PageDown by a whole one, Home to "sem nota"
- * and End to 5. `null` means the key was not ours and the browser keeps it.
+ * The APG slider keys: arrows by half a star, PageUp/PageDown by a whole one, Home to zero stars
+ * and End to five. A returned `null` means the key was not ours and the browser keeps it.
+ *
+ * Home is the bottom of the scale, not the way off it: erasing a note is "Tirar a nota", the one
+ * control wired to `clear_rating`. From "sem nota" the arrows start counting at zero, so a right
+ * arrow gives half a star and a left arrow gives a deliberate zero.
  */
-function keyboardRating(key: string, rating: number): number | null {
+function keyboardRating(key: string, rating: number | null): number | null {
+  const from = rating ?? 0;
   switch (key) {
     case "ArrowRight":
     case "ArrowUp":
-      return stepRating(rating, RATING_STEP);
+      return stepRating(from, RATING_STEP);
     case "ArrowLeft":
     case "ArrowDown":
-      return stepRating(rating, -RATING_STEP);
+      return stepRating(from, -RATING_STEP);
     case "PageUp":
-      return stepRating(rating, 1);
+      return stepRating(from, 1);
     case "PageDown":
-      return stepRating(rating, -1);
+      return stepRating(from, -1);
     case "Home":
       return 0;
     case "End":

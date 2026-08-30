@@ -1,4 +1,5 @@
 import pytest
+from django.utils import timezone
 
 from books.models import Book, MonthlyReading
 
@@ -130,16 +131,16 @@ class TestMonthlyPicks:
         assert "600" in response.json()["detail"]
 
     def test_readers_list_is_public(self, client, member, pick):
-        MonthlyReading.objects.create(user=member, pick=pick, pages_read=60)
+        MonthlyReading.objects.create(
+            user=member, pick=pick, pages_read=600, finished_at=timezone.now(), rating_halves=8
+        )
 
         body = client.get("/api/monthly-picks/current/readers").json()
 
         assert body == [
             {
                 "user": {"username": "ana", "full_name": "Ana Ribeiro", "photo": None},
-                "pages_read": 60,
-                "percent": 10,
-                "finished_at": None,
+                "rating": 4.0,
             }
         ]
 
@@ -172,7 +173,8 @@ class TestRating:
         assert self.rate(auth, 5).json()["rating"] == 5
         assert MonthlyReading.objects.get(user=member, pick=pick).rating_halves == 10
 
-    def test_zero_is_still_how_a_rating_is_cleared(self, auth, member, pick):
+    def test_zero_is_a_rating_of_its_own_and_not_an_erasure(self, auth, member, pick):
+        """It used to be the only way to clear a note; TestClearingARating is that way now."""
         self.rate(auth, 4.5)
 
         assert self.rate(auth, 0).json()["rating"] == 0
@@ -210,3 +212,110 @@ class TestRating:
         body = client.get("/api/users/ana").json()
 
         assert body["readings"][0]["rating"] == 0.5
+
+
+class TestWhoFinished:
+    """`GET /api/monthly-picks/current/readers` — who closed the book *and* said what they thought.
+
+    The filter is two conditions and both matter: `finished_at` is "terminou", and a non-NULL
+    `rating_halves` is "avaliou". A rating of **0 is a rating** — the column is born NULL and a
+    zero only ever gets there because a member sent one.
+    """
+
+    def finished(self, user, pick, rating_halves):
+        return MonthlyReading.objects.create(
+            user=user,
+            pick=pick,
+            pages_read=600,
+            finished_at=timezone.now(),
+            rating_halves=rating_halves,
+        )
+
+    def readers(self, client):
+        return client.get("/api/monthly-picks/current/readers").json()
+
+    def test_a_reading_in_progress_stays_out(self, client, member, pick):
+        MonthlyReading.objects.create(user=member, pick=pick, pages_read=60, rating_halves=8)
+
+        assert self.readers(client) == []
+
+    def test_finishing_without_a_rating_stays_out(self, client, member, pick):
+        self.finished(member, pick, rating_halves=None)
+
+        assert self.readers(client) == []
+
+    def test_a_rating_of_zero_is_a_rating_and_gets_in(self, client, member, pick):
+        self.finished(member, pick, rating_halves=0)
+
+        assert self.readers(client) == [
+            {
+                "user": {"username": "ana", "full_name": "Ana Ribeiro", "photo": None},
+                "rating": 0.0,
+            }
+        ]
+
+    def test_a_full_rating_gets_in(self, client, member, pick):
+        self.finished(member, pick, rating_halves=10)
+
+        assert [reader["rating"] for reader in self.readers(client)] == [5.0]
+
+    def test_the_list_is_alphabetical_rather_than_a_race(self, client, member, other, pick):
+        # Bruno finished first and read fastest; the list still opens with Ana (DESIGN.md 9).
+        self.finished(other, pick, rating_halves=10)
+        self.finished(member, pick, rating_halves=1)
+
+        assert [reader["user"]["full_name"] for reader in self.readers(client)] == [
+            "Ana Ribeiro",
+            "Bruno Alves",
+        ]
+
+    def test_it_takes_one_query_for_the_whole_list(
+        self, client, member, other, pick, django_assert_num_queries
+    ):
+        self.finished(member, pick, rating_halves=6)
+        self.finished(other, pick, rating_halves=8)
+
+        # One for the pick, one for the readings joined to their users.
+        with django_assert_num_queries(2):
+            self.readers(client)
+
+
+class TestClearingARating:
+    """Erasing a note is its own request now that 0 means zero stars."""
+
+    def put(self, auth, payload):
+        return auth.put(
+            "/api/monthly-picks/current/reading", payload, content_type="application/json"
+        )
+
+    def test_clear_rating_takes_the_column_back_to_null(self, auth, member, pick):
+        self.put(auth, {"rating": 4})
+
+        assert self.put(auth, {"clear_rating": True}).json()["rating"] is None
+        assert MonthlyReading.objects.get(user=member, pick=pick).rating_halves is None
+
+    def test_zero_is_stored_as_zero_and_not_as_null(self, auth, member, pick):
+        assert self.put(auth, {"rating": 0}).json()["rating"] == 0
+        assert MonthlyReading.objects.get(user=member, pick=pick).rating_halves == 0
+
+    def test_a_request_that_only_moves_pages_leaves_the_rating_alone(self, auth, member, pick):
+        self.put(auth, {"rating": 3.5})
+
+        assert self.put(auth, {"pages_read": 10}).json()["rating"] == 3.5
+
+    def test_grading_and_erasing_in_one_request_is_refused(self, auth, member, pick):
+        self.put(auth, {"rating": 2})
+
+        response = self.put(auth, {"rating": 5, "clear_rating": True})
+
+        assert response.status_code == 400
+        assert MonthlyReading.objects.get(user=member, pick=pick).rating_halves == 4
+
+    def test_erasing_takes_a_member_off_the_finished_list(self, auth, member, pick):
+        self.put(auth, {"pages_read": 600})
+        self.put(auth, {"rating": 0})
+        assert len(auth.get("/api/monthly-picks/current/readers").json()) == 1
+
+        self.put(auth, {"clear_rating": True})
+
+        assert auth.get("/api/monthly-picks/current/readers").json() == []

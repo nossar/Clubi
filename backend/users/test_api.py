@@ -24,7 +24,19 @@ class TestMe:
             "quote": "",
             "birth_date": None,
             "favorites": [],
+            "is_staff": False,
         }
+
+    def test_is_staff_says_who_may_write_postagens(self, client, organiser):
+        client.force_login(organiser)
+
+        assert client.get("/api/me").json()["is_staff"] is True
+
+    def test_is_staff_is_not_public_on_a_profile(self, client, organiser):
+        """It belongs to MeOut, not to UserOut — UserProfileOut extends the latter (ADR-15)."""
+        body = client.get(f"/api/users/{organiser.username}").json()
+
+        assert "is_staff" not in body
 
     def test_patch_only_touches_the_fields_sent(self, auth, member):
         response = auth.patch(

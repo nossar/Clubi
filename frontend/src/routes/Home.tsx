@@ -6,8 +6,6 @@ import type { MonthlyPick } from "../api/types";
 import { BrandElement } from "../components/BrandElement";
 import { MonthlyPickHighlight } from "../components/MonthlyPickHighlight";
 import { ProgressBar } from "../components/ProgressBar";
-import { ReadersList } from "../components/ReadersList";
-import { RecentPosts } from "../components/RecentPosts";
 
 /** An empty screen is an invitation, not "nenhum registro encontrado" (DESIGN.md 9). */
 function NoMonthlyPick() {
@@ -63,12 +61,14 @@ export function Home() {
     );
   }
 
+  // Two blocks, and that is the whole screen: the book, and your reading of it. The postagens
+  // preview that used to sit under them moved out entirely — they have their own screen, reached
+  // from the balão in the header, and the club's own voice does not belong in the middle of the
+  // member's reading. "Quem já terminou" folded into the reading card (see FinishedReaders).
   return (
     <>
       <MonthlyPickHighlight pick={pick} />
       <ProgressBar pick={pick} />
-      <ReadersList />
-      <RecentPosts />
     </>
   );
 }

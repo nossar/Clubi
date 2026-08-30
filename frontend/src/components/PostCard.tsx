@@ -5,9 +5,9 @@ import { formatDateTime } from "../format";
 import { MemberAvatar } from "./MemberAvatar";
 
 /**
- * Renders on Home and Feed (guide 7.4: "write it once; three near-copies is how they diverge").
- * The guide expected Profile to be its third caller; it is not, because `GET /api/posts` has no
- * author filter — see frontend/CLAUDE.md's note under Profile.
+ * Renders on the Feed, and nowhere else since the Home stopped previewing postagens. Guide 7.4
+ * expected three callers: Profile is not one, because `GET /api/posts` has no author filter (see
+ * frontend/CLAUDE.md), and the Home is not one any more either.
  *
  * This is functional core, not frame (DESIGN.md 7) — no checker, no tilt, no stamp; the card
  * itself is a plain cream surface.
@@ -42,7 +42,7 @@ export function PostCard({ post }: { post: Post }) {
       {post.images.length > 0 ? (
         <div className="post-card__images">
           {post.images.map((src, index) => (
-            <img key={src} src={src} alt={`Imagem ${index + 1} da publicação de ${post.author.full_name}`} />
+            <img key={src} src={src} alt={`Imagem ${index + 1} da postagem de ${post.author.full_name}`} />
           ))}
         </div>
       ) : null}

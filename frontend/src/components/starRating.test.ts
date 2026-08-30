@@ -33,7 +33,7 @@ describe("ratingFromPosition", () => {
     expect(at(110)).toBe(3); // middle of star 3
   });
 
-  it("reads a drag off the left end as sem nota", () => {
+  it("reads a drag off the left end as zero stars", () => {
     expect(at(-1)).toBe(0);
     expect(at(-500)).toBe(0);
   });
@@ -104,8 +104,10 @@ describe("formatRating and ratingCaption", () => {
     expect(formatRating(3)).toBe("3");
   });
 
-  it("says sem nota rather than zero", () => {
-    expect(ratingCaption(0)).toBe("sem nota");
+  it("keeps zero stars apart from no rating at all", () => {
+    // The two used to print the same words, back when 0 was the only way to erase a note.
+    expect(ratingCaption(null)).toBe("sem nota");
+    expect(ratingCaption(0)).toBe("0 de 5");
     expect(ratingCaption(4.5)).toBe("4,5 de 5");
   });
 });

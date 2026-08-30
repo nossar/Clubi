@@ -2,6 +2,7 @@ import { Link, Navigate, Route, Routes } from "react-router-dom";
 
 import { Footer } from "./components/Footer";
 import { Header } from "./components/Header";
+import { UnreadNotice } from "./components/UnreadNotice";
 import { CurrentUserProvider } from "./context/CurrentUser";
 import { EditProfile } from "./routes/EditProfile";
 import { Feed } from "./routes/Feed";
@@ -33,6 +34,9 @@ export function App() {
   return (
     <CurrentUserProvider>
       <Header />
+      {/* Above the screen rather than inside one: whichever route the member lands on, arriving
+          with postagens waiting is worth one line. It dismisses itself once they are read. */}
+      <UnreadNotice />
       <main>
         <Routes>
           <Route path="/" element={<Home />} />
@@ -43,7 +47,7 @@ export function App() {
           <Route path="/profile/edit" element={<EditProfile />} />
           <Route path="/search" element={<Search />} />
           {/* Guide 7.4 also lists /book-of-the-month, but the Home already *is* that screen —
-              it renders MonthlyPickHighlight, ProgressBar and ReadersList over the same pick.
+              it renders MonthlyPickHighlight and ProgressBar over the same pick.
               A second screen would be the near-copy 7.4 warns about two lines below the route
               table, so the documented URL redirects instead of being duplicated (and a member
               trimming /book-of-the-month/history in the address bar lands on the book, not on

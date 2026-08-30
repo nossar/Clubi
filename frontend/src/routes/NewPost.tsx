@@ -1,12 +1,13 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useMemo, useState } from "react";
 import type { ChangeEvent, FormEvent } from "react";
-import { useNavigate } from "react-router-dom";
+import { Navigate, useNavigate } from "react-router-dom";
 
 import { api } from "../api/client";
 import type { Book, Post } from "../api/types";
 import { BookPicker } from "../components/BookPicker";
 import { BrandElement } from "../components/BrandElement";
+import { useCurrentUser } from "../context/CurrentUser";
 
 const MAX_IMAGES = 4;
 const MAX_IMAGE_BYTES = 8 * 1024 * 1024;
@@ -20,8 +21,13 @@ const MAX_IMAGE_BYTES = 8 * 1024 * 1024;
  *
  * The functional core stays clean (DESIGN.md 7) — no collage on the form. `clips` is the one
  * brand element here, standing for "attach an image" per DESIGN.md 6.3.
+ *
+ * **Only the organisation writes** (`MeOut.is_staff`), and this screen turns a member away rather
+ * than letting them fill in a form the API will refuse: `create_post` answers a plain member with
+ * 403 whatever this file does, so rendering the fields would only be a promise nobody can keep.
  */
 export function NewPost() {
+  const me = useCurrentUser();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
 
@@ -52,7 +58,7 @@ export function NewPost() {
     const problems: string[] = [];
     for (const file of selected) {
       if (images.length + accepted.length >= MAX_IMAGES) {
-        problems.push(`No máximo ${MAX_IMAGES} imagens por publicação.`);
+        problems.push(`No máximo ${MAX_IMAGES} imagens por postagem.`);
         break;
       }
       if (file.size > MAX_IMAGE_BYTES) {
@@ -106,17 +112,23 @@ export function NewPost() {
   function onSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!title.trim() || !body.trim()) {
-      setFormError("Preencha o título e o texto da publicação.");
+      setFormError("Preencha o título e o texto da postagem.");
       return;
     }
     setFormError(null);
     createPost.mutate();
   }
 
+  // After every hook, never before one: an early return above them would change the hook order
+  // between renders.
+  if (!me.is_staff) {
+    return <Navigate to="/posts" replace />;
+  }
+
   return (
     <section className="section">
       <div className="container">
-        <h1 className="section-title">Nova publicação</h1>
+        <h1 className="section-title">Nova postagem</h1>
 
         <form className="post-form" onSubmit={onSubmit}>
           <div className="field">
@@ -197,19 +209,19 @@ export function NewPost() {
           <div aria-live="polite">
             {formError ? (
               <p className="notice notice--error">
-                <span className="notice__label">Não deu para publicar.</span> {formError}
+                <span className="notice__label">Não deu para postar.</span> {formError}
               </p>
             ) : null}
             {createPost.isError ? (
               <p className="notice notice--error">
-                <span className="notice__label">Não deu para publicar.</span>{" "}
+                <span className="notice__label">Não deu para postar.</span>{" "}
                 {createPost.error.message} Tente de novo.
               </p>
             ) : null}
           </div>
 
           <button className="button" type="submit" disabled={createPost.isPending}>
-            {createPost.isPending ? "Publicando…" : "Publicar"}
+            {createPost.isPending ? "Postando…" : "Postar"}
           </button>
         </form>
       </div>

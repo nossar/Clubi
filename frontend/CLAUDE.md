@@ -22,15 +22,32 @@ process bug even when it looks fine — the fix is to add it to DESIGN.md with i
 
 **Fases 4, 5, 6, 7 and 8 are done — every frontend phase the guide has.** Vite with the proxy,
 `client.ts`, TanStack Query, `styles/tokens.css` and `base.css`, `Header`, `Footer`, `Home` with
-the monthly highlight and a working `ProgressBar`, `Feed`, `NewPost`, `PostDetail` and `PostCard`
-— which also renders on the Home under a "Publicações recentes" section (`RecentPosts`) —
+the monthly highlight and a working `ProgressBar`, `Feed`, `NewPost`, `PostDetail` and `PostCard`,
 `Profile`, `EditProfile`, `StarRating` and `FavoritesShelf`, `Search`, the header's `MemberSearch`
-autocomplete and `PickHistory`, and now the external-catalogue half of `BookPicker`. You open `/`,
-see the book of the month, update your progress and rate it, publish, read, edit and delete posts
-with images, open any member's profile to see their shelf and every reading they have logged, find
+autocomplete and `PickHistory`, and the external-catalogue half of `BookPicker`. You open `/`,
+see the book of the month, update your progress and rate it, ask who already finished it, read the
+postagens, open any member's profile to see their shelf and every reading they have logged, find
 a member by name or `@handle` from any screen, read back every book the club has ever picked, and
 — when the acervo does not have the book you mean — find it in the Open Library and register it
-without leaving the form you were filling in.
+without leaving the form you were filling in. **Writing a postagem is the organisation's** (see
+below).
+
+**One round of changes landed after Fase 8 and is not a phase**, so nothing in the guide names it.
+It reshaped the Home and the postagens, and four of its decisions outlive it:
+
+1. **"Quem está lendo" became "quem já terminou", and it is asked for rather than shown.**
+   `ReadersList` is gone; `FinishedReaders` is a disclosure *inside* the reading card, whose query
+   waits for the click (`enabled: open`). `GET /api/monthly-picks/current/readers` now returns only
+   members with `finished_at` **and** a rating, alphabetically, as `{user, rating}` — `pages_read`,
+   `percent` and `finished_at` left the contract with the screen that drew them. DESIGN.md 9 was
+   amended for this, and says plainly which part of it is under tension.
+2. **A rating of `0` is zero stars; `null` is "sem nota".** They used to be the same thing on both
+   sides. See the note under "Response shapes" — this is the change most likely to be undone by
+   accident.
+3. **The Home is two blocks: the book, and your reading of it.** `RecentPosts` is deleted, so
+   `["posts", 1]` has one caller again (`Feed`), and `/` no longer fetches the feed at all.
+4. **"Publicação" is now "postagem" everywhere a member can read it**, identifiers untouched — the
+   model is still `Post`, the route still `/posts`, the query key still `["posts", …]`.
 
 What is here:
 
@@ -139,8 +156,9 @@ already existed on screen, and written down rather than chosen in silence:
    file and no new machinery.
 3. **`BookOfTheMonth` was *not* written, and `/book-of-the-month` redirects to `/`.** The Home
    already **is** that screen: guide 7.4 defines it as "destaque do mês + posts recentes", and it
-   renders `MonthlyPickHighlight`, `ProgressBar` and `ReadersList` over the same pick, blurb and
-   synopsis included. A second screen would have been the near-copy 7.4 warns about two lines
+   renders `MonthlyPickHighlight` and `ProgressBar` over the same pick, blurb and synopsis
+   included. (7.4's "posts recentes" half is gone — see the round of changes at the top of this
+   file — which strengthens the case rather than weakening it: `/` is now *only* the book.) A second screen would have been the near-copy 7.4 warns about two lines
    below its own route table — and it would have been a URL with nothing of its own to say. The
    redirect keeps the documented address alive and gives `/book-of-the-month/history` a parent
    that resolves instead of 404-ing. **Write the real screen the day the Home turns into a mixed
@@ -170,13 +188,13 @@ driving it rather than by reading it:
 
 Four things Fase 7 changed in files Fases 4–6 had already written:
 
-- **The avatar ternary is now `MemberAvatar`.** `PostCard`, `PostDetail` and `ReadersList` each
-  had their own copy of "photo, or initials in a `.avatar`" before the search needed it twice
+- **The avatar ternary is now `MemberAvatar`.** `PostCard`, `PostDetail` and the old `ReadersList`
+  each had their own copy of "photo, or initials in a `.avatar`" before the search needed it twice
   more. Same reasoning that moved `initials()` into `format.ts` in Fase 5.
 - **`BookPicker`'s debounce is now `useDebouncedValue`** (`src/useDebouncedValue.ts`), shared with
   `MemberSearch` and `Search`. Three copies of the same `useEffect` was the alternative.
 - **`.feed__title` is now `.page-title`.** `Feed`, `Search` and `PickHistory` head their screens
-  the same way; one class, so the three cannot drift. `.feed__heading` (the row with "Publicar")
+  the same way; one class, so the three cannot drift. `.feed__heading` (the row with "Postar")
   is still feed-specific.
 - **The header wraps and is a stacking context.** `.site-header__inner` gained `flex-wrap`, and at
   phone width the search field takes its own row under the logotype (DESIGN.md 8.5: the member
@@ -195,12 +213,14 @@ Each of these was a real conflict, and the resolution is deliberate rather than 
    a paginated feed on the client, which shows "their posts that happened to land on page 1". Both
    documents were corrected instead of shipping that. **Adding the section means adding an
    `author` query param to `list_posts` first.**
-2. **A rating of `0` means "sem nota", and is the only way to clear one.** `update_reading` guards
-   every field with `if payload.<field> is not None`, so `{"rating": null}` is discarded in silence
-   and the old number survives; `MonthlyReadingIn` allows `ge=0` and the model allows 0, so 0 is a
-   real value. DESIGN.md 9 requires the rating to be reversible, and this is the one shape the API
-   offers that delivers it. `StarRating` renders `0` and `null` identically, and dragging off the
-   left end of the bar is the gesture that reaches it.
+2. ~~**A rating of `0` means "sem nota", and is the only way to clear one.**~~ **Superseded.** It
+   was true, and it was a workaround for an API that had no way to say "erase": `update_reading`
+   guards every field with `if payload.<field> is not None`, so `{"rating": null}` is discarded in
+   silence. It stopped being tenable when "quem já terminou" started filtering on
+   `rating_halves IS NOT NULL` — a member who had erased their note would have appeared on the
+   list captioned "sem nota". So the backend grew `MonthlyReadingIn.clear_rating`, and `0` became
+   the zero-star rating it always looked like. The reversibility DESIGN.md 9 asks for now comes
+   from the erase field, not from the 0.
 3. **`PatchDict` drops `ProfileIn`'s `max_length`.** A 200-character `full_name` (column: 120) and
    a 200-character `quote` (column: 180) both answer 200 OK and are written — SQLite does not
    enforce varchar length, but the Neon Postgres of ADR-13 would raise `DataError` → 500. So the
@@ -225,8 +245,9 @@ those files are frozen:
   into an actual `Headers.delete()` — the only way a `FormData` upload gets the browser to write
   its own multipart boundary instead of shipping the default `application/json`.
 - **The reader avatar's CSS class is `.avatar`, not `.reader__avatar`.** `PostCard` and
-  `PostDetail` reuse it for the post author. `ReadersList.tsx` was updated to match, and the
-  `initials()` helper it used to define locally moved to `format.ts` so both call sites share it.
+  `PostDetail` reuse it for the post author. `ReadersList.tsx` — deleted since — was updated to
+  match, and the `initials()` helper it used to define locally moved to `format.ts`; that is why
+  the class outlived the component it was named after.
 
 Three things that already bit once, so they are worth knowing before touching the setup:
 
@@ -356,6 +377,8 @@ frontend/
     ├── format.ts                 # pt-BR date formatting (Intl), shared by components
     ├── useDebouncedValue.ts      # one value, one request per pause — the searches and both
     │                             # halves of BookPicker, which calls it twice at two delays
+    ├── unreadPosts.ts            # the unread count and the "I have read them" mutation,
+    │                             # shared by the header badge and UnreadNotice
     ├── assets/    elements/ (10 svg, currentColor). Fonts and the logo live in
     │              backend/core/static/brand/ — one copy, both surfaces (DESIGN.md 2.1)
     ├── api/       client.ts, generated.ts, types.ts
@@ -366,7 +389,7 @@ frontend/
     │              ProgressBar, StarRating (+ starRating.ts, its pure
     │              position-to-value logic, tested in starRating.test.ts),
     │              FavoritesShelf, BookCover,
-    │              BrandElement, ReadersList, RecentPosts,
+    │              BrandElement, FinishedReaders, UnreadNotice,
     │              BookPicker (+ externalBook.ts, the pure hit-to-BookIn
     │              mapping, tested in externalBook.test.ts),
     │              MemberSearch, MemberAvatar
@@ -377,7 +400,8 @@ Everything above is written. **`BookOfTheMonth.tsx` is not in the tree on purpos
 Fase 7 decision above; `/book-of-the-month` redirects to the Home, which is that screen.
 
 Six components are not in guide 7.4: `BrandElement` (inlines a brand SVG so `currentColor`
-applies), `ReadersList` ("quem está lendo", on the Home), `RecentPosts` (the Home's feed preview),
+applies), `FinishedReaders` (the folded "quem já terminou" panel inside the reading card),
+`UnreadNotice` (the one-line greeting for a member arriving with postagens waiting),
 `BookPicker` — the search-select behind `PostIn.book_id`, written for `NewPost`, reused by
 `PostDetail`'s inline edit and, since Fase 6, by `FavoritesShelf` (its input `id` is a prop with a
 default: two pickers on one screen would otherwise share an `id` and the second `<label htmlFor>`
@@ -393,9 +417,9 @@ would address the first field), and since Fase 8 **the only place in the SPA tha
 | `/posts/:id` | `PostDetail` | | `/search` | `Search` |
 | `/u/:username` | `Profile` | | | |
 
-`PostCard` renders on Home (via `RecentPosts`) and Feed — **two screens, not the three guide 7.4
-predicted**: see the first of the three disagreements above for why Profile is not its third
-caller. Write it once; near-copies are how they diverge.
+`PostCard` renders on the Feed and nowhere else — **one screen, not the three guide 7.4
+predicted**. Profile is not a caller because `GET /api/posts` has no author filter (see the first
+of the three disagreements above); the Home stopped being one when `RecentPosts` was deleted.
 
 ## State rules
 
@@ -412,8 +436,9 @@ Three disciplines Django used to enforce for free (guide 7.5):
 |---|---|---|
 | Book of the month | `["monthly-pick", "current"]` | (practically never) |
 | My reading | `["reading", "current"]` | saving progress or a rating |
-| Who is reading | `["readers", "current"]` | saving progress |
+| Who already finished | `["readers", "current"]` | saving progress **and saving or erasing a rating** — a rating is now half of what puts a member on that list |
 | Feed | `["posts", page]` | creating, editing or deleting a post |
+| Unread postagens | `["posts", "unread"]` | `POST /posts/seen` (`setQueryData`, not an invalidation — the response *is* the new count) |
 | Single post | `["post", id]` | editing that post (`setQueryData` on the mutation response; deleted on a successful delete) |
 | Book search (NewPost, edit) | `["books", "search", query]` | never — read-only, and `staleTime` alone keeps retyping the same term cheap |
 | Profile | `["user", username]` | editing the profile, saving favorites, saving a rating (the history prints it) |
@@ -432,10 +457,16 @@ the one place in this table where the shorter prefix is the wrong answer.
 and `/search` for fifty, and one key for both would hand the screen the header's five. The term in
 the key is the debounced, `@`-stripped one, so `@ana` and `ana` share a cache entry.
 
-`RecentPosts` (the Home) and `Feed`'s first page both read `["posts", 1]` — one cache entry, not
-two. Invalidation after a write uses the `["posts"]` prefix, which covers every page of the feed
-at once; do not invalidate a single `["posts", page]` tuple, since the write may have changed
-which page an item belongs on.
+**`["posts", 1]` has exactly one caller now.** It used to be shared with `RecentPosts` on the Home,
+which is deleted — so the Home fetches no postagens at all any more, and nothing on `/` depends on
+the feed. Invalidation after a write still uses the `["posts"]` prefix, which covers every page of
+the feed at once (and `["posts", "unread"]` with it, harmlessly); do not invalidate a single
+`["posts", page]` tuple, since the write may have changed which page an item belongs on.
+
+**`["readers", "current"]` is fetched lazily.** `FinishedReaders` passes `enabled: open`, so
+nothing is requested until the member opens the panel. The invalidations above still fire whether
+it is open or not — TanStack marks a disabled query stale without fetching it, which is the
+behaviour that makes this safe: open the panel later and it refetches once.
 
 `main.tsx` defaults: `staleTime: 30_000`, `refetchOnWindowFocus: false`, and `retry: false`. The
 last one is not in guide 7.5 and is deliberate: this API's non-200s are states, not blips. A 404 on
@@ -462,6 +493,25 @@ to `/accounts/login/` — retrying either only fires requests at a page that is 
   7 in `rating_halves`); that is undone by a property on the model, so the wire never carries it
   and nothing on this side should double or halve anything. `starRating.ts` is where the 0.5 grid
   lives on the client.
+- **`0` is a rating and `null` is the absence of one, and erasing is `{"clear_rating": true}`.**
+  Until "quem já terminou" needed to tell the two apart, `{"rating": 0}` was the only erasure the
+  API offered and the SPA printed both as "sem nota". Now: `ratingCaption(0)` is "0 de 5" and only
+  `ratingCaption(null)` is "sem nota"; dragging off the left end of the bar and pressing Home both
+  give a deliberate zero; **"Tirar a nota" is the only path back to `null`**, so it shows for a 0
+  as much as for a 5. A `{"rating": null}` still means "leave it alone" — that is what makes the
+  `PUT` partial, and it is why erasing needed a field of its own rather than a null.
+- **`GET /api/me` carries `is_staff`; no other response does.** It is `MeOut`, a subclass of
+  `UserOut` that exists so the flag stays off `UserProfileOut` (which extends `UserOut` too) and
+  out of `UserBrief`, where it would have become project-wide vocabulary (ADR-15, rule 3). The TS
+  type is `Me`, not `User`.
+- **Only `is_staff` may write a postagem.** `create_post`, `update_post`, `delete_post` and
+  `attach_image` answer everyone else with 403 and a pt-BR `detail`. The SPA hides the shortcuts
+  and sends `/posts/new` back to `/posts`, but that is courtesy — the backend is the authority,
+  and it refuses regardless of what is drawn.
+- **Unread is one stamp, not a row per post.** `User.posts_seen_at` versus `Post.created_at`;
+  `GET /api/posts/unread` counts, `POST /api/posts/seen` stamps, and your own postagens never
+  count. A member who has never opened the feed has everything unread, which is what every member
+  gets the day it ships and what one visit to `/posts` settles.
 - **The shelf is replaced whole**: `PUT /api/me/favorites` with positions 1–4. Reorder in local
   state, then PUT. `UserOut.favorites` comes back as a bare `BookOut[]` already in slot order — no
   `position` on the way out — so the order *is* the array index, and saving rebuilds `position` as
@@ -520,12 +570,23 @@ open a file:
   clean and aligned.
 - **There is no icon library and there will not be one** (DESIGN.md 6.3, decided in E-07). Where an
   icon means something, use a brand element — `estrela-5` is `StarRating`, `clips` is attach,
-  `balao` is a post. Where it is a control, use a word: "Publicar", "Ver mais", "Excluir", and a
-  search field with a placeholder rather than a magnifier. Fases 4–6 need zero functional icons. Do
-  not install Lucide, Feather or Heroicons — that is a deviation to raise, not a default.
+  `balao` is the way to the postagens. Where it is a control, use a word: "Postar", "Ver mais",
+  "Excluir", and a search field with a placeholder rather than a magnifier. The header's postagens
+  link is the one place both apply at once, and it does both — balão *and* the word, never a mute
+  icon (DESIGN.md 6.3, registered as E-14). Do not install Lucide, Feather or Heroicons — that is a
+  deviation to raise, not a default.
 - **The tone is anti-metric and it is load-bearing** (DESIGN.md section 9). No ranking, no streaks,
   no "you're behind", no red for low progress. `ProgressBar` and `StarRating` are the two
-  components most likely to get this wrong.
+  components most likely to get this wrong — and `FinishedReaders` is the one that lives closest to
+  the line, since a list of members' ratings *is* comparable. What keeps it on the right side is
+  written into DESIGN.md 9: alphabetical order, no average, no count, and folded away until the
+  member asks. Do not "improve" it with a club average or a sort by rating.
+
+**`StarRating` carries a `number | null`, and the two are different answers.** Its internal
+"pending" state is a *box* (`{ rating } | null`) rather than a bare value, because `null` became a
+rating state and could no longer double as "nothing in flight". `aria-valuenow` still falls back to
+0 for an unrated row — a slider must carry a number — which is exactly why `aria-valuetext` is not
+optional on this widget.
 
 **`StarRating` is a `role="slider"`, not a radio group.** Half stars would have needed ten inputs,
 and a radio ring cannot show a value the member has not committed to — the preview under the

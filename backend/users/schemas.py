@@ -35,6 +35,19 @@ class UserOut(UserBrief):
         return [f.book for f in Favorite.objects.filter(user=obj).select_related("book")]
 
 
+class MeOut(UserOut):
+    """`GET /api/me` — the member as *they* see themselves.
+
+    `is_staff` is here rather than in `UserBrief` or `UserOut` on purpose. It is the flag the
+    SPA reads to decide whether to draw the "Postar" shortcuts, and it is nobody else's
+    business: `UserProfileOut` extends `UserOut` too, so a field added there would have shown
+    up on every public profile. Putting it in the shared projection would have been worse
+    still — a projection is project-wide vocabulary (ADR-15, rule 3).
+    """
+
+    is_staff: bool
+
+
 class UserProfileOut(UserOut):
     readings: list[ReadingHistoryOut]
 

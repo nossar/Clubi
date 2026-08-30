@@ -41,8 +41,38 @@ def other():
 
 
 @pytest.fixture
+def organiser():
+    """A member of the club's organisation — the only kind that writes postagens."""
+    return User.objects.create_user(
+        username="carla",
+        email="carla@espm.br",
+        password=PASSWORD,
+        full_name="Carla Souza",
+        is_staff=True,
+    )
+
+
+@pytest.fixture
+def co_organiser():
+    """A second organiser, so "only the author edits" can be told apart from "only staff writes"."""
+    return User.objects.create_user(
+        username="dora",
+        email="dora@espm.br",
+        password=PASSWORD,
+        full_name="Dora Lima",
+        is_staff=True,
+    )
+
+
+@pytest.fixture
 def auth(client, member):
     client.force_login(member)
+    return client
+
+
+@pytest.fixture
+def staff_auth(client, organiser):
+    client.force_login(organiser)
     return client
 
 

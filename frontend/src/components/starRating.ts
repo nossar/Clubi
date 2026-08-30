@@ -24,8 +24,10 @@ export function clampRating(value: number): number {
  * half full is always the one under the finger.
  *
  * Two edges the formula alone does not give:
- * - `x < 0` is 0, "sem nota". Dragging off the left end is the gesture that clears a rating, and
- *   without it the lowest reachable value would be 0.5 (`Math.floor` of a tiny x is still star 1).
+ * - `x < 0` is 0 — **zero stars, which is a rating**, not "sem nota". Dragging off the left end
+ *   is how a member gives a book nothing; without it the lowest reachable value would be 0.5
+ *   (`Math.floor` of a tiny x is still star 1). Erasing a note is a separate control, because
+ *   the API separates them (`MonthlyReadingIn.clear_rating`).
  * - past the right end clamps to 5, so overshooting a drag does not wrap or overflow.
  */
 export function ratingFromPosition(x: number, barWidth: number, stars = MAX_RATING): number {
@@ -57,7 +59,15 @@ export function formatRating(value: number): string {
   return value.toLocaleString("pt-BR", { maximumFractionDigits: 1 });
 }
 
-/** The caption and the `aria-valuetext`, which say the same thing on purpose. */
-export function ratingCaption(value: number): string {
-  return value > 0 ? `${formatRating(value)} de ${MAX_RATING}` : "sem nota";
+/**
+ * The caption and the `aria-valuetext`, which say the same thing on purpose.
+ *
+ * `null` and `0` are two different answers and this is where they part company. `null` is "sem
+ * nota" — nobody has said anything. `0` is an opinion: the member walked the bar all the way
+ * down and left the book zero stars, and the club's list of who finished counts them in. Reading
+ * a 0 as "sem nota" is what the SPA did until the two meanings were separated; if this ever goes
+ * back to a single caption, the erase button and the finished list break together.
+ */
+export function ratingCaption(value: number | null): string {
+  return value === null ? "sem nota" : `${formatRating(value)} de ${MAX_RATING}`;
 }

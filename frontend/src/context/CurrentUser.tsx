@@ -3,9 +3,9 @@ import { createContext, useContext } from "react";
 import type { ReactNode } from "react";
 
 import { ApiError, api } from "../api/client";
-import type { User } from "../api/types";
+import type { Me } from "../api/types";
 
-const CurrentUserContext = createContext<User | null>(null);
+const CurrentUserContext = createContext<Me | null>(null);
 
 function Splash({ children }: { children: ReactNode }) {
   return (
@@ -24,7 +24,7 @@ function Splash({ children }: { children: ReactNode }) {
 export function CurrentUserProvider({ children }: { children: ReactNode }) {
   const { data, isPending, error } = useQuery({
     queryKey: ["me"],
-    queryFn: () => api<User>("/me"),
+    queryFn: () => api<Me>("/me"),
   });
 
   // A 401 is not a failure to report: the redirect is already under way, and this is what the
@@ -48,7 +48,7 @@ export function CurrentUserProvider({ children }: { children: ReactNode }) {
   return <CurrentUserContext.Provider value={data}>{children}</CurrentUserContext.Provider>;
 }
 
-export function useCurrentUser(): User {
+export function useCurrentUser(): Me {
   const user = useContext(CurrentUserContext);
   if (!user) {
     throw new Error("useCurrentUser needs a CurrentUserProvider above it");

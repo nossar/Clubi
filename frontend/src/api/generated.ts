@@ -191,8 +191,24 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Current Readers */
-        get: operations["current_readers"];
+        /**
+         * Finished Readers
+         * @description Who has finished this month's book and left a rating.
+         *
+         *     Both halves of the filter are load-bearing. `finished_at` is what makes this "quem já
+         *     terminou" instead of "quem está lendo", and `rating_halves__isnull=False` is what gives
+         *     every row something to say. **A rating of 0 keeps a member on this list**: zero stars is an
+         *     opinion, and the only way a reading has no rating at all is for nobody to have written one
+         *     — the column is `null=True` with no default, so it is born NULL and a 0 only ever arrives
+         *     because someone sent one. Erasing a rating (`MonthlyReadingIn.clear_rating`) takes the row
+         *     back off the list, which is the reversibility DESIGN.md 9 asks for.
+         *
+         *     Ordered by name, not by when they finished or by how far they read: this is companionship,
+         *     not a race (DESIGN.md 9). `pick__book` left the select_related along with `percent` — the
+         *     only relation this response reads now is `user`, and that one is still the difference
+         *     between one query and N.
+         */
+        get: operations["finished_readers"];
         put?: never;
         post?: never;
         delete?: never;
@@ -231,6 +247,50 @@ export interface paths {
         put?: never;
         /** Create Post */
         post: operations["create_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/posts/unread": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Unread Posts
+         * @description The number behind the badge on the balão in the header.
+         */
+        get: operations["unread_posts"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/posts/seen": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Mark Posts Seen
+         * @description Opening the feed is what marks the postagens as read — there is no per-post state.
+         *
+         *     One stamp on the member, not a row per post: what the badge has to answer is "is there
+         *     anything new since you last looked", and a timestamp answers exactly that. Per-post read
+         *     receipts would be a table that grows with members × postagens to tell us nothing more.
+         */
+        post: operations["mark_posts_seen"];
         delete?: never;
         options?: never;
         head?: never;
@@ -294,8 +354,17 @@ export interface components {
             /** Synopsis */
             synopsis?: string | null;
         };
-        /** UserOut */
-        UserOut: {
+        /**
+         * MeOut
+         * @description `GET /api/me` — the member as *they* see themselves.
+         *
+         *     `is_staff` is here rather than in `UserBrief` or `UserOut` on purpose. It is the flag the
+         *     SPA reads to decide whether to draw the "Postar" shortcuts, and it is nobody else's
+         *     business: `UserProfileOut` extends `UserOut` too, so a field added there would have shown
+         *     up on every public profile. Putting it in the shared projection would have been worse
+         *     still — a projection is project-wide vocabulary (ADR-15, rule 3).
+         */
+        MeOut: {
             /** Username */
             username: string;
             /** Full Name */
@@ -308,6 +377,8 @@ export interface components {
             birth_date: string | null;
             /** Favorites */
             favorites: components["schemas"]["BookOut"][];
+            /** Is Staff */
+            is_staff: boolean;
         };
         /** ProfileInPatch */
         ProfileInPatch: {
@@ -446,17 +517,21 @@ export interface components {
             cover_url: string;
         };
         /**
-         * ReaderOut
-         * @description One member's position in the current pick, for the "who is reading" list.
+         * FinishedReaderOut
+         * @description One member who finished the current pick and rated it.
+         *
+         *     It used to be `ReaderOut`, and it used to carry `pages_read`, `percent` and `finished_at`
+         *     for a list of everyone with a reading row. The screen behind it now asks a narrower
+         *     question — who closed the book, and what did they think — so the fields it stopped
+         *     drawing left the contract with it rather than staying on as dead weight.
+         *
+         *     `rating` is not optional even though the column is: the route filters rows without one
+         *     out, so a null can never reach this schema.
          */
-        ReaderOut: {
+        FinishedReaderOut: {
             user: components["schemas"]["UserBrief"];
-            /** Pages Read */
-            pages_read: number;
-            /** Percent */
-            percent: number | null;
-            /** Finished At */
-            finished_at: string | null;
+            /** Rating */
+            rating: number;
         };
         /** MonthlyReadingOut */
         MonthlyReadingOut: {
@@ -482,6 +557,11 @@ export interface components {
             pages_read?: number | null;
             /** Rating */
             rating?: number | null;
+            /**
+             * Clear Rating
+             * @default false
+             */
+            clear_rating: boolean;
             /** Review */
             review?: string | null;
         };
@@ -523,6 +603,14 @@ export interface components {
             /** Book Id */
             book_id?: number | null;
         };
+        /**
+         * UnreadPostsOut
+         * @description How many postagens the member has not seen — see posts.api.unread_posts.
+         */
+        UnreadPostsOut: {
+            /** Count */
+            count: number;
+        };
         /** PostInPatch */
         PostInPatch: {
             /** Title */
@@ -556,7 +644,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["UserOut"];
+                    "application/json": components["schemas"]["MeOut"];
                 };
             };
         };
@@ -580,7 +668,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["UserOut"];
+                    "application/json": components["schemas"]["MeOut"];
                 };
             };
         };
@@ -610,7 +698,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["UserOut"];
+                    "application/json": components["schemas"]["MeOut"];
                 };
             };
         };
@@ -836,7 +924,7 @@ export interface operations {
             };
         };
     };
-    current_readers: {
+    finished_readers: {
         parameters: {
             query?: never;
             header?: never;
@@ -851,7 +939,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["ReaderOut"][];
+                    "application/json": components["schemas"]["FinishedReaderOut"][];
                 };
             };
         };
@@ -943,6 +1031,46 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["PostOut"];
+                };
+            };
+        };
+    };
+    unread_posts: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UnreadPostsOut"];
+                };
+            };
+        };
+    };
+    mark_posts_seen: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UnreadPostsOut"];
                 };
             };
         };

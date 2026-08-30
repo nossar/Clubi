@@ -5,10 +5,13 @@ import type { FormEvent } from "react";
 import { api } from "../api/client";
 import type { MonthlyPick, MonthlyReading } from "../api/types";
 import { useCurrentUser } from "../context/CurrentUser";
+import { FinishedReaders } from "./FinishedReaders";
 import { StarRating } from "./StarRating";
 
 /**
- * Where you are in this month's book — the pages, and the rating if you feel like giving one.
+ * Where you are in this month's book — the pages, the rating if you feel like giving one, and a
+ * folded-away way to see who already finished it (`FinishedReaders`, which asks for its own data
+ * only when opened).
  *
  * The tone here is load-bearing (DESIGN.md 9): the bar informs, it never nags. No countdown, no
  * "you're behind", no red for a low number, and the fill keeps the same colour at 8% and at 96%.
@@ -42,32 +45,38 @@ export function ProgressBar({ pick }: { pick: MonthlyPick }) {
     onSuccess: () => {
       setDraft(null);
       queryClient.invalidateQueries({ queryKey: ["reading", "current"] });
-      // Saving progress is also what puts the member on the "quem está lendo" list.
+      // Reaching the last page is what sets `finished_at`, which is half of what puts a member
+      // on the "quem já terminou" list — so that list goes stale here too.
       queryClient.invalidateQueries({ queryKey: ["readers", "current"] });
     },
   });
 
   /**
-   * A rating of 0 is how the API expresses "sem nota", and the only way to clear one: the route
-   * guards every field with `if payload.<field> is not None`, so `{"rating": null}` is discarded
-   * in silence and the old number stays. `MonthlyReadingIn` allows `ge=0`, and the model's
-   * property allows 0 too, so 0 is a real value rather than a trick. DESIGN.md 9 requires the
-   * rating to be reversible; this is the one shape that delivers it.
+   * Grading and erasing are one mutation because they are one request to one row — and two
+   * shapes of body, which is the API's own split. `{"rating": n}` writes a note, where 0 means
+   * zero stars like any other number; `{"clear_rating": true}` takes the column back to NULL.
+   *
+   * A `{"rating": null}` would do neither: `update_reading` guards every field with
+   * `if payload.<field> is not None`, so a null reads as "leave it alone" — which is what makes
+   * a partial PUT possible and why erasing needed a field of its own. DESIGN.md 9 asks for the
+   * rating to be reversible, and this is now that path.
    *
    * The number is 0 to 5 in steps of 0.5 — `multiple_of=0.5` on the schema, so a 3.3 is a 422.
    * `StarRating` only ever produces values on that grid.
    */
   const rate = useMutation({
-    mutationFn: (rating: number) =>
+    mutationFn: (payload: { rating: number } | { clear_rating: true }) =>
       api<MonthlyReading>("/monthly-picks/current/reading", {
         method: "PUT",
-        body: JSON.stringify({ rating }),
+        body: JSON.stringify(payload),
       }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["reading", "current"] });
-      // The profile's reading history prints this rating, so it goes stale as well. Not
-      // ["readers", "current"]: a rating does not change who is reading.
+      // The profile's reading history prints this rating, so it goes stale as well. And so does
+      // "quem já terminou": a note is now half of what puts a member on that list, and erasing
+      // one takes them off it.
       queryClient.invalidateQueries({ queryKey: ["user", me.username] });
+      queryClient.invalidateQueries({ queryKey: ["readers", "current"] });
     },
   });
 
@@ -167,8 +176,8 @@ export function ProgressBar({ pick }: { pick: MonthlyPick }) {
             <StarRating
               value={reading.rating}
               label="Se quiser, dê uma nota"
-              onRate={(rating) => rate.mutate(rating)}
-              onClear={() => rate.mutate(0)}
+              onRate={(rating) => rate.mutate({ rating })}
+              onClear={() => rate.mutate({ clear_rating: true })}
               disabled={rate.isPending}
             />
 
@@ -185,6 +194,10 @@ export function ProgressBar({ pick }: { pick: MonthlyPick }) {
               A nota é sua e dá para mudar ou tirar quando quiser. Ninguém compara notas por aqui.
             </p>
           </div>
+
+          {/* Folded away until asked for, and inside this card rather than under it: it is about
+              the book you are reading, not a section of its own (see FinishedReaders). */}
+          <FinishedReaders />
         </div>
       </div>
     </section>

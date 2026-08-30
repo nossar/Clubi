@@ -14,7 +14,7 @@ function NotFoundState() {
   return (
     <section className="section">
       <div className="container state">
-        <h1 className="state__title">esta publicação não existe</h1>
+        <h1 className="state__title">esta postagem não existe</h1>
         <p>Pode ter sido removida, ou o endereço está errado.</p>
         <p>
           <Link to="/posts">← Voltar para o feed</Link>
@@ -86,7 +86,7 @@ export function PostDetail() {
     return (
       <section className="section">
         <div className="container">
-          <p className="muted">Carregando publicação…</p>
+          <p className="muted">Carregando a postagem…</p>
         </div>
       </section>
     );
@@ -101,7 +101,7 @@ export function PostDetail() {
       <section className="section">
         <div className="container">
           <p className="notice notice--error">
-            <span className="notice__label">Não deu para carregar a publicação.</span>{" "}
+            <span className="notice__label">Não deu para carregar a postagem.</span>{" "}
             {error.message}
           </p>
         </div>
@@ -111,7 +111,10 @@ export function PostDetail() {
 
   if (!post) return null;
 
-  const isAuthor = post.author.username === me.username;
+  // Staff as well as author: only the organisation writes, and `update_post`/`delete_post`
+  // check both. A member who was demoted keeps their old postagens on screen and loses the
+  // buttons — which is what the API would tell them anyway, only without the failed request.
+  const isAuthor = post.author.username === me.username && me.is_staff;
 
   function startEditing() {
     if (!post) return;
@@ -175,7 +178,7 @@ export function PostDetail() {
                   <img
                     key={src}
                     src={src}
-                    alt={`Imagem ${index + 1} da publicação de ${post.author.full_name}`}
+                    alt={`Imagem ${index + 1} da postagem de ${post.author.full_name}`}
                   />
                 ))}
               </div>

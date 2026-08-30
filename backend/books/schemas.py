@@ -33,6 +33,12 @@ class MonthlyReadingIn(Schema):
     # number (books.models.MonthlyReading.rating_halves), and that is deliberately invisible
     # here — the contract is stars, not storage.
     rating: float | None = Field(default=None, ge=0, le=5, multiple_of=0.5)
+    # Zero is a rating — zero stars — and no longer doubles as "no rating", because the
+    # "quem já terminou" list is filtered on `rating_halves` being NOT NULL and a member who
+    # meant to erase their note would otherwise stay on it. A null `rating` cannot mean "erase"
+    # either: this is a partial PUT, so a request carrying only `pages_read` arrives with
+    # `rating=None` and must leave the note alone. Hence a field of its own.
+    clear_rating: bool = False
     review: str | None = None
 
 
@@ -60,13 +66,20 @@ class MonthlyPickOut(Schema):
 # GET /api/monthly-picks/current/readers, and the pick is a books model. It embeds
 # the UserBrief projection rather than importing users.schemas — that import is
 # what would make books and users circular (ADR-15).
-class ReaderOut(Schema):
-    """One member's position in the current pick, for the "who is reading" list."""
+class FinishedReaderOut(Schema):
+    """One member who finished the current pick and rated it.
+
+    It used to be `ReaderOut`, and it used to carry `pages_read`, `percent` and `finished_at`
+    for a list of everyone with a reading row. The screen behind it now asks a narrower
+    question — who closed the book, and what did they think — so the fields it stopped
+    drawing left the contract with it rather than staying on as dead weight.
+
+    `rating` is not optional even though the column is: the route filters rows without one
+    out, so a null can never reach this schema.
+    """
 
     user: UserBrief
-    pages_read: int
-    percent: int | None
-    finished_at: datetime | None
+    rating: float
 
 
 # Read by users.schemas.UserProfileOut — the one cross-app schema import (ADR-15).
