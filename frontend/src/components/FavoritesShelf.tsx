@@ -1,6 +1,6 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 
 import { api } from "../api/client";
 import type { Book, FavoritesPayload } from "../api/types";
@@ -60,6 +60,7 @@ export function FavoritesShelf({
 }) {
   const me = useCurrentUser();
   const queryClient = useQueryClient();
+  const navigate = useNavigate();
   const [draft, setDraft] = useState<ShelfBook[]>(books.filter(isShelfBook));
   const [problem, setProblem] = useState<string | null>(null);
 
@@ -242,6 +243,22 @@ export function FavoritesShelf({
           disabled={!dirty || save.isPending}
         >
           {save.isPending ? "Salvando…" : "Salvar estante"}
+        </button>
+        {/* The shelf sits at the foot of a screen with two other forms above it, so whoever came
+            to /profile/edit only to swap books had to save here and then scroll back up to the
+            "← Voltar" link. This is the same mutation with the trip built in: the per-call
+            onSuccess runs after the shared one, so the invalidations have already been queued by
+            the time we leave. No confirmation notice is lost — the profile it lands on *is* the
+            confirmation, showing the shelf that was just saved. */}
+        <button
+          className="button button--quiet"
+          type="button"
+          onClick={() =>
+            save.mutate(undefined, { onSuccess: () => navigate(`/u/${me.username}`) })
+          }
+          disabled={!dirty || save.isPending}
+        >
+          Salvar e voltar ao perfil
         </button>
         {dirty ? (
           <button
