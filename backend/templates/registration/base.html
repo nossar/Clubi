@@ -6,6 +6,8 @@
   <title>{% block title %}clubi{% endblock %}</title>
   <link rel="preload" href="{% static 'brand/fonts/Manrope-Regular.woff2' %}" as="font" type="font/woff2" crossorigin>
   <link rel="preload" href="{% static 'brand/fonts/ClashDisplay-Semibold.woff2' %}" as="font" type="font/woff2" crossorigin>
+  {# tokens.css first: auth.css is only rules, and every value it reads is defined there. #}
+  <link rel="stylesheet" href="{% static 'css/tokens.css' %}">
   <link rel="stylesheet" href="{% static 'css/auth.css' %}">
 </head>
 <body>

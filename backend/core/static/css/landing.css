@@ -1,0 +1,514 @@
+/* The landing page (ADR-18) — the rendered `/` an anonymous visitor sees.
+   Tokens come from tokens.css; nothing here defines a colour, a size or a radius that is not
+   read from there or justified in frontend/DESIGN.md (registered as E-18).
+
+   auth.css is not loaded on this page, so the two never collide: `.button` here is the inline
+   version of the same object, without the `width: 100%` a form submit wants. */
+
+/* --paper-grain and --tilt are not in tokens.css, and that is deliberate: the SPA keeps them in
+   base.css rather than in its own tokens.css, and the two token files are twins on purpose (see
+   the header of tokens.css). Same values, same place in the stack. */
+:root {
+  --paper-grain: url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22160%22%20height%3D%22160%22%3E%3Cfilter%20id%3D%22g%22%3E%3CfeTurbulence%20type%3D%22fractalNoise%22%20baseFrequency%3D%220.9%22%20numOctaves%3D%222%22%20stitchTiles%3D%22stitch%22%2F%3E%3C%2Ffilter%3E%3Crect%20width%3D%22160%22%20height%3D%22160%22%20filter%3D%22url(%23g)%22%2F%3E%3C%2Fsvg%3E");
+  --tilt: 1.5deg; /* E-09: decorative only, and only outside the functional core */
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  margin: 0;
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  background: var(--clubi-bg);
+  color: var(--clubi-ink);
+  font-family: var(--clubi-font-text);
+  font-size: var(--text-base);
+  line-height: var(--leading-body);
+  letter-spacing: var(--tracking-text);
+}
+
+/* The paper grain, same as the SPA's body::after. z-index 100 and pointer-events: none — it sits
+   over everything and catches nothing. */
+body::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  pointer-events: none;
+  opacity: 0.03;
+  background-image: var(--paper-grain);
+}
+
+main {
+  flex: 1;
+}
+
+h1,
+h2,
+h3 {
+  margin: 0;
+  font-family: var(--clubi-font-display);
+  font-weight: 600;
+  line-height: var(--leading-display);
+  letter-spacing: var(--tracking-display);
+}
+
+p {
+  margin: 0;
+}
+
+/* --------------------------------------------------------------------------- layout */
+
+.container {
+  width: 100%;
+  max-width: var(--container-max);
+  margin-inline: auto;
+  padding-inline: max(var(--space-4), var(--container-gutter));
+}
+
+.section {
+  padding-block: var(--space-7);
+}
+
+.section--invert {
+  background: var(--clubi-bg-invert);
+  color: var(--clubi-ink-on-invert);
+}
+
+.section-title {
+  font-size: var(--text-xl);
+  color: var(--clubi-ink-brand);
+}
+
+.muted {
+  color: var(--clubi-ink-muted);
+  font-size: var(--text-sm);
+}
+
+/* The skip link is off-screen until focused — never display:none, which would take it out of the
+   tab order and defeat the point. */
+.skip-link {
+  position: absolute;
+  left: -9999px;
+  top: var(--space-2);
+  z-index: 101; /* above the grain */
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius-md);
+  /* Yellow on wine ink, not the wine-on-cream a button uses: this link lands on top of the wine
+     header band, where a wine background would have made it invisible. Yellow reads against both
+     surfaces, and carrying wine text keeps it inside 3.2 rule 3. */
+  background: var(--clubi-highlight);
+  color: var(--clubi-highlight-ink);
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.skip-link:focus {
+  left: var(--space-4);
+}
+
+:focus-visible {
+  outline: 2px solid var(--clubi-focus);
+  outline-offset: 2px;
+}
+
+/* --------------------------------------------------------------------------- brand mark */
+
+/* Hand-drawn lettering, never type (DESIGN.md 4.6 and 5.4), painted as a mask so the SVG takes
+   currentColor — which an external <img> cannot inherit. Same technique as .auth-brand.
+   The band is 8.7's: clamp(104px, 26vw, 132px), above the 96px floor of 5.3. */
+.brand {
+  display: block;
+  width: clamp(104px, 26vw, 132px);
+  aspect-ratio: 553 / 259; /* the logo's own ratio (DESIGN.md 5.1) — never distort */
+  background-color: var(--clubi-ink-brand);
+  -webkit-mask: var(--logo-src) center / contain no-repeat;
+  mask: var(--logo-src) center / contain no-repeat;
+}
+
+/* Used by both the header band and the footer — the two wine surfaces the logotype sits on. */
+.brand--on-invert {
+  background-color: var(--clubi-ink-on-invert);
+}
+
+/* --------------------------------------------------------------------------- buttons */
+
+.button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 44px; /* the touch target of DESIGN.md 10.4 */
+  padding: var(--space-3) var(--space-5);
+  border: 1px solid transparent;
+  border-radius: var(--radius-md);
+  background: var(--clubi-action);
+  color: var(--clubi-action-ink);
+  font-family: var(--clubi-font-text);
+  font-size: var(--text-base);
+  font-weight: 700;
+  letter-spacing: var(--tracking-text);
+  text-decoration: none;
+  cursor: pointer;
+  transition: background var(--motion-base) var(--motion-ease);
+}
+
+.button:hover {
+  background: var(--clubi-action-hover);
+}
+
+.button:active {
+  background: var(--clubi-action-active);
+}
+
+/* The secondary of the pair. Outlined rather than a second fill: two solid wine buttons side by
+   side would give "Entrar" and "Criar conta" the same weight, and the page is publicised to
+   people who do not have an account yet. */
+.button--quiet {
+  background: transparent;
+  border-color: var(--clubi-action);
+  color: var(--clubi-ink-brand);
+}
+
+.button--quiet:hover,
+.button--quiet:active {
+  background: var(--clubi-tint-wine);
+}
+
+.button--lg {
+  font-size: var(--text-md);
+  padding: var(--space-3) var(--space-6);
+}
+
+/* --------------------------------------------------------------------------- top bar */
+
+.landing-top {
+  padding-block: var(--space-4);
+}
+
+/* A wine band rather than a logotype floating on the cream. It does two jobs: the header now
+   visibly ends instead of dissolving into the hero, and the first screen carries more of the
+   palette than wine-on-cream. The two CTAs that used to sit here were removed separately — the
+   hero right below carries the same pair. */
+.landing-top {
+  background: var(--clubi-bg-invert);
+  color: var(--clubi-ink-on-invert);
+}
+
+.landing-top__inner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+}
+
+/* The brandbook's eight-pointed star, which DESIGN.md 6.3 assigns to "destaque, novidade".
+   Painted as a mask for the same reason the logotype is: the SVG fills with currentColor, which
+   an external <img> cannot inherit, so one file serves every colour the brand has.
+
+   Yellow is only legal because this band is wine. DESIGN.md 3.2 rule 3 measures yellow on cream
+   at 1.38 and forbids it; on wine it is 6.84. Move this star into the hero and it breaks the
+   rule — that is why the hero's yellow is a marca-texto instead.
+
+   4rem is far below the ~240px ceiling of 6.2, where the textured stroke frays, and it is
+   decoration in the margin rather than content (6.2 again: at most two per screen, this is one). */
+.landing-top__mark {
+  width: 4rem;
+  aspect-ratio: 199.55 / 220.02; /* the drawing's own viewBox — never distort */
+  background-color: var(--clubi-highlight);
+  transform: rotate(var(--tilt)); /* E-09 caps decorative rotation at 1.5deg */
+  -webkit-mask: var(--element-src) center / contain no-repeat;
+  mask: var(--element-src) center / contain no-repeat;
+}
+
+/* The brandbook's highlighter. This is the second of the two forms DESIGN.md 3.2 rule 3 allows
+   yellow to take: "preenchimento de área grande com texto vinho por cima" — 6.84, AA. Square
+   corners are not an oversight: 8.2 gives marca-texto --radius-none explicitly.
+   box-decoration-break keeps the fill whole when the phrase wraps across lines. */
+.mark {
+  padding: 0 0.12em;
+  border-radius: var(--radius-none);
+  background: var(--clubi-highlight);
+  color: var(--clubi-highlight-ink);
+  -webkit-box-decoration-break: clone;
+  box-decoration-break: clone;
+}
+
+/* --------------------------------------------------------------------------- hero */
+
+/* Collage lives in the frame, not the machinery (DESIGN.md 7): the hero is one of the four places
+   allowed to carry texture and tilt. */
+.hero {
+  padding-block: var(--space-8) var(--space-9);
+}
+
+/* The measure caps the *text*, not the block. Putting it on .hero__inner — which also carries
+   .container, and therefore margin-inline: auto — centred a 68ch box inside 1120px, so the hero
+   started ~170px to the right of the logotype, the eyebrow and every section title below it. The
+   page has one left edge; only the line length is limited. */
+.hero__inner {
+  display: grid;
+  gap: var(--space-5);
+}
+
+.hero__title {
+  /* Composed from existing steps rather than a new size: --text-2xl at phone width, --text-4xl
+     at the top, 8vw between them. */
+  max-width: var(--measure);
+  font-size: clamp(var(--text-2xl), 8vw, var(--text-4xl));
+  color: var(--clubi-ink-brand);
+}
+
+.hero__lead {
+  max-width: var(--measure);
+  font-size: var(--text-md);
+  line-height: var(--leading-snug);
+}
+
+/* Mobile-first, as 8.5 asks. Stacked below --bp-sm, where two content-width buttons of unequal
+   length ("Criar conta" / "Já sou do clube") read as ragged rather than as a pair — and where
+   auth.css already gives .button the full width on the rendered forms. Side by side above it. */
+.hero__actions {
+  display: grid;
+  gap: var(--space-3);
+  margin-top: var(--space-2);
+}
+
+@media (min-width: 480px) {
+  .hero__actions {
+    display: flex;
+    flex-wrap: wrap;
+  }
+}
+
+/* --------------------------------------------------------------------------- book of the month */
+
+.pick__eyebrow {
+  margin-bottom: var(--space-6);
+  color: var(--clubi-highlight); /* yellow on wine: 6.84 — the one background it is allowed (3.2) */
+  font-family: var(--clubi-font-display);
+  font-size: var(--text-md);
+}
+
+.pick__inner {
+  display: grid;
+  gap: var(--space-6);
+}
+
+/* 8.5 is mobile-first and says the member arrives by phone: one column, cover first, until the
+   cover can sit beside the text without squeezing it. */
+@media (min-width: 768px) {
+  .pick__inner {
+    grid-template-columns: 17rem 1fr; /* 8.7: the hero's cover column */
+    gap: var(--space-7);
+    /* Centred, not start-aligned: the cover is ~25rem tall and the text beside it is four short
+       lines, so aligning both to the top left a third of the wine band empty under the words. */
+    align-items: center;
+  }
+}
+
+.pick__cover {
+  width: min(15rem, 62vw); /* 8.7: the phone-width cover */
+}
+
+@media (min-width: 768px) {
+  .pick__cover {
+    width: 100%;
+  }
+}
+
+/* The "recorte com borda branca" of DESIGN.md 7, with 8.7's proportions. The tilt is E-09's
+   1.5deg and is allowed here because the cover is decoration on this page — it is not a control
+   and nothing is read off its alignment. */
+.book-cover {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  aspect-ratio: 2 / 3;
+  padding: var(--space-2);
+  border-radius: var(--radius-lg);
+  background: var(--clubi-cream);
+  box-shadow: var(--shadow-paper);
+  transform: rotate(calc(var(--tilt) * -1));
+  overflow: hidden;
+}
+
+.book-cover img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: var(--radius-md);
+}
+
+/* Typographic, like the SPA's BookCover: a graphic element here would spend one of the two the
+   screen is allowed (DESIGN.md 6.2). */
+.book-cover--blank {
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--space-4);
+  color: var(--clubi-ink-brand);
+  text-align: center;
+}
+
+.book-cover__title {
+  font-family: var(--clubi-font-display);
+  font-size: var(--text-md);
+  line-height: var(--leading-tight);
+}
+
+.book-cover__author {
+  font-size: var(--text-sm);
+  color: var(--clubi-ink-muted);
+}
+
+.pick__body {
+  display: grid;
+  gap: var(--space-3);
+  max-width: var(--measure);
+}
+
+.pick__title {
+  /* The same clamp the SPA's .pick__title uses — this is the same object on two surfaces. */
+  font-size: clamp(var(--text-xl), 9vw, var(--text-3xl));
+}
+
+.pick__author {
+  font-size: var(--text-md);
+  color: var(--clubi-ink-muted-on-invert);
+}
+
+.pick__period {
+  color: var(--clubi-ink-muted-on-invert);
+}
+
+/* Full-strength cream, not the muted tone the period uses. When there is no pick this sentence is
+   the only thing in the wine band, and muting the one line in a section makes the band read as
+   broken rather than as quiet. Muted is for metadata sitting beside something louder. */
+.pick__blank {
+  max-width: var(--measure);
+  font-size: var(--text-md);
+  line-height: var(--leading-snug);
+}
+
+.pick__blurb {
+  max-width: var(--measure);
+  /* The SPA separates the blurb from the metadata above it instead of spacing all four lines
+     evenly, which read as four unrelated lines. The gap is what groups title+author+period. */
+  margin-top: var(--space-2);
+}
+
+/* --------------------------------------------------------------------------- how it works */
+
+.how__grid {
+  display: grid;
+  gap: var(--space-6);
+  margin: var(--space-6) 0 0;
+  padding: 0;
+  list-style: none;
+  counter-reset: step;
+}
+
+/* Three blocks, so three fixed columns — not an auto-fitting grid. Same reasoning the shelf uses
+   for its four slots (8.7): a grid that fits itself says more of these could arrive. */
+@media (min-width: 768px) {
+  .how__grid {
+    grid-template-columns: repeat(3, 1fr);
+    gap: var(--space-7);
+  }
+}
+
+.how__item {
+  display: grid;
+  gap: var(--space-3);
+  align-content: start;
+  counter-increment: step;
+}
+
+/* The step number is the list's own counter rather than a drawn badge: the brand is verbal
+   (DESIGN.md 6.3), and a numeral is type. */
+.how__item::before {
+  content: counter(step);
+  font-family: var(--clubi-font-display);
+  font-size: var(--text-xl);
+  line-height: var(--leading-display);
+  color: var(--clubi-accent); /* orange: large type only, never body (DESIGN.md 3.2) */
+}
+
+.how__title {
+  font-size: var(--text-md);
+  color: var(--clubi-ink-brand);
+}
+
+/* --------------------------------------------------------------------------- footer */
+
+.landing-foot {
+  background: var(--clubi-bg-invert);
+  color: var(--clubi-ink-on-invert);
+  padding-block: var(--space-7);
+}
+
+.landing-foot__inner {
+  display: grid;
+  gap: var(--space-3);
+}
+
+.landing-foot__note {
+  max-width: var(--measure);
+  font-family: var(--clubi-font-display);
+  font-size: var(--text-md);
+  line-height: var(--leading-tight);
+  letter-spacing: var(--tracking-display);
+}
+
+.landing-foot .muted {
+  color: var(--clubi-ink-muted-on-invert);
+}
+
+/* 8.6: respect the member's setting. */
+@media (prefers-reduced-motion: reduce) {
+  .button {
+    transition: none;
+  }
+
+  .book-cover {
+    transform: none;
+  }
+}
+
+/* --------------------------------------------------------------------------- closing CTA */
+
+/* The page used to end on the third step, with the footer next and no way to act on what had just
+   been read. The top bar's buttons were removed because they repeated the hero inside one screen;
+   this pair is three screens further down, at the moment the reader has the answer. */
+.how__cta {
+  display: grid;
+  gap: var(--space-4);
+  margin-top: var(--space-7);
+  padding-top: var(--space-6);
+  border-top: 1px solid var(--clubi-line);
+}
+
+@media (min-width: 480px) {
+  .how__cta {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+  }
+}
+
+.how__cta p {
+  flex: 1 1 16rem;
+  font-family: var(--clubi-font-display);
+  font-size: var(--text-md);
+  line-height: var(--leading-tight);
+  letter-spacing: var(--tracking-display);
+  color: var(--clubi-ink-brand);
+}

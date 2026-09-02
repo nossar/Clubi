@@ -7,6 +7,7 @@ import { formatDateTime } from "../format";
 import { canManagePost, useDeletePost } from "../posts";
 import { MemberAvatar } from "./MemberAvatar";
 import { PostEditForm } from "./PostEditForm";
+import { PostImages } from "./PostImages";
 
 /**
  * Renders on the Feed, and nowhere else since the Home stopped previewing postagens. Guide 7.4
@@ -56,7 +57,7 @@ export function PostCard({ post }: { post: Post }) {
   return (
     <article className="post-card">
       <header className="post-card__header">
-        <MemberAvatar person={post.author} />
+        <MemberAvatar person={post.author} linkTo={`/u/${post.author.username}`} />
         <div>
           <p className="post-card__author">
             <Link className="post-card__author-link" to={`/u/${post.author.username}`}>
@@ -79,13 +80,7 @@ export function PostCard({ post }: { post: Post }) {
 
       <p className="post-card__body">{post.body}</p>
 
-      {post.images.length > 0 ? (
-        <div className="post-card__images">
-          {post.images.map((src, index) => (
-            <img key={src} src={src} alt={`Imagem ${index + 1} da postagem de ${post.author.full_name}`} />
-          ))}
-        </div>
-      ) : null}
+      <PostImages images={post.images} authorName={post.author.full_name} />
 
       {canManage && !confirming ? (
         <div className="post-card__manage">

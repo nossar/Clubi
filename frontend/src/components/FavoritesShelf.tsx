@@ -41,7 +41,7 @@ function sameOrder(a: Book[], b: Book[]): boolean {
  *   editor locks at four slots and generates contiguous 1..N positions itself. A gap in the
  *   positions would be accepted by the API and then be invisible on read, which is worse.
  * - **Reordering is buttons, not drag-and-drop.** Two arrows and an × — the residual glyphs of
- *   DESIGN.md 6.3 rule 3, drawn in the marca's stroke and versioned in `assets/elements/`, never
+ *   DESIGN.md 6.3 rule 3, drawn in the marca's stroke and versioned with the brand assets, never
  *   pulled from an icon set. A drag library would be a stack deviation (frontend/CLAUDE.md) for
  *   one control on one screen — while also being the harder thing to operate by keyboard and by
  *   touch. The words they replaced live on in `aria-label` and `title`, so nothing was lost for a

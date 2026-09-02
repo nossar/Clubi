@@ -14,12 +14,17 @@ Written and working:
 - `users` — custom `User` (`full_name`, `birth_date`, `photo`, `quote`, `posts_seen_at`) plus a `favorites` M2M through `books.Favorite`; `users/schemas.py`, `users/api.py` (`me_router`, `users_router`). `MeOut` is the `/api/me` response and the only schema carrying `is_staff` (see below).
 - `books` — `Book`, `MonthlyPick`, `MonthlyReading`, `Favorite`, with migrations and admin; `books/schemas.py`, `books/api.py` (`books_router`, `picks_router`). `MonthlyReading` stores its rating in half-stars (`rating_halves`, 0–10, with a `CheckConstraint`) and exposes it as 0–5 in steps of 0.5 through a `rating` property — see the ratings note below.
 - `posts` — `Post`, `PostImage`, with migrations and admin; `posts/schemas.py`, `posts/api.py` (`posts_router`). **Writing is `is_staff`-only**, and the router also answers the unread count.
-- `core` — no models; holds `core/images.py` (`compress_image`) and `core/static/css/auth.css`.
+- `core` — no models; holds `core/images.py` (`compress_image`), the shared CSS under
+  `core/static/css/` (`tokens.css`, `auth.css`, `landing.css`) and `core/views.py`, which owns the
+  root view and the SPA shell (see the landing-page note below).
 - Auth end to end: `SignupView`, `django.contrib.auth.urls`, pt-BR templates under `backend/templates/registration/`, email settings for password reset, and 17 tests in `users/test_auth.py`.
 - `api` — no models, no routes of its own; only `api/api.py` (the `NinjaAPI` instance and the `add_router` calls) and `api/schemas.py` (the two shared projections). All 22 endpoints of the guide's section 6.2 map are mounted, plus two the map does not have (`GET /api/posts/unread`, `POST /api/posts/seen`); docs at `/api/docs`.
 - API tests live with their app — `books/test_api.py`, `users/test_api.py`, `posts/test_api.py`, `api/test_api.py` — over shared fixtures in `backend/conftest.py`.
 
-- `frontend/` — Fases 4 to 8 are done: Vite with the proxy, `src/api/client.ts`, TanStack Query, `styles/tokens.css` and `base.css` on the brand tokens, `Header`, `Footer`, `Home` with the monthly highlight and a working `ProgressBar`, the postagens screens (`Feed`, `NewPost`, `PostDetail`, `PostCard`), the profile screens (`Profile`, `EditProfile`, `StarRating` — a `role="slider"` with click, drag and arrow keys over the half-star scale — `FavoritesShelf`), the search (`Search` at `/search`, the `MemberSearch` field in the header, and `PickHistory` at `/book-of-the-month/history`), and the external catalogue inside `BookPicker` (`GET /api/books/external` plus `POST /api/books`, with `externalBook.ts` for the pure hit-to-`BookIn` mapping). `backend/templates/index.html` is the real SPA shell, loading the pinned Vite bundle. One round of changes landed after Fase 8 and is not a phase: the Home is now only the book and your reading of it (the postagens preview and the "quem está lendo" section are gone), "quem já terminou" is a folded panel inside the reading card, the header carries the balão into `/posts` with an unread badge, and "publicação" became "postagem" in every user-facing string. See `frontend/CLAUDE.md` for the folder's contract and `frontend/DESIGN.md` for anything visual.
+- `frontend/` — Fases 4 to 8 are done: Vite with the proxy, `src/api/client.ts`, TanStack Query, `styles/tokens.css` and `base.css` on the brand tokens, `Header`, `Footer`, `Home` with the monthly highlight and a working `ProgressBar`, the postagens screens (`Feed`, `NewPost`, `PostDetail`, `PostCard`), the profile screens (`Profile`, `EditProfile`, `StarRating` — a `role="slider"` with click, drag and arrow keys over the half-star scale — `FavoritesShelf`), the search (`Search` at `/search`, the `MemberSearch` field in the header, and `PickHistory` at `/book-of-the-month/history`), and the external catalogue inside `BookPicker` (`GET /api/books/external` plus `POST /api/books`, with `externalBook.ts` for the pure hit-to-`BookIn` mapping). `backend/templates/index.html` is the real SPA shell, loading the pinned Vite bundle. One round of changes landed after Fase 8 and is not a phase: the Home is now only the book and your reading of it (the postagens preview and the "quem está lendo" section are gone), "quem já terminou" is a folded panel inside the reading card, the header carries the balão into `/posts` with an unread badge, and "publicação" became "postagem" in every user-facing string. A second, smaller round landed on
+2026-09-02: the images of a postagem are expandable — one `PostImages` behind `PostCard` and
+`PostDetail`, every thumbnail opening the photo whole in a modal `<dialog>` (DESIGN.md E-17, which
+also rewrote E-07). See `frontend/CLAUDE.md` for the folder's contract and `frontend/DESIGN.md` for anything visual.
 
 Not written yet:
 - Nothing on the frontend. Two things are *deliberately* absent rather than owed, and both are argued in `frontend/CLAUDE.md`: `BookOfTheMonth` (Fase 7 — the Home already is that screen, and `/book-of-the-month` redirects to it) and a "cadastro de livro" screen (Fase 8 — a book is registered from inside `BookPicker`, where the member already is, and anything the Open Library does not have is a job for the Admin, ADR-14).
@@ -32,7 +37,7 @@ Follow the phase order in the implementation guide rather than inventing structu
 Two documents at the repo root are the spec for this project. The guide is gitignored (present locally only); the ADRs are versioned:
 
 - `clubi-guia-de-implementacao.md` — the roadmap: repo structure, model code, admin, auth, endpoint map, schemas, frontend layout, deploy, and the phase-by-phase implementation order (section 9).
-- `clubi-decisoes-de-arquitetura.md` — ADR-01 … ADR-17, the *why* behind each choice, including what was deliberately rejected.
+- `clubi-decisoes-de-arquitetura.md` — ADR-01 … ADR-18, the *why* behind each choice, including what was deliberately rejected.
 
 A third document governs anything visual:
 
@@ -130,6 +135,23 @@ also extends `UserOut`) and out of `UserBrief`, where it would have become proje
 means "never opened the feed", so everything counts — which is what every existing member got when
 the column shipped, and what one visit settles. Per-post read receipts would have been a table
 growing with members × postagens to answer a question a timestamp already answers.
+
+**`/` answers with two documents, and that is the only place in the URL map that does (ADR-18).**
+`core/views.root` renders `templates/landing.html` for an anonymous visitor — the page the club
+publicises, carrying `og:` tags built from `MonthlyPick.current()` — and the SPA shell for a member.
+It is declared *before* the catch-all in `clubi/urls.py`, which is the whole mechanism: Django takes
+the first pattern that matches, so the catch-all's negative lookahead never had to change. The
+ADR-05 flow is untouched — a deep link into an authenticated route does not match `path("")`, falls
+through to the shell, and is redirected by `client.ts` on the 401 from `/api/me`. Two consequences
+worth knowing before touching it: the response varies on the session cookie, so `Vary: Cookie` is
+load-bearing and `core/test_views.py` asserts it; and the hero and the three "como funciona" blocks
+are **placeholder copy awaiting the founder**, marked as such in the template.
+
+**Tokens live in `core/static/css/tokens.css`, not in `auth.css` any more.** That file is the
+declared twin of `frontend/src/styles/tokens.css` — same names, same values, the whole palette
+rather than a subset — and both the `/accounts/` pages and the landing load it. `auth.css` is now
+only the `.auth-card` rules. Changing a token means changing both files, and `frontend/DESIGN.md`
+before either.
 
 **Custom user from day one (ADR-09).** `AUTH_USER_MODEL = "users.User"` was set before the first migration. Never reference `auth.User`; use `settings.AUTH_USER_MODEL` in FKs.
 

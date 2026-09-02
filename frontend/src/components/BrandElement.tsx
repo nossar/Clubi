@@ -6,15 +6,15 @@
  * surrounding colour — that is what lets one drawing serve cream-on-wine and wine-on-cream
  * without a second "sticker" file (DESIGN.md 6.1). They already carry aria-hidden. */
 
-import balao from "../assets/elements/balao.svg?raw";
-import clips from "../assets/elements/clips.svg?raw";
-import estrela5 from "../assets/elements/estrela-5.svg?raw";
-import livroAberto from "../assets/elements/livro-aberto.svg?raw";
-import livroFechado from "../assets/elements/livro-fechado.svg?raw";
-import nuvem from "../assets/elements/nuvem.svg?raw";
-import setaBaixo from "../assets/elements/seta-baixo.svg?raw";
-import setaCima from "../assets/elements/seta-cima.svg?raw";
-import x from "../assets/elements/x.svg?raw";
+import balao from "../../../backend/core/static/brand/elements/balao.svg?raw";
+import clips from "../../../backend/core/static/brand/elements/clips.svg?raw";
+import estrela5 from "../../../backend/core/static/brand/elements/estrela-5.svg?raw";
+import livroAberto from "../../../backend/core/static/brand/elements/livro-aberto.svg?raw";
+import livroFechado from "../../../backend/core/static/brand/elements/livro-fechado.svg?raw";
+import nuvem from "../../../backend/core/static/brand/elements/nuvem.svg?raw";
+import setaBaixo from "../../../backend/core/static/brand/elements/seta-baixo.svg?raw";
+import setaCima from "../../../backend/core/static/brand/elements/seta-cima.svg?raw";
+import x from "../../../backend/core/static/brand/elements/x.svg?raw";
 
 // Add an entry when a screen actually needs it, and keep to at most two elements per screen
 // (DESIGN.md 6.2) — they are punctuation, not content. "x", "seta-cima" and "seta-baixo" are the

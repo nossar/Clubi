@@ -45,6 +45,12 @@ export default defineConfig({
       // /static/brand/ (DESIGN.md 2.1). Without it the dev server renders in system fonts and
       // says nothing about why.
       "/static": proxyToDjango,
+      // Deliberately NOT proxied: "/". Since ADR-18 the root is a rendered Django view — the
+      // landing page for a visitor, the SPA shell for a member — but it is also this dev
+      // server's own root, and proxying it would hand every `npm run dev` session the shell
+      // Django renders instead of the app Vite is serving with HMR. The landing page's assets
+      // are all under /static, which is covered above, so it needs nothing here: look at it on
+      // localhost:8000 in a private window.
     },
   },
 });

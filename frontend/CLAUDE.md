@@ -9,7 +9,10 @@ If something written here turns out to apply project-wide, move it up instead of
 
 Section 7 of `clubi-guia-de-implementacao.md` is this folder's spec: Vite config (7.1), `client.ts`
 verbatim (7.2), generated types (7.3), layout and route table (7.4), state rules (7.5), a worked
-`ProgressBar` (7.6), design (7.7). The ADRs that constrain this folder are 03, 04, 05, 12, 16 and 17.
+`ProgressBar` (7.6), design (7.7). The ADRs that constrain this folder are 03, 04, 05, 12, 16 and
+17 — and 18, which is the one place a page of this site is rendered by Django rather than routed
+here: `/` shows a landing page to anonymous visitors and this SPA to members, without changing the
+401 redirect that `client.ts` performs.
 
 **[DESIGN.md](DESIGN.md) is the visual source of truth and is a prerequisite for every frontend
 task** (ADR-17). It distils the brandbook in `frontend/clubi/` into tokens, logo and element rules,
@@ -48,6 +51,14 @@ It reshaped the Home and the postagens, and four of its decisions outlive it:
    `["posts", 1]` has one caller again (`Feed`), and `/` no longer fetches the feed at all.
 4. **"Publicação" is now "postagem" everywhere a member can read it**, identifiers untouched — the
    model is still `Post`, the route still `/posts`, the query key still `["posts", …]`.
+
+**A later change, also outside the phases (2026-09-02): the images of a postagem expand.** The
+grid was cropping every photo to 4/3 with no way to see the rest of it. Both hosts now render one
+`PostImages`, each thumbnail opens the photo whole in a modal `<dialog>`, and a lone image is not
+cropped at all. It cost DESIGN.md an **E-17** and a rewrite of **E-07**: the residue of hand-drawn
+glyphs is counted by *job* now (`×` closes, the arrows move) rather than by how many screens use
+one, because "fechar a estante", "fechar o aviso" and "fechar a imagem" were being written up as
+three exceptions to describe one verb. Details under `PostImages` below.
 
 What is here:
 
@@ -190,7 +201,13 @@ Four things Fase 7 changed in files Fases 4–6 had already written:
 
 - **The avatar ternary is now `MemberAvatar`.** `PostCard`, `PostDetail` and the old `ReadersList`
   each had their own copy of "photo, or initials in a `.avatar`" before the search needed it twice
-  more. Same reasoning that moved `initials()` into `format.ts` in Fase 5.
+  more. Same reasoning that moved `initials()` into `format.ts` in Fase 5. **Since 2026-09-02 it
+  takes an optional `linkTo`**, which the two postagem bylines pass: the photo is the second thing
+  a reader clicks to reach a profile, and it used to be inert next to a name that linked. The link
+  is deliberately `aria-hidden` with `tabIndex={-1}` — those two only ever together — because the
+  name beside it goes to the same place, so a screen reader and a Tab press should meet that
+  destination once, not twice. It is the same argument as the component's `alt=""`. A caller that
+  already wraps the whole member in one link (`Search`, `MemberSearch`) must not pass it.
 - **`BookPicker`'s debounce is now `useDebouncedValue`** (`src/useDebouncedValue.ts`), shared with
   `MemberSearch` and `Search`. Three copies of the same `useEffect` was the alternative.
 - **`.feed__title` is now `.page-title`.** `Feed`, `Search` and `PickHistory` head their screens
@@ -389,14 +406,16 @@ frontend/
     ├── posts.ts                  # who may manage a postagem, the delete and update
     │                             # mutations, and the edit payload rules — shared by
     │                             # PostCard (on the feed) and PostDetail
-    ├── assets/    elements/ (10 svg, currentColor). Fonts and the logo live in
-    │              backend/core/static/brand/ — one copy, both surfaces (DESIGN.md 2.1)
+    │              (no assets/ dir: the elements moved to backend/core/static/brand/elements/
+    │              with the fonts and the logo — one copy, both surfaces, DESIGN.md 2.1.
+    │              BrandElement still inlines them with ?raw across that path)
     ├── api/       client.ts, generated.ts, types.ts
     ├── context/   CurrentUser.tsx
     ├── routes/    Home, Feed, NewPost, PostDetail, Profile, EditProfile,
     │              PickHistory, Search
     ├── components/ Header, AccountMenu, Footer, PostCard, PostEditForm,
-    │              MonthlyPickHighlight,
+    │              PostImages (the thumbnails plus the expanded view, shared
+    │              by PostCard and PostDetail), MonthlyPickHighlight,
     │              ProgressBar, StarRating (+ starRating.ts, its pure
     │              position-to-value logic, tested in starRating.test.ts),
     │              FavoritesShelf, BookCover,
@@ -410,8 +429,9 @@ frontend/
 Everything above is written. **`BookOfTheMonth.tsx` is not in the tree on purpose** — see the
 Fase 7 decision above; `/book-of-the-month` redirects to the Home, which is that screen.
 
-Eight components are not in guide 7.4: `BrandElement` (inlines a brand SVG so `currentColor`
+Nine components are not in guide 7.4: `BrandElement` (inlines a brand SVG so `currentColor`
 applies), `PostEditForm` (the one edit form, rendered by both `PostDetail` and `PostCard`),
+`PostImages` (the images of a postagem — the grid and the expanded view — see below),
 `AccountMenu` (the header's account corner — see below), `FinishedReaders` (the folded
 "quem já terminou" panel inside the reading card),
 `UnreadNotice` (the one-line greeting for a member arriving with postagens waiting),
@@ -450,6 +470,28 @@ accepts one only in `book_id`, so an untouched field has to be **absent** from t
 empty payload means close the form without a request. Editing swaps the card for the form, the
 same move the detail makes on its article — nothing has to be fetched, since `PostOut` carries the
 whole body and the four-line clamp is only CSS.
+
+**The images of a postagem are `PostImages`, and the crop is now a promise (DESIGN.md E-17).**
+`PostCard` and `PostDetail` each carried their own `<img>` grid, so "how a postagem shows a photo"
+was two edits; it is one component now, and the second host passes `post-detail__images` as a
+`className` for the `--measure` cap it already had. What changed for the member: every thumbnail
+is a button that opens the photo whole, and a postagem with a single image is not cropped at all.
+
+Three things about the expanded view are decisions rather than defaults:
+
+- **It is a native `<dialog>` with `showModal()`.** Escape, the focus trap, the inert background
+  and handing focus back to the thumbnail all come from the browser and come correct. The part
+  that is not merely convenient is the top layer: `body::after` paints the paper grain at
+  `z-index: 100` over the whole page, and nothing in normal flow gets above it — a `position:
+  fixed` overlay would have shown the photo under the grain.
+- **The image is `contain`, never scaled past its own pixels.** Nothing is cropped and nothing is
+  interpolated up. What the panel cannot promise is 1:1 on a 390px screen, which is why
+  "Ver o arquivo original" opens the file itself — and it is worth knowing that this *is* the
+  original: `core/images.compress_image` resized to 1600px on upload, so no larger version exists
+  anywhere.
+- **Escape is the dialog's, the arrows are ours.** `onClose` is what clears the open index — the
+  member can close with Escape, with the `×` or by clicking the scrim, and all three routes end in
+  the same state change rather than three of them.
 
 **Every field id in that form comes from `useId()`, and on the feed that is load-bearing.**
 `PostDetail` could hardcode `edit-title` because one screen holds one postagem; the feed can have
@@ -594,10 +636,17 @@ Tokens first, components second (7.7). **The canonical token block is section 11
 [DESIGN.md](DESIGN.md)** — copy it into `styles/tokens.css` rather than inventing values, and read
 sections 3 through 10 for the rules that govern how they are used.
 
-`styles/tokens.css` and [backend/core/static/css/auth.css](../backend/core/static/css/auth.css)
-must carry the same values. The rendered `/accounts/` pages and the SPA are the same site; the
-visible seam between them is ADR-05's one real downside, and shared tokens are the stated
-mitigation. Changing a token means changing both files — and DESIGN.md first.
+`styles/tokens.css` and [backend/core/static/css/tokens.css](../backend/core/static/css/tokens.css)
+must carry the same values. The rendered pages and the SPA are the same site; the visible seam
+between them is ADR-05's one real downside, and shared tokens are the stated mitigation. Changing a
+token means changing both files — and DESIGN.md first.
+
+**The backend twin used to be `auth.css`, and it held a subset.** It was split when the landing page
+of ADR-18 needed `--space-7` and `--container-max` and had nowhere to read them from — at which
+point the two files had quietly stopped being twins. `core/static/css/tokens.css` now carries the
+whole palette (so the two are checkable side by side), `auth.css` is only the `.auth-card` rules,
+and `landing.css` is the third consumer. `--paper-grain` and `--tilt` are deliberately *not* in
+either token file: the SPA keeps them in `base.css`, so the landing keeps them in `landing.css`.
 
 `auth.css` used to disagree with DESIGN.md — it shipped with an improvised palette (`#f6f2ea`,
 `#7a2e2e`, Inter) that predated anyone reading the brandbook. It was realigned on 2026-08-27, and
@@ -621,8 +670,8 @@ open a file:
   controls repeated across four slots is the density E-07 named as its own revisit trigger, so
   `FavoritesShelf` uses the two arrows and the × (DESIGN.md 6.3 rule 3, registered as E-15) with
   the sentence moved into `aria-label`/`title`. **That did not open a door** — it is still three
-  hand-drawn glyphs in `src/assets/elements/`, and a fourth one is a DESIGN.md decision, not a new
-  file. Do not install Lucide, Feather or Heroicons — that is a deviation to raise, not a default.
+  hand-drawn glyphs in `backend/core/static/brand/elements/`, and a fourth one is a DESIGN.md
+  decision, not a new file. Do not install Lucide, Feather or Heroicons — that is a deviation to raise, not a default.
 - **The tone is anti-metric and it is load-bearing** (DESIGN.md section 9). No ranking, no streaks,
   no "you're behind", no red for low progress. `ProgressBar` and `StarRating` are the two
   components most likely to get this wrong — and `FinishedReaders` is the one that lives closest to

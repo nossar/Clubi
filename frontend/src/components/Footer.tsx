@@ -9,7 +9,7 @@ export function Footer() {
         <p className="site-footer__note">
           Aqui não importa quantos livros você lê por ano. O que importa é fazer parte.
         </p>
-        <p className="muted">criado por estudantes para estudantes</p>
+        <p className="muted">Criado por estudantes para estudantes</p>
       </div>
     </footer>
   );

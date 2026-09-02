@@ -367,6 +367,16 @@ a {
   text-underline-offset: 2px;
 }
 
+/* On a phone this is a thumb target, and the text-sized line box is 22px — half of the 44px
+   DESIGN.md 10.4 asks for, and half of what the account control next to it already measures.
+   The row it sits in is 44px tall either way, so filling it changes the hit area and nothing
+   that is drawn. */
+@media (max-width: 479px) {
+  .site-header__posts {
+    min-height: 44px;
+  }
+}
+
 /* The positioning context for the badge, and the only place a brand element is sized in the
    header — 1.25rem sits it on the cap height of the word next to it. */
 .site-header__balao {
@@ -955,6 +965,21 @@ a {
   overflow: hidden;
 }
 
+/* The photo as a second way into the profile, on the postagem byline. It carries no hover colour
+   of its own — the frame is the avatar's — so the cue is the shadow going from --shadow-paper to
+   --shadow-lifted, which is the pairing DESIGN.md 8.3 gives to rest and hover. No focus style is
+   needed and none is drawn: the link is aria-hidden and out of the tab order (see MemberAvatar),
+   because the name next to it is the same destination and already takes the stop. */
+.avatar-link {
+  display: block;
+  flex: none;
+  border-radius: var(--radius-pill);
+}
+
+.avatar-link:hover .avatar {
+  box-shadow: var(--shadow-lifted);
+}
+
 /* ---------------------------------------------------------------- feed
    Functional core (DESIGN.md 7): a plain surface, no checker, no tilt, no stamp. The collage
    budget for this screen is spent on the balão heading icon alone. */
@@ -1072,6 +1097,33 @@ a {
   gap: var(--space-2);
 }
 
+/* One image has nothing to line up against, so it is not cut: it keeps its own proportion up to
+   a ceiling of 26rem, which is about the height of the card's text and keeps a portrait photo from
+   turning the card into a column (E-13). The crop below only exists to make a grid of two to four
+   photos read as one block. */
+.post-card__images--single {
+  grid-template-columns: minmax(0, 1fr);
+  justify-items: start;
+}
+
+/* The thumbnail is a button because the crop is a promise: what the grid cuts, a click gives back
+   whole (E-17). Reset to nothing — the frame is the img's, the same one it had before this became
+   clickable — and the cursor says what the click does, since there is no wording on a photo. */
+.post-card__thumb {
+  display: block;
+  width: 100%;
+  max-width: 100%;
+  padding: 0;
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: none;
+  cursor: zoom-in;
+}
+
+.post-card__images--single .post-card__thumb {
+  width: auto;
+}
+
 .post-card__images img {
   display: block;
   width: 100%;
@@ -1079,6 +1131,20 @@ a {
   object-fit: cover;
   border-radius: var(--radius-sm);
   border: 1px solid var(--clubi-line);
+  transition: box-shadow var(--motion-base) var(--motion-ease);
+}
+
+.post-card__images--single img {
+  width: auto;
+  max-width: 100%;
+  max-height: 26rem;
+  aspect-ratio: auto;
+  object-fit: contain;
+}
+
+.post-card__thumb:hover img,
+.post-card__thumb:focus-visible img {
+  box-shadow: var(--shadow-lifted);
 }
 
 /* The author's own controls, at the foot of the card. A hairline above them says they belong to
@@ -1197,6 +1263,24 @@ a {
 .field-file {
   display: block;
   font: inherit;
+}
+
+/* A native file input's intrinsic width is its button plus the whole "Nenhum arquivo escolhido"
+   label, and a grid or flex item's automatic minimum is that intrinsic width — so on a 360px
+   phone the input pushed .post-form and .photo-form past the container, taking every field with
+   it and running the label off the screen. Letting the input shrink hands the truncation to the
+   browser, which ellipsises the label instead. Above this width the column is wider than the
+   input's intrinsic size, so the rule has nothing to do — it is scoped to the phone anyway. */
+@media (max-width: 479px) {
+  .field,
+  .photo-form__controls {
+    min-width: 0;
+  }
+
+  .field-file {
+    min-width: 0;
+    max-width: 100%;
+  }
 }
 
 /* ---------------------------------------------------------------- book picker */
@@ -1864,6 +1948,109 @@ a {
 
 .splash .brand-mark {
   color: var(--clubi-ink-brand);
+}
+
+/* ---------------------------------------------------------------- lightbox
+   The expanded image (E-17). A native <dialog>: `showModal()` puts it in the top layer, which is
+   the only thing that paints above the grain of body::after (z-index 100), and brings Escape,
+   focus trap and inert background with it.
+
+   The panel is the "recorte com borda branca" of DESIGN.md 7 — cream paper around the photo —
+   with the raio and the sombra section 8 assigns to a modal: --radius-lg and --shadow-lifted. The
+   scrim is the ink at 88%, the same warm tint the shadows are mixed from (8.3); a neutral grey
+   would dirty the cream showing at the edges. */
+.lightbox {
+  width: min(100%, 1200px);
+  max-width: 100%;
+  max-height: 100dvh;
+  margin: auto;
+  padding: var(--space-4);
+  border: 0;
+  background: transparent;
+  overflow: visible;
+}
+
+.lightbox::backdrop {
+  background: rgb(38 22 29 / 0.88);
+}
+
+.lightbox__panel {
+  display: grid;
+  gap: var(--space-2);
+  padding: var(--space-3);
+  border-radius: var(--radius-lg);
+  background: var(--clubi-surface);
+  box-shadow: var(--shadow-lifted);
+}
+
+.lightbox__bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  min-height: 44px;
+}
+
+.lightbox__count {
+  margin: 0;
+  font-size: var(--text-sm);
+  color: var(--clubi-ink-muted);
+}
+
+/* Same trade as the aviso's dismiss (E-16): a 44px target (10.4) around a small drawing, so the
+   glyph reads as punctuation of the bar instead of a second element sitting on the photo. */
+.lightbox__close {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  border: 0;
+  border-radius: var(--radius-md);
+  background: transparent;
+  color: var(--clubi-ink-brand);
+  cursor: pointer;
+  transition: background var(--motion-base) var(--motion-ease);
+}
+
+.lightbox__close .brand-element {
+  width: 0.9rem;
+}
+
+.lightbox__close:hover,
+.lightbox__close:active {
+  background: var(--clubi-tint-wine);
+}
+
+/* Never cropped and never blown up past its own pixels: `contain` plus no width of its own. The
+   ceiling leaves the bar above and the row below on screen at 100dvh. */
+.lightbox__image {
+  display: block;
+  max-width: 100%;
+  max-height: calc(100dvh - 12rem);
+  margin: 0 auto;
+  object-fit: contain;
+  border-radius: var(--radius-sm);
+}
+
+.lightbox__foot {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  min-height: 44px;
+}
+
+.lightbox__nav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.lightbox__original {
+  font-size: var(--text-sm);
 }
 
 /* ---------------------------------------------------------------- motion

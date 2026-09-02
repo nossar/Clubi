@@ -1,0 +1,193 @@
+{% load static %}
+{% comment %}
+The landing page (ADR-18): what an anonymous visitor gets at `/`, and the page the club actually
+publicises. A member signed in gets index.html from the same URL — core/views.root decides.
+
+It is rendered rather than a route in the SPA for one reason above the others: the crawlers behind
+a WhatsApp, Instagram or Telegram link preview do not run JavaScript. The og: tags below are read
+from the first bytes of this document, with the real book of the month already in them; from the
+SPA shell they would forever read the same generic card.
+
+PLACEHOLDERS — every string marked {# PLACEHOLDER #} below is provisional and belongs to the
+founder. They are, in order: the hero's one-sentence proposal, the three "como funciona" blocks
+(title and body of each), and the closing invitation above the last button. Nothing else on this
+page is invented copy: the labels are mechanical, and the footer line comes from the club's own
+pieces (DESIGN.md 9), which is where the SPA's footer takes it from too.
+
+Write those with `{% comment %}`, never a multi-line `{# … #}`: the hash form is a *single-line*
+comment, and broken across lines Django emits it verbatim into the page. Four of them did exactly
+that here, so core/test_views.py now asserts no `{#` survives into the response.
+
+No graphic elements here on purpose. The brand's ten elements live in frontend/src/assets/, which
+Django cannot reach through {% static %}, and copying one into core/static/brand/ would create the
+second copy of an asset DESIGN.md 2.1 keeps deliberately single. The logotype is shared already,
+and the brand is verbal anyway (DESIGN.md 6.3) — so this page is type, paper and one logo.
+{% endcomment %}
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  <title>clubi — o clube do livro da ESPM</title>
+  <meta name="description" content="{% if pick %}Neste mês o clubi está lendo {{ pick.book.title }}, de {{ pick.book.author }}.{% else %}O clube do livro da ESPM.{% endif %}">
+
+  {% comment %}
+    The link preview. og:image must be absolute — a crawler will not resolve a relative path —
+    which is what core/views.root builds cover_url for.
+  {% endcomment %}
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="clubi">
+  <meta property="og:locale" content="pt_BR">
+  <meta property="og:url" content="{{ request.build_absolute_uri }}">
+  <meta property="og:title" content="clubi — o clube do livro da ESPM">
+  <meta property="og:description" content="{% if pick %}Neste mês estamos lendo {{ pick.book.title }}, de {{ pick.book.author }}.{% else %}O clube do livro da ESPM.{% endif %}">
+  {% if cover_url %}
+    <meta property="og:image" content="{{ cover_url }}">
+    <meta property="og:image:alt" content="Capa de {{ pick.book.title }}">
+    <meta name="twitter:card" content="summary_large_image">
+  {% else %}
+    {# No cover, no og:image: a preview with a broken image reads worse than one with none. #}
+    <meta name="twitter:card" content="summary">
+  {% endif %}
+
+  <link rel="preload" href="{% static 'brand/fonts/ClashDisplay-Semibold.woff2' %}" as="font" type="font/woff2" crossorigin>
+  <link rel="preload" href="{% static 'brand/fonts/Manrope-Regular.woff2' %}" as="font" type="font/woff2" crossorigin>
+  <link rel="stylesheet" href="{% static 'css/tokens.css' %}">
+  <link rel="stylesheet" href="{% static 'css/landing.css' %}">
+</head>
+<body>
+  <a class="skip-link" href="#conteudo">Pular para o conteúdo</a>
+
+  {% comment %}
+    A wine band, not a bare logotype floating on the cream. Two things it fixes at once: the
+    logotype now sits in a header that visibly ends, instead of dissolving into the hero below it;
+    and the first screen stops being only wine-on-cream. The star is the brandbook's estrela-8,
+    which DESIGN.md 6.3 assigns to "destaque, novidade" — decoration in the margin, aria-hidden,
+    one element on the screen (6.2 allows two).
+
+    The yellow is legal *here* and would not be one band lower: DESIGN.md 3.2 rule 3 measures
+    yellow on cream at 1.38 and forbids it outright. On wine it is 6.84. The other yellow on this
+    page — the marca-texto in the h1 — is that rule's other sanctioned form, a large filled area
+    with wine text over it.
+  {% endcomment %}
+  <header class="landing-top">
+    <div class="container landing-top__inner">
+      <span class="brand brand--on-invert" role="img" aria-label="clubi"
+            style="--logo-src: url('{% static 'brand/logo-clubi.svg' %}')"></span>
+      <span class="landing-top__mark" aria-hidden="true"
+            style="--element-src: url('{% static 'brand/elements/estrela-8.svg' %}')"></span>
+    </div>
+  </header>
+
+  <main id="conteudo">
+    <section class="hero">
+      <div class="container hero__inner">
+        {# The <span> is the marca-texto; the sentence itself is still the founder's to write. #}
+        <h1 class="hero__title">A cada mês, <span class="mark">uma nova leitura.</span></h1>
+        {# PLACEHOLDER — a frase de proposta é da fundadora. #}
+        <p class="hero__lead">
+          O clubi é o primeiro clube do livro de estudantes para estudantes na ESPM Rio, onde a leitura vira conversa e troca de experiências.
+        </p>
+        <p class="hero__actions">
+          <a class="button button--lg" href="{% url 'signup' %}">Criar conta</a>
+          <a class="button button--quiet button--lg" href="{% url 'login' %}">Já sou do clube</a>
+        </p>
+      </div>
+    </section>
+
+    <section class="section section--invert pick">
+      <div class="container">
+        <p class="pick__eyebrow">O livro deste mês</p>
+
+        {% if pick %}
+          <div class="pick__inner">
+            <div class="pick__cover">
+              {% if pick.book.cover_image %}
+                <span class="book-cover">
+                  <img src="{{ pick.book.cover_image }}" alt="Capa de {{ pick.book.title }}">
+                </span>
+              {% else %}
+                {% comment %}
+                  The same typographic placeholder the SPA's BookCover draws, for the same
+                  reason: a graphic element here would spend one of the two the screen is
+                  allowed (DESIGN.md 6.2).
+                {% endcomment %}
+                <span class="book-cover book-cover--blank">
+                  <span class="book-cover__title">{{ pick.book.title }}</span>
+                  <span class="book-cover__author">{{ pick.book.author }}</span>
+                </span>
+              {% endif %}
+            </div>
+
+            <div class="pick__body">
+              <h2 class="pick__title">{{ pick.book.title }}</h2>
+              <p class="pick__author">{{ pick.book.author }}</p>
+              {% comment %}
+                |lower is not cosmetic: Django's pt-BR locale capitalises month names
+                ("Agosto"), while the SPA's Intl.DateTimeFormat does not ("agosto") — and
+                lowercase is the correct Portuguese. Without it the two halves of the same site
+                write the same date two ways. See format.ts, formatDay.
+              {% endcomment %}
+              <p class="pick__period">
+                Leitura de {{ pick.starts_on|date:"j" }} de {{ pick.starts_on|date:"F"|lower }}
+                a {{ pick.ends_on|date:"j" }} de {{ pick.ends_on|date:"F"|lower }}
+              </p>
+              {% if pick.blurb %}
+                <p class="pick__blurb">{{ pick.blurb }}</p>
+              {% endif %}
+            </div>
+          </div>
+        {% else %}
+          <p class="pick__blank">
+            A próxima leitura ainda está sendo escolhida. Crie sua conta para acompanhar —
+            o livro aparece aqui assim que o clube decidir.
+          </p>
+        {% endif %}
+      </div>
+    </section>
+
+    <section class="section how">
+      <div class="container">
+        <h2 class="section-title">Como funciona</h2>
+        <ol class="how__grid">
+          {# PLACEHOLDER — os três blocos abaixo são da fundadora, título e texto. #}
+          <li class="how__item">
+            <h3 class="how__title">Escolhemos o livro juntos</h3>
+            <p>Uma leitura por mês, anunciada aqui com o prazo combinado.</p>
+          </li>
+          <li class="how__item">
+            <h3 class="how__title">Você lê no seu ritmo</h3>
+            <p>Marque por onde está quando quiser. Ninguém é cobrado por página.</p>
+          </li>
+          <li class="how__item">
+            <h3 class="how__title">A leitura vira conversa</h3>
+            <p>As postagens do clube ficam no site, e o encontro do mês fecha a leitura.</p>
+          </li>
+        </ol>
+
+        <div class="how__cta">
+          {# PLACEHOLDER — a frase de convite é da fundadora. #}
+          <p>Toda leitura começa com alguém entrando.</p>
+          <a class="button button--lg" href="{% url 'signup' %}">Criar conta</a>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="landing-foot">
+    <div class="container landing-foot__inner">
+      <span class="brand brand--on-invert" role="img" aria-label="clubi"
+            style="--logo-src: url('{% static 'brand/logo-clubi.svg' %}')"></span>
+      {% comment %}
+        Not a placeholder: this is the club's own line (DESIGN.md 9), the same one the SPA's
+        footer carries.
+      {% endcomment %}
+      <p class="landing-foot__note">
+        Aqui não importa quantos livros você lê por ano. O que importa é fazer parte.
+      </p>
+      <p class="muted">Criado por estudantes para estudantes</p>
+    </div>
+  </footer>
+</body>
+</html>

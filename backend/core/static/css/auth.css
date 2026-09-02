@@ -1,92 +1,9 @@
-/* Design tokens for the rendered auth pages.
-   Source of truth: frontend/DESIGN.md section 11 (ADR-17).
-   The SPA's styles/tokens.css carries these same values — the rendered /accounts/ pages and the
-   SPA are one site, and shared tokens are ADR-05's stated mitigation for the seam between them.
-   Changing a value here means changing it there, and in DESIGN.md first. */
+/* The rendered auth pages (ADR-05): login, signup and the password-reset flow.
 
-/* Brandbook typography (DESIGN.md 4.1). Only the four weights the brandbook names are shipped.
-   Clash Semibold declares itself as family "Clash Display Semibold", so it is renamed here —
-   without this the browser treats it as a separate family and font-weight silently stops working. */
-@font-face {
-  font-family: "Clash Display";
-  src: url("../brand/fonts/ClashDisplay-Regular.woff2") format("woff2");
-  font-weight: 400;
-  font-style: normal;
-  font-display: swap;
-}
-@font-face {
-  font-family: "Clash Display";
-  src: url("../brand/fonts/ClashDisplay-Semibold.woff2") format("woff2");
-  font-weight: 600;
-  font-style: normal;
-  font-display: swap;
-}
-@font-face {
-  font-family: "Manrope";
-  src: url("../brand/fonts/Manrope-Regular.woff2") format("woff2");
-  font-weight: 400;
-  font-style: normal;
-  font-display: swap;
-}
-@font-face {
-  font-family: "Manrope";
-  src: url("../brand/fonts/Manrope-Bold.woff2") format("woff2");
-  font-weight: 700;
-  font-style: normal;
-  font-display: swap;
-}
-
-:root {
-  /* Brand, literal from the brandbook (DESIGN.md 3.1) */
-  --clubi-wine: #88013e;
-  --clubi-cream: #fdfae7;
-  --clubi-yellow: #ffd071;
-  --clubi-orange: #ed6630;
-
-  /* Surfaces */
-  --clubi-bg: var(--clubi-cream);
-  --clubi-surface: #fefdf4;
-  --clubi-surface-sunken: #f7eedf;
-  --clubi-line: #edd7cf;
-  --clubi-line-strong: #e1bebe;
-
-  /* Text */
-  --clubi-ink: #26161d;
-  --clubi-ink-brand: var(--clubi-wine);
-  --clubi-ink-muted: #716664;
-
-  /* Action */
-  --clubi-action: var(--clubi-wine);
-  --clubi-action-hover: #780137;
-  --clubi-action-active: #6a0130;
-  --clubi-action-ink: var(--clubi-cream);
-  --clubi-focus: var(--clubi-orange);
-
-  /* State (DESIGN.md E-03) */
-  --clubi-danger: #b83620;
-
-  /* Type */
-  --clubi-font-display: "Clash Display", "Trebuchet MS", system-ui, sans-serif;
-  --clubi-font-text: "Manrope", system-ui, -apple-system, "Segoe UI", sans-serif;
-  --leading-tight: 1.1;
-  --leading-body: 1.6;
-  --tracking-display: 0;
-  --tracking-text: -0.02em;
-
-  /* Space and shape */
-  --space-2: 0.5rem;
-  --space-3: 0.75rem;
-  --space-4: 1rem;
-  --space-5: 1.5rem;
-  --space-6: 2rem;
-  --radius-sm: 4px;
-  --radius-md: 8px;
-  --radius-lg: 16px;
-  --shadow-paper: 0 1px 2px rgb(38 22 29 / 0.06), 0 6px 16px rgb(38 22 29 / 0.08);
-
-  --motion-base: 200ms;
-  --motion-ease: cubic-bezier(0.2, 0, 0.2, 1);
-}
+   Tokens are NOT here — they live in tokens.css, which registration/base.html loads first and
+   which the landing page loads too. This file is only what the .auth-card screens themselves
+   need. Anything below that is a value rather than a rule belongs there, and in DESIGN.md
+   before that. */
 
 *,
 *::before,

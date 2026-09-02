@@ -6,6 +6,7 @@ import { ApiError, api } from "../api/client";
 import type { Post } from "../api/types";
 import { MemberAvatar } from "../components/MemberAvatar";
 import { PostEditForm } from "../components/PostEditForm";
+import { PostImages } from "../components/PostImages";
 import { useCurrentUser } from "../context/CurrentUser";
 import { formatDateTime } from "../format";
 import { canManagePost, useDeletePost } from "../posts";
@@ -105,7 +106,7 @@ export function PostDetail() {
         </p>
 
         <header className="post-card__header">
-          <MemberAvatar person={post.author} />
+          <MemberAvatar person={post.author} linkTo={`/u/${post.author.username}`} />
           <div>
             <p className="post-card__author">
               <Link className="post-card__author-link" to={`/u/${post.author.username}`}>
@@ -128,17 +129,11 @@ export function PostDetail() {
 
             <p className="post-detail__body">{post.body}</p>
 
-            {post.images.length > 0 ? (
-              <div className="post-card__images post-detail__images">
-                {post.images.map((src, index) => (
-                  <img
-                    key={src}
-                    src={src}
-                    alt={`Imagem ${index + 1} da postagem de ${post.author.full_name}`}
-                  />
-                ))}
-              </div>
-            ) : null}
+            <PostImages
+              images={post.images}
+              authorName={post.author.full_name}
+              className="post-detail__images"
+            />
 
             {isAuthor ? (
               <div className="post-detail__actions">

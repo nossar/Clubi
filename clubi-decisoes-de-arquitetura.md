@@ -25,6 +25,7 @@ Formato: cada decisão traz **contexto**, **decisão**, **alternativas considera
 | ADR-15 | Apps autocontidos, não um app de API central |
 | ADR-16 | Ferramental de desenvolvimento do frontend |
 | ADR-17 | Brandbook como fonte da verdade visual |
+| ADR-18 | Página de apresentação renderizada em `/` |
 
 ---
 
@@ -410,6 +411,44 @@ Três regras decorrem:
 
 ---
 
+## ADR-18 — Página de apresentação renderizada em `/`
+
+**Contexto.** Até aqui o site não tinha porta de entrada. O `/` caía no catch-all, que serve o shell da SPA; a SPA chamava `GET /api/me`, recebia 401 e o `client.ts` mandava o navegador para `/accounts/login/`. Ou seja: **um visitante anônimo era despejado num formulário de senha sem nunca ler uma frase sobre o que é o Clubi.** Isso era tolerável enquanto o site existia para quem já era do clube. Deixa de ser no momento em que o endereço passa a ser divulgado — que é o cenário para o qual esta página nasce.
+
+A pergunta não é se a página deve existir, e sim onde ela mora: uma view Django renderizada, no espírito do ADR-05, ou uma rota pública dentro da SPA.
+
+**Decisão.** Uma view renderizada em `/`, servida pelo Django. `core/views.root` ramifica na sessão: visitante anônimo recebe `templates/landing.html`; membro autenticado recebe o mesmo `index.html` de sempre. **Uma URL, dois documentos, nenhum redirect.**
+
+**Justificativa — o critério que decidiu é o crawler, e só ele.** Os robôs de preview de link do WhatsApp, do Instagram e do Telegram não executam JavaScript: leem os primeiros bytes do HTML e vão embora. A partir do shell da SPA, todo link do Clubi compartilhado em qualquer lugar mostraria para sempre o mesmo card genérico — o `<title>clubi</title>` fixo do `index.html` —, porque o livro do mês só existe depois que o React montou e o `fetch` voltou. Renderizada, a view escreve `og:title`, `og:description` e `og:image` já com o título, o autor e a capa vigentes, no primeiro byte. Numa página cuja função é ser divulgada, isso não é detalhe: é a função. O mesmo raciocínio, mais fraco, vale para indexação — o Googlebot renderiza JS, mas em fila separada e com atraso, e os buscadores menores mal renderizam.
+
+Os outros três critérios avaliados **não** decidiram, e vale registrar por quê, para ninguém reabrir a discussão achando que decidiram:
+
+- *Custo do bundle.* Real, porém secundário. O build atual pesa 383 KB de JS (124 KB comprimido) mais 29 KB de CSS, e hoje o visitante anônimo paga tudo isso **e** uma navegação de documento inteira até `/accounts/login/`. Baixar React para exibir texto estático é desperdício, mas desperdício de alguns décimos de segundo, não um argumento estrutural. *O cold start do plano gratuito do Render foi explicitamente descartado como critério*: ele some no plano pago (ADR-13), e esta página nasce para o cenário divulgado.
+- *Acesso ao ORM.* Menos decisivo do que parecia. A view chama `MonthlyPick.current()` direto, sem round trip e sem estado no cliente — mas **`GET /api/monthly-picks/current` já é público**: o `picks_router` é montado sem `auth=` em `api/api.py` e a rota não declara auth própria. Uma rota na SPA não precisaria de endpoint novo. O que sobra de verdade é outro custo: o `CurrentUserProvider` envolve o `<Routes>` inteiro e bloqueia a renderização até `/api/me` responder, então uma rota pública exigiria quebrar esse provider em dois — uma reestruturação da raiz da SPA para hospedar uma página sem estado nenhum.
+- *Catch-all.* Empate, e é o critério que sai de graça nas duas opções. O `path("", root)` é declarado **antes** do `re_path`, e o Django resolve na ordem: o primeiro padrão que casa vence. O lookahead negativo `^(?!static/|media/|api/|admin/|accounts/).*$` fica **intocado**, o que preserva a propriedade que ele existe para dar — um caminho de API digitado errado devolve 404 em vez de renderizar HTML.
+
+**O que explicitamente não muda: o fluxo do ADR-05.** Um deep link para rota autenticada (`/posts`, `/u/ana`) não casa com `path("")`, cai no catch-all, recebe o shell, e o `client.ts` faz o que sempre fez ao ver o 401 do `/api/me` — redireciona para `/accounts/login/?next=…`. Nenhuma linha de `client.ts`, `CurrentUser.tsx` ou `App.tsx` foi tocada, e não há endpoint novo na API. Os CTAs "Entrar" e "Criar conta" apontam para as views que já existiam sob `/accounts/`.
+
+**Alternativas consideradas.**
+
+- *Rota pública dentro da SPA.* Descartada pelo argumento do crawler acima, com o custo do bundle e a quebra do `CurrentUserProvider` como agravantes.
+- *Redirecionar o membro autenticado para outra URL* (`/app`, `/home`). Descartada: `/` é a Home na tabela de rotas do guia (7.4) e é o alvo de `LOGIN_REDIRECT_URL`. Mover o app para outro endereço para abrir espaço à apresentação trocaria uma página nova por uma mudança em toda a navegação.
+- *Uma URL própria para a apresentação* (`/sobre`, `/apresentacao`), com `/` intacto. Descartada: o endereço que o clube divulga é o domínio raiz. Uma apresentação que só existe um nível abaixo é uma apresentação que quase ninguém abre.
+- *Servir a landing a todo mundo e deixar o membro clicar para entrar no app.* Descartada: cobra um clique por visita de quem já é do clube, para mostrar um texto escrito para quem não é.
+
+**Consequências.**
+
+- Positivas: o link do clube ganha preview real, com o livro do mês dentro; o visitante lê antes de ser convidado a se cadastrar; a página é HTML puro, sem JS, e serve de fallback se o bundle quebrar; e nada do ADR-05 precisou ser mexido.
+- Negativas, e são três:
+  1. **`/` passa a responder dois documentos conforme o cookie.** O `Vary: Cookie` que o `SessionMiddleware` emite é o que impede um cache compartilhado de entregar o shell a um anônimo. Ele sai porque ler `request.user` toca a sessão — o que é uma dependência sutil demais para se confiar, então `core/test_views.py` **asserta o header** em vez de supor.
+  2. **A landing não é previsível no dev server do Vite.** A única rota renderizada nova é justamente `/`, que é a raiz da SPA em `:5173` e portanto o único caminho que **não pode** entrar no proxy. Os estáticos dela ficam sob `/static/`, que já está proxiado, então nenhuma entrada nova foi adicionada ao `vite.config.ts`. Vê-se a página em `localhost:8000/`, numa janela anônima.
+  3. **Existe agora uma segunda superfície de copy fora do controle da SPA**, com placeholders esperando a fundadora. Texto provisório que ninguém troca vira texto definitivo por omissão.
+- Neutra, mas vale saber: o `auth.css` foi partido em dois. Os tokens saíram para `core/static/css/tokens.css`, que a landing e as páginas de `/accounts/` carregam, e o `auth.css` ficou só com as regras do `.auth-card`. O arquivo novo é o gêmeo declarado do `frontend/src/styles/tokens.css` — a mitigação de costura que o ADR-05 prometeu e o ADR-17 reafirmou passa a ser verificável a olho, porque os dois carregam a paleta inteira em vez de um subconjunto.
+
+**Quando revisar.** Se a apresentação passar a precisar de estado (formulário de interesse, área de conteúdo paginada, qualquer coisa que peça interatividade além de links), a conta muda e vale reavaliar se ela é uma tela da SPA. E se um dia houver mais de uma página institucional — sobre, contato, edições anteriores abertas ao público —, aí a decisão a tomar não é esta de novo, e sim se o Clubi quer uma camada pública de verdade, com navegação própria, em vez de uma página avulsa.
+
+---
+
 ## Resumo executivo
 
 Se for para levar uma frase de cada decisão:
@@ -422,3 +461,4 @@ Se for para levar uma frase de cada decisão:
 6. **Admin como primeira entrega** porque é o seguro barato contra o único risco real do projeto.
 7. **Apps autocontidos, com só as projeções compartilhadas** porque schema de resposta pertence à rota, não à entidade que ele cita.
 8. **Brandbook como fonte da verdade visual** porque a identidade do clube é anterior ao site — e o que a web precisa e ele não cobre fica registrado como extrapolação, não decidido no CSS.
+9. **Apresentação renderizada em `/`** porque quem recebe o link do clube precisa de preview e de texto antes da senha — e crawler de rede social não executa JavaScript.

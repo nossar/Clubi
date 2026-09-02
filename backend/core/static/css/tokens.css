@@ -1,8 +1,52 @@
-/* clubi — design tokens. Source of truth: frontend/DESIGN.md section 11 (ADR-17).
-   backend/core/static/css/tokens.css carries these same values — the rendered pages (/accounts/
-   and the landing of ADR-18) and the SPA are one site, and shared tokens are ADR-05's stated
-   mitigation for the seam between them. Changing a value here means changing it there, and in
-   DESIGN.md first. */
+/* clubi — design tokens for the rendered pages (the /accounts/ screens and the landing).
+   Source of truth: frontend/DESIGN.md section 11 (ADR-17).
+
+   This file is the deliberate twin of frontend/src/styles/tokens.css: same names, same values.
+   The rendered pages and the SPA are one site, and shared tokens are ADR-05's stated mitigation
+   for the seam between them. Changing a value here means changing it there, and in DESIGN.md
+   first.
+
+   It carries the *whole* palette rather than the subset a given page happens to use. The subset
+   is what auth.css held until the landing page needed --space-7 and --container-max and had
+   nowhere to read them from — at which point the twin files had quietly stopped being twins.
+   A full mirror is checkable by eye; a subset is not.
+
+   The @font-face block lives here and not in the SPA's tokens.css because the SPA declares its
+   faces in base.css. Same four files, same four weights — only the URL form differs, since these
+   are resolved relative to this stylesheet and those are absolute. */
+
+/* Brandbook typography (DESIGN.md 4.1). Only the four weights the brandbook names are shipped.
+   Clash Semibold declares itself as family "Clash Display Semibold", so it is renamed here —
+   without this the browser treats it as a separate family and font-weight silently stops working. */
+@font-face {
+  font-family: "Clash Display";
+  src: url("../brand/fonts/ClashDisplay-Regular.woff2") format("woff2");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Clash Display";
+  src: url("../brand/fonts/ClashDisplay-Semibold.woff2") format("woff2");
+  font-weight: 600;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Manrope";
+  src: url("../brand/fonts/Manrope-Regular.woff2") format("woff2");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Manrope";
+  src: url("../brand/fonts/Manrope-Bold.woff2") format("woff2");
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+
 :root {
   /* ---- Brand, literal from the brandbook p.3 ---- */
   --clubi-wine:   #88013e;
