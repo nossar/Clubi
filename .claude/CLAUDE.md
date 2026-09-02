@@ -6,22 +6,25 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 Clubi — the ESPM book club website. Django + Django Ninja backend serving a React/TypeScript SPA from a single origin.
 
-**Current state: the whole backend is done — models, admin, auth and the API. The frontend is not.**
+**Current state: the whole backend is done — models, admin, auth and the API. The frontend has Fases 4 to 8 (Home, postagens, profiles, busca, catálogo externo), so every screen the guide's route table names is mounted and every phase of frontend work is closed. What is left is Fase 9, the deploy.** One round of product changes landed after Fase 8 without being a phase — see the `frontend/` line below and the two sections on postagens further down.
+
+**On the phase numbers:** guide section 9 numbers the external-catalogue work **Fase 8** and the deploy **Fase 9**. This file and `frontend/CLAUDE.md` used to have them the other way round; the guide is the spec, so its numbering won and both were corrected during Fase 8. An older note calling the deploy "Fase 8" is the losing side of that.
 
 Written and working:
-- `users` — custom `User` (`full_name`, `birth_date`, `photo`, `quote`) plus a `favorites` M2M through `books.Favorite`; `users/schemas.py`, `users/api.py` (`me_router`, `users_router`).
-- `books` — `Book`, `MonthlyPick`, `MonthlyReading`, `Favorite`, with migrations and admin; `books/schemas.py`, `books/api.py` (`books_router`, `picks_router`).
-- `posts` — `Post`, `PostImage`, with migrations and admin; `posts/schemas.py`, `posts/api.py` (`posts_router`).
+- `users` — custom `User` (`full_name`, `birth_date`, `photo`, `quote`, `posts_seen_at`) plus a `favorites` M2M through `books.Favorite`; `users/schemas.py`, `users/api.py` (`me_router`, `users_router`). `MeOut` is the `/api/me` response and the only schema carrying `is_staff` (see below).
+- `books` — `Book`, `MonthlyPick`, `MonthlyReading`, `Favorite`, with migrations and admin; `books/schemas.py`, `books/api.py` (`books_router`, `picks_router`). `MonthlyReading` stores its rating in half-stars (`rating_halves`, 0–10, with a `CheckConstraint`) and exposes it as 0–5 in steps of 0.5 through a `rating` property — see the ratings note below.
+- `posts` — `Post`, `PostImage`, with migrations and admin; `posts/schemas.py`, `posts/api.py` (`posts_router`). **Writing is `is_staff`-only**, and the router also answers the unread count.
 - `core` — no models; holds `core/images.py` (`compress_image`) and `core/static/css/auth.css`.
 - Auth end to end: `SignupView`, `django.contrib.auth.urls`, pt-BR templates under `backend/templates/registration/`, email settings for password reset, and 17 tests in `users/test_auth.py`.
-- `api` — no models, no routes of its own; only `api/api.py` (the `NinjaAPI` instance and the `add_router` calls) and `api/schemas.py` (the two shared projections). All 22 endpoints of the guide's section 6.2 map are mounted; docs at `/api/docs`.
+- `api` — no models, no routes of its own; only `api/api.py` (the `NinjaAPI` instance and the `add_router` calls) and `api/schemas.py` (the two shared projections). All 22 endpoints of the guide's section 6.2 map are mounted, plus two the map does not have (`GET /api/posts/unread`, `POST /api/posts/seen`); docs at `/api/docs`.
 - API tests live with their app — `books/test_api.py`, `users/test_api.py`, `posts/test_api.py`, `api/test_api.py` — over shared fixtures in `backend/conftest.py`.
 
-Not written yet:
-- `frontend/` — no code. What is there is `frontend/DESIGN.md` (the visual source of truth, ADR-17) and `frontend/clubi/` (brandbook and brand assets). `backend/templates/index.html` is a declared placeholder for the SPA shell, to be replaced by the Vite build.
-- The Neon Postgres wiring (see below). The root `Makefile` now exists.
+- `frontend/` — Fases 4 to 8 are done: Vite with the proxy, `src/api/client.ts`, TanStack Query, `styles/tokens.css` and `base.css` on the brand tokens, `Header`, `Footer`, `Home` with the monthly highlight and a working `ProgressBar`, the postagens screens (`Feed`, `NewPost`, `PostDetail`, `PostCard`), the profile screens (`Profile`, `EditProfile`, `StarRating` — a `role="slider"` with click, drag and arrow keys over the half-star scale — `FavoritesShelf`), the search (`Search` at `/search`, the `MemberSearch` field in the header, and `PickHistory` at `/book-of-the-month/history`), and the external catalogue inside `BookPicker` (`GET /api/books/external` plus `POST /api/books`, with `externalBook.ts` for the pure hit-to-`BookIn` mapping). `backend/templates/index.html` is the real SPA shell, loading the pinned Vite bundle. One round of changes landed after Fase 8 and is not a phase: the Home is now only the book and your reading of it (the postagens preview and the "quem está lendo" section are gone), "quem já terminou" is a folded panel inside the reading card, the header carries the balão into `/posts` with an unread badge, and "publicação" became "postagem" in every user-facing string. See `frontend/CLAUDE.md` for the folder's contract and `frontend/DESIGN.md` for anything visual.
 
-Known divergence: `core/static/css/auth.css` shipped with an improvised palette that predates the brandbook. ADR-17 replaces it with the brand tokens; realigning it is a prerequisite of the first SPA CSS commit, not later cleanup.
+Not written yet:
+- Nothing on the frontend. Two things are *deliberately* absent rather than owed, and both are argued in `frontend/CLAUDE.md`: `BookOfTheMonth` (Fase 7 — the Home already is that screen, and `/book-of-the-month` redirects to it) and a "cadastro de livro" screen (Fase 8 — a book is registered from inside `BookPicker`, where the member already is, and anything the Open Library does not have is a job for the Admin, ADR-14).
+- **One backend gap the frontend found and did not fix** (Fase 6, raised rather than acted on): `PatchDict[ProfileIn]` discards the schema's `max_length`, so `PATCH /api/me` writes a 200-character `full_name` into a 120-character column and answers 200 OK. SQLite does not check varchar length; the Neon Postgres of ADR-13 would raise `DataError` → 500. `EditProfile`'s `maxLength` attributes are the only length validation in the path today.
+- The Neon Postgres wiring (see below). The root `Makefile` now exists and no longer gates the frontend steps.
 
 Follow the phase order in the implementation guide rather than inventing structure.
 
@@ -70,7 +73,7 @@ Ruff: line-length 100, migrations excluded. `select` is unset, so linting uses t
 
 The root `Makefile` exists and is the preferred entry point: `install`, `dev-backend`, `dev-frontend`, `types`, `migrate`, `build`, `check`, `lint`. Use it instead of growing ad-hoc scripts.
 
-**The binary is not called `make` on this machine.** Make ships from MSYS2 here and is installed as `mingw32-make` (`C:\msys64\ucrt64\bin`) — there is no plain `make` on PATH, and Git Bash does not bundle one. So it is `mingw32-make check`, not `make check`. On Linux, macOS, WSL, or a Windows box that got make from Chocolatey or Scoop, the binary is `make`. If `make` returns "command not found", that is the reason — the Makefile is fine; reach for `mingw32-make` before concluding anything is broken.
+**The binary is possibly not called `make` on this machine.** Make ships from MSYS2 here and is installed as `mingw32-make` (`C:\msys64\ucrt64\bin`) — there is no plain `make` on PATH, and Git Bash does not bundle one. So it is `mingw32-make check`, not `make check`. On Linux, macOS, WSL, or a Windows box that got make from Chocolatey or Scoop, the binary is `make`. If `make` returns "command not found", that is the reason — the Makefile is fine; reach for `mingw32-make` before concluding anything is broken.
 
 While `frontend/package.json` is absent, the Makefile skips the frontend steps and echoes a `Skipped …` line for each. That gating is scaffolding: delete the `FRONTEND` variable and the `ifneq` blocks when the frontend is scaffolded, or a later `make check` can pass green having tested only the backend.
 
@@ -110,7 +113,23 @@ Three things about the Ninja wiring that are easy to get wrong:
 - `Book` — bibliographic record, no notion of "month". `author` is a `CharField`, not an FK (ADR-10).
 - `MonthlyPick` — the club's choice for one month (`month` unique, first day of month). There is **no** `is_book_of_the_month` boolean; that would destroy history. Current pick via `MonthlyPick.current()`.
 - `MonthlyReading` — one member's reading of one pick (progress, rating, review), unique per `(user, pick)`. It *is* the profile history; created lazily by `get_or_create` on the first progress click. Accessors: `user.monthly_readings`, `pick.readings`.
+
+**Ratings are half-stars in the column and whole stars in the contract.** `MonthlyReading.rating_halves` is an integer 0–10 where one unit is half a star, bounded by a `CheckConstraint` (a NULL passes — most readings have no rating). Nothing outside the model should touch that column: the `rating` property converts both ways, so the admin, a shell session and `MonthlyReadingOut` all see 0–5 in steps of 0.5, and `MonthlyReadingIn` rejects anything off that grid with `multiple_of=0.5` (a 3.3 or an 11 is a 422). Doing the conversion in a schema instead would have left every non-API reader holding a 7. **`0` is a rating — zero stars — and it stopped meaning "sem nota".** Erasing one is `{"clear_rating": true}`, a field of its own: `update_reading` discards a `null` (which is what makes the `PUT` partial), and `GET /monthly-picks/current/readers` filters on `rating_halves IS NOT NULL`, so a member who erased a note must actually reach NULL instead of parking on 0. The reversibility DESIGN.md 9 asks for comes from that field now.
 - `Favorite` / `PostImage` — fixed 4-slot lists modeled as rows with `position` and a 1–4 `CheckConstraint`. The shelf is saved by atomic replacement (`PUT /api/me/favorites`), not add/remove/reorder endpoints.
+
+**Reading is the club's, writing is the organisation's.** `create_post`, `update_post`,
+`delete_post` and `attach_image` refuse anyone without `is_staff` — 403, pt-BR — before they look
+at authorship. The SPA needs to know, so `GET /api/me` answers with `MeOut`, a subclass of
+`UserOut` that adds `is_staff` and exists precisely so the flag stays off `UserProfileOut` (which
+also extends `UserOut`) and out of `UserBrief`, where it would have become project-wide vocabulary
+(ADR-15, rule 3). Hiding the "Postar" shortcuts is courtesy; these four checks are the rule.
+
+**Unread postagens are one stamp, not a table.** `User.posts_seen_at` compared against
+`Post.created_at`: `GET /api/posts/unread` counts what is newer and not the member's own,
+`POST /api/posts/seen` writes the stamp, and the SPA fires it when the feed mounts. A NULL stamp
+means "never opened the feed", so everything counts — which is what every existing member got when
+the column shipped, and what one visit settles. Per-post read receipts would have been a table
+growing with members × postagens to answer a question a timestamp already answers.
 
 **Custom user from day one (ADR-09).** `AUTH_USER_MODEL = "users.User"` was set before the first migration. Never reference `auth.User`; use `settings.AUTH_USER_MODEL` in FKs.
 

@@ -25,6 +25,12 @@ class PostOut(Schema):
         return [image.file.url for image in obj.images.all()]
 
 
+class UnreadPostsOut(Schema):
+    """How many postagens the member has not seen — see posts.api.unread_posts."""
+
+    count: int
+
+
 class Page(Schema):
     items: list[PostOut]
     total: int

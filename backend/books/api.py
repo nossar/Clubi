@@ -11,10 +11,10 @@ from books.models import Book, MonthlyPick, MonthlyReading
 from books.schemas import (
     BookIn,
     ExternalBookOut,
+    FinishedReaderOut,
     MonthlyPickOut,
     MonthlyReadingIn,
     MonthlyReadingOut,
-    ReaderOut,
 )
 
 # Mounted at /api/books and /api/monthly-picks — both are books models.
@@ -116,13 +116,28 @@ def current_pick(request):
     return _current_pick()
 
 
-@picks_router.get("/current/readers", response=list[ReaderOut])
-def current_readers(request):
-    # pick__book is needed by MonthlyReading.percent — without it the list is N+1.
+@picks_router.get("/current/readers", response=list[FinishedReaderOut])
+def finished_readers(request):
+    """Who has finished this month's book and left a rating.
+
+    Both halves of the filter are load-bearing. `finished_at` is what makes this "quem já
+    terminou" instead of "quem está lendo", and `rating_halves__isnull=False` is what gives
+    every row something to say. **A rating of 0 keeps a member on this list**: zero stars is an
+    opinion, and the only way a reading has no rating at all is for nobody to have written one
+    — the column is `null=True` with no default, so it is born NULL and a 0 only ever arrives
+    because someone sent one. Erasing a rating (`MonthlyReadingIn.clear_rating`) takes the row
+    back off the list, which is the reversibility DESIGN.md 9 asks for.
+
+    Ordered by name, not by when they finished or by how far they read: this is companionship,
+    not a race (DESIGN.md 9). `pick__book` left the select_related along with `percent` — the
+    only relation this response reads now is `user`, and that one is still the difference
+    between one query and N.
+    """
     return (
         _current_pick()
-        .readings.select_related("user", "pick__book")
-        .order_by("-pages_read", "user__full_name")
+        .readings.filter(finished_at__isnull=False, rating_halves__isnull=False)
+        .select_related("user")
+        .order_by("user__full_name")
     )
 
 
@@ -145,8 +160,15 @@ def update_reading(request, payload: MonthlyReadingIn):
         if total and payload.pages_read >= total and not reading.finished_at:
             reading.finished_at = timezone.now()
 
-    if payload.rating is not None:
+    # Erasing and grading are two different requests, not one field doing both jobs — see the
+    # comment on MonthlyReadingIn.clear_rating for why 0 stopped meaning "sem nota".
+    if payload.clear_rating:
+        if payload.rating is not None:
+            raise HttpError(400, "Escolha entre dar uma nota e tirar a nota.")
+        reading.rating = None
+    elif payload.rating is not None:
         reading.rating = payload.rating
+
     if payload.review is not None:
         reading.review = payload.review
 

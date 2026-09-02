@@ -1,7 +1,17 @@
 {% load static %}
 {% comment %}
-SPA shell placeholder. Replace with the Vite build shell (guide, section 8) once
-frontend/dist exists — it must load assets/index.css and assets/index.js.
+The SPA shell (guide, section 8). Django serves the API, the Admin, the rendered /accounts/ pages
+and this file from one origin (ADR-04); everything the catch-all in clubi/urls.py does not exclude
+lands here and React Router takes over.
+
+Two things this file has to get right:
+
+- The asset names are pinned in frontend/vite.config.ts (rollupOptions.output), because {% static %}
+  cannot know a hash Vite invented at build time. In production WhiteNoise's manifest storage
+  re-hashes them, so cache busting is not lost. If you unpin them, read dist/.vite/manifest.json
+  here instead — never ship a shell pointing at names Vite is not emitting.
+- The view is wrapped in ensure_csrf_cookie (clubi/urls.py). A member with a valid session but no
+  csrftoken cookie would have every write rejected, since client.ts reads the header from it.
 {% endcomment %}
 <!doctype html>
 <html lang="pt-BR">
@@ -9,31 +19,16 @@ frontend/dist exists — it must load assets/index.css and assets/index.js.
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>clubi</title>
-  <link rel="stylesheet" href="{% static 'css/auth.css' %}">
+  <meta name="description" content="O clube do livro da ESPM.">
+  {# Only the two faces that appear above the fold (DESIGN.md 4.2). #}
+  <link rel="preload" as="font" type="font/woff2" crossorigin
+        href="{% static 'brand/fonts/ClashDisplay-Semibold.woff2' %}">
+  <link rel="preload" as="font" type="font/woff2" crossorigin
+        href="{% static 'brand/fonts/Manrope-Regular.woff2' %}">
+  <link rel="stylesheet" href="{% static 'assets/index.css' %}">
 </head>
 <body>
-  <main class="auth-card">
-    <a class="auth-brand" href="/" aria-label="clubi"
-       style="--logo-src: url('{% static 'brand/logo-clubi.svg' %}')"></a>
-    <h1>Clube do Livro da ESPM</h1>
-    {% if user.is_authenticated %}
-      <p class="auth-lead">
-        Olá, {{ user.full_name|default:user.username }}. A interface ainda está em
-        construção — por enquanto, o clube funciona pelo Admin.
-      </p>
-      <p class="auth-links">
-        <a href="/admin/">Ir para o Admin</a>
-      </p>
-      <form class="auth-form" method="post" action="{% url 'logout' %}">
-        {% csrf_token %}
-        <button class="button" type="submit">Sair</button>
-      </form>
-    {% else %}
-      <p class="auth-lead">A interface ainda está em construção.</p>
-      <p class="auth-links">
-        <a href="{% url 'login' %}">Entrar</a> · <a href="{% url 'signup' %}">Criar conta</a>
-      </p>
-    {% endif %}
-  </main>
+  <div id="root"></div>
+  <script type="module" src="{% static 'assets/index.js' %}"></script>
 </body>
 </html>

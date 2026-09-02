@@ -9,7 +9,7 @@ from api.schemas import BookOut, UserBrief
 from books.models import Book, Favorite
 from core.images import compress_image
 from users.models import User
-from users.schemas import FavoritesIn, ProfileIn, UserOut, UserProfileOut
+from users.schemas import FavoritesIn, MeOut, ProfileIn, UserProfileOut
 
 # Mounted at /api/me, authenticated as a whole (see api/api.py).
 me_router = Router()
@@ -28,13 +28,13 @@ def _shelf(user: User) -> list[Book]:
     return [f.book for f in Favorite.objects.filter(user=user).select_related("book")]
 
 
-@me_router.get("", response=UserOut)
+@me_router.get("", response=MeOut)
 def read_me(request):
     """The SPA's login signal: 401 here means "send the visitor to /accounts/login/"."""
     return request.user
 
 
-@me_router.patch("", response=UserOut)
+@me_router.patch("", response=MeOut)
 def update_me(request, payload: PatchDict[ProfileIn]):
     user = request.user
 
@@ -48,7 +48,7 @@ def update_me(request, payload: PatchDict[ProfileIn]):
     return user
 
 
-@me_router.put("/photo", response=UserOut)
+@me_router.put("/photo", response=MeOut)
 def upload_photo(request, file: File[UploadedFile]):
     if file.size > MAX_PHOTO_BYTES:
         raise HttpError(400, "Arquivo maior que 8 MB.")

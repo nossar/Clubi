@@ -11,7 +11,9 @@ escolha arbitrária que este documento existe para impedir.
 
 | | |
 |---|---|
-| **Status** | Fechado para a Fase 4. **As 12 extrapolações foram revisadas pelo fundador em 2026-08-27** — nenhuma em aberto. |
+| **Status** | Fechado para a Fase 4. **As 12 primeiras extrapolações foram revisadas pelo fundador em 2026-08-27.** A **E-13** (dimensões de componente, seção 8.7) nasceu durante a Fase 4, ganhou três linhas na Fase 5 (área de texto, botão de remover imagem, proporção de imagem de post), mais quatro na Fase 6 (foto de perfil, estrela de nota, slot da estante, capa do histórico), mais duas na Fase 7 (campo de busca do cabeçalho, cartão de membro), mais duas quando a nota passou a aceitar meia estrela (recorte da metade, prévia) e mais uma na Fase 8 (capa no resultado do catálogo externo), e mais três quando as postagens ganharam
+lugar no cabeçalho (painel de quem terminou, balão do cabeçalho, bolinha de não lidas). A **E-14**
+(elemento de marca ao lado de palavra num controle, seção 6.3) nasceu junto. As duas estão em aberto. |
 | **Fonte primária** | `frontend/clubi/clubi  canva_brandbook.pdf` (6 páginas) |
 | **Autoridade** | Em conflito, vence o brandbook. Depois dele, as peças de redes sociais. Depois, este documento. |
 | **Idioma** | Documento em pt-BR (convenção do projeto); nomes de token em inglês. |
@@ -499,7 +501,7 @@ A saída é separar dois problemas que costumam ser tratados como um só.
 |---|---|---|
 | Nota do livro | `estrela-5` | `StarRating` |
 | Anexar imagem | `clips` | `NewPost` |
-| Post, comentário | `balao` | `PostCard`, `Feed` |
+| Postagens (o caminho até elas) | `balao` | `Header` |
 | Livro do Mês, leitura em curso | `livro-aberto` | `MonthlyPickHighlight` |
 | Histórico de escolhas | `livro-fechado` | `PickHistory` |
 | Estado vazio | `nuvem` | qualquer lista vazia |
@@ -521,12 +523,72 @@ segundo arquivo, sem variante preenchida/vazada.
 | seta de voltar | **"← Voltar"** |
 
 Botão com rótulo é mais acessível que ícone sozinho e conversa com o tom da seção 9. **As Fases 4 a
-6 saem inteiras com zero ícone funcional.**
+8 saíram inteiras com zero ícone funcional** — o primeiro caso de fronteira só apareceu depois
+delas, quando as postagens ganharam lugar no cabeçalho, e está resolvido logo abaixo (E-14) sem
+que nenhuma das duas regras caísse. A Fase 7 era o teste mais provável dessa regra, porque
+é a fase da busca: o campo do cabeçalho ficou com o `placeholder` "Buscar membros" e nenhuma lupa,
+exatamente como a linha desta tabela previa. A Fase 8 acrescentou o caso que a tabela não previa —
+**espera**: a consulta ao catálogo externo pode levar segundos, e onde caberia um *spinner* está
+uma frase ("Procurando “…” no catálogo aberto…"), pelo mesmo motivo que o controle é a palavra
+"Procurar no catálogo aberto" e não uma lupa. O `×` que o Chrome desenha dentro de um
+`<input type="search">` é do navegador, não nosso — a semântica do campo vale mais que o pixel, e
+esta seção governa o que o projeto desenha.
 
-**3. O resíduo: dois glifos.** Sobram `×` (fechar) e o menu do celular, onde palavra fica desajeitada
-num canto. Quando forem necessários, **desenhe-os no traço da marca** — linha irregular, ponta
-aberta, leve tremor, espessura equivalente à dos elementos — e versione junto em
-`src/assets/elements/`. Dois glifos, não uma dependência.
+**A fronteira, e como ela foi resolvida (E-14).** O acesso às postagens no cabeçalho é as duas
+coisas ao mesmo tempo: um *controle* (leva para `/posts`) e um *significado* que esta seção já
+tinha atribuído ao `balao`. A saída não foi escolher um dos dois lados, foi **usar os dois** — o
+balão com a palavra "Postagens" ao lado, não um balão mudo. Um ícone sozinho seria exatamente o
+botão-símbolo que a regra 2 recusa; a palavra sozinha desperdiçaria o elemento que a tabela acima
+já reservava para post. É a única composição desse tipo no site, e continua não havendo biblioteca
+de ícones. A bolinha de não lidas sobre o balão segue a regra de 10.3: ela **carrega o número**, e
+a frase inteira ("3 postagens não lidas") vai num `.visually-hidden` ao lado — cor nunca é o único
+sinal.
+
+**3. O resíduo: três glifos, desenhados aqui.** Sobram `×` (fechar/tirar) e as duas setas de
+reordenar, `seta-cima` e `seta-baixo`; o menu do celular continua na fila, se um dia existir.
+Todos foram **desenhados no traço da marca** — linha irregular, ponta aberta, leve tremor, mesma
+espessura dos elementos, mesmo `viewBox` de 100×100 e o mesmo `currentColor` — e versionados junto
+em `src/assets/elements/`. Três glifos, não uma dependência.
+
+**Onde as setas entraram, e por que a regra 2 não caiu (E-15).** Os controles de cada lugar da
+estante (`FavoritesShelf` em modo de edição) eram as palavras "Subir", "Descer" e "Tirar", e
+passaram a ser as duas setas e o `×`. É o caso que a própria E-07 previa: **quatro lugares × três
+palavras é doze rótulos numa grade de quatro colunas de `7rem`** — a densidade em que o texto
+atrapalha em vez de ajudar, e onde a palavra repetida quatro vezes já não distinguia o lugar de que
+falava. A regra 2 continua valendo em todo o resto do site, e a leitura do controle não se perdeu:
+cada botão carrega a frase inteira em `aria-label` e `title`, **nomeando o livro** — "Subir
+“Torto Arado” para o lugar 2" —, que é mais do que a palavra sozinha dizia. Não entrou biblioteca:
+o `×` é o arquivo que a Fase 5 já usava para tirar imagem em preparo, e as setas nasceram do mesmo
+traço no mesmo dia.
+
+**O `×` sozinho, sem densidade para justificá-lo (E-16).** O aviso de postagens novas
+(`UnreadNotice`) dispensava-se por um botão escrito "Depois", ao lado de um link "Ver as
+postagens"; agora a faixa é uma frase só — "Você possui 3 postagens novas desde sua última visita"
+— e o `×` do resíduo encostado à direita. Isto é o gatilho que a E-15 deixou escrito — **um
+controle isolado, sem repetição**, então não é a densidade que paga por ele. O que paga é a outra
+metade da regra 3: `×` é o glifo que esta seção já reservou para *fechar*, e fechar um aviso é a
+ação mais convencionada que existe numa interface. A frase não sumiu — vai em `aria-label` e
+`title` ("Dispensar o aviso"). **O link saiu junto, e isso é o que mantém a regra 2 de pé aqui:**
+o caminho até as postagens continua sendo palavra, só que a de cima — o balão + "Postagens" do
+cabeçalho (E-14), na mesma tela, com a mesma contagem. Duas portas para a mesma sala, uma linha
+abaixo da outra, é duplicata e não atalho. Não entrou biblioteca: é o mesmo arquivo `x.svg` da
+estante e das imagens em preparo.
+
+**E ele é menor do que o da estante, de propósito.** O alvo de toque de 10.4 continua inteiro —
+44px —, mas **transborda** a faixa em vez de defini-la: a linha tem a altura do texto e o quadrado
+sobra para fora por margem negativa, porque um botão de 44px numa faixa de uma linha só fica mais
+que o dobro da altura daquilo que ele dispensa. O desenho é cortado para `0.8rem`, o tamanho da
+própria frase, para o `×` ler como pontuação da linha e não como um segundo elemento ao lado dela.
+É a mesma troca da estante (glifo pequeno dentro de alvo grande) com o quadrado tirado do fluxo.
+
+**A seta ganhou um segundo emprego, e continua não sendo um menu (`AccountMenu`).** O canto da
+conta no cabeçalho — "Olá, Ana" + foto — abre "Meu perfil" e "Sair", e a `seta-baixo`/`seta-cima`
+é o que diz que há um segundo nível. Não é a regra 2 caindo de novo: **quem é clicado é a
+palavra**, o nome accessível do controle é a saudação, e a foto e a seta são as duas `aria-hidden`
+ao lado dela — a seta pontua, não controla. As duas se **trocam** em vez de girar por CSS, porque
+são traço à mão de ponta aberta e uma `seta-baixo` espelhada lê como o espelho dela mesma. O
+"menu do celular" que esta regra deixou na fila continua na fila: isto é uma revelação de dois
+itens sob uma palavra, não um ícone de hambúrguer.
 
 ---
 
@@ -564,6 +626,14 @@ Nada nesta seção está no brandbook (E-10). Tudo é derivado do que se observa
 | `--space-5`, `--space-6` | 24, 32px | Entre componentes |
 | `--space-7`, `--space-8` | 48, 64px | Entre blocos, respiro de seção |
 | `--space-9` | 96px | Entre seções de página inteira |
+
+**Duas seções podem ser meias de um assunto só, e aí a costura cai uma faixa.** No perfil, "Estante"
+e "Leituras do clubi" são as duas metades do que aquela pessoa lê — não dois blocos independentes
+da página. O fio entre elas continua lá, mas o ar dos dois lados desce de `--space-7`/`--space-8`
+("respiro de seção") para `--space-6` ("entre componentes"): `.section--tight` no primeiro do par,
+que alcança o topo do segundo pelo irmão adjacente. É exceção, não o padrão — o ritmo da página
+continua sendo o da tabela acima, e duas seções que tratam de assuntos diferentes ficam longe uma
+da outra de propósito.
 
 ### 8.2 Raio
 
@@ -614,6 +684,43 @@ Rápido e sem elasticidade: `--motion-fast: 120ms`, `--motion-base: 200ms`,
 `--motion-slow: 320ms`, todos com `ease-out`. A marca é desenhada à mão, não animada; exagero de
 movimento contradiz o "espaço para desacelerar" da seção 9. Respeite `prefers-reduced-motion`.
 
+### 8.7 Dimensões de componente (E-13)
+
+O resto da seção 8 dá espaçamento, raio, container e breakpoints, mas não desce ao tamanho dos
+componentes em si — e a Fase 4 precisou desses tamanhos. Ficam registrados aqui para não
+renascerem no CSS a cada tela nova. **Nenhum é do brandbook**; cada um se apoia numa regra que já
+existia neste documento.
+
+| Medida | Valor | De onde saiu |
+|---|---|---|
+| Logotipo no cabeçalho e no rodapé | `clamp(104px, 26vw, 132px)` | A faixa de 5.3 (mínimo 96px, alvo 120–140px). O piso subiu para 104px porque em 390px o logo divide a linha com o "Sair" |
+| Capa de livro | proporção `2 / 3`, borda de `--space-2`, `--radius-lg` | Proporção corrente de capa; a borda creme grossa é o "recorte com borda branca" da seção 7 e o raio é o que 8.2 atribui a capa de livro |
+| Coluna da capa no herói (≥768px) | `17rem` | Cerca de um quarto do `--container-max`, o suficiente para a capa não competir com o `h1` |
+| Capa no celular | `min(15rem, 62vw)` | 62vw deixa o retalho xadrez deslocado e o selo caberem na coluna em 390px sem estourar a goteira |
+| Elemento gráfico | `2rem` embutido em linha, `5rem` em estado vazio | Muito abaixo do teto de ~240px de 6.2, onde o traço texturizado esgarça |
+| Avatar de leitor | `2.75rem` (44px) | É o alvo de toque de 10.4 reusado como diâmetro |
+| Trilho da barra de progresso | `0.875rem` de altura, `--radius-pill` | Fino o bastante para informar sem virar medidor (seção 9); o raio é o do selo |
+| Campo numérico | `6rem` de largura, `44px` de altura | Cabe quatro dígitos; a altura é o alvo de toque |
+| Fio de aviso / borda de avatar | `3px` / `2px` | Mais grossos que o fio de 1px de `--clubi-line`, porque marcam estado e não podem depender só de cor (3.3) |
+| Área de texto (Fase 5, `NewPost`/edição de post) | `8rem` de altura mínima | Cabe o corpo de um post curto sem rolagem; abaixo disso o membro perde a visão do que já escreveu antes de publicar |
+| Botão de remover imagem em preparo (Fase 5) | `44px` de diâmetro | O mesmo alvo de toque de 10.4, reusado como diâmetro — mesma lógica do avatar de leitor acima |
+| Proporção de imagem — publicação vs. capa (Fase 5) | `4 / 3` nas imagens já publicadas, `1 / 1` nas miniaturas em preparo | Diferente de `2 / 3` (capa de livro), de propósito: a publicação é foto de celular, não capa editorial; o quadrado nas miniaturas do formulário as distingue visualmente das imagens já publicadas antes de o post existir |
+| Foto de perfil (Fase 6, `Profile`/`EditProfile`) | `clamp(6rem, 22vw, 8rem)`, borda de `--space-2`, `--radius-pill` | Cerca de metade da coluna de capa do herói (17rem): ancora o cabeçalho sem disputar atenção com o nome. A borda creme grossa é o mesmo "recorte com borda branca" da seção 7 já aplicado à capa de livro |
+| Estrela de nota (Fase 6, `StarRating`) | glifo de `1.5rem` dentro de um alvo de `44px` | O alvo de toque de 10.4 — que nomeia as estrelas como um dos dois candidatos a errá-lo. O glifo em si fica muito abaixo do teto de ~240px de 6.2 e alinha com uma linha de texto |
+| Meia estrela (`StarRating`, nota de 0,5 em 0,5) | cópia do mesmo glifo de `1.5rem` empilhada sobre o vazio, recortada por `overflow: hidden` a `50%` da largura | Não é medida nova, é a de cima usada duas vezes: a estrela cheia e a vazia já eram o mesmo desenho em cores diferentes (6.1), então a metade sai do mesmo arquivo em vez de um terceiro. O recorte é na largura do glifo, não na do alvo de `44px`, senão o corte cairia na folga em volta do desenho |
+| Prévia de nota (`StarRating`, sob o cursor ou o dedo) | preenchimento a `opacity: .55`, legenda prefixada por `prévia:` | A prévia precisa se distinguir da nota já dada, e 10.3 proíbe que a distinção seja só de cor — daí o par: a opacidade é o sinal visual, a palavra na legenda é o que não depende de enxergar a diferença. Opacidade em vez de uma quinta cor porque a paleta é fechada (3.1) |
+| Slot da estante de favoritos (Fase 6) | coluna mínima de `7rem`; 2 colunas até 768px, 4 acima | A estante tem quatro lugares fixos (ADR-08), então a grade é fixa e não auto-ajustável — uma grade que se ajusta sozinha diria que cabem mais. Abaixo de 7rem o título de um livro sem capa não cabe no placeholder tipográfico |
+| Botão de ordenar/tirar na estante (`FavoritesShelf`) | glifo de `1.25rem` (o `×`, `1.05rem`) dentro de um alvo de `44px` | A mesma troca da estrela de nota acima: o alvo é o de 10.4, o desenho fica pequeno o bastante para continuar lendo como traço da marca. O `×` é menor por correção óptica — ele preenche o `viewBox` de canto a canto, as setas são altas e estreitas, então na mesma largura pesaria mais que as duas ao lado. Três alvos e os vãos dão 140px, dentro dos ~163px que a estante de 2 colunas deixa em 390px: a fila não quebra na largura para a qual a estante foi desenhada |
+| Capa no histórico de leituras (Fase 6) | `5rem` | O mesmo valor que 6.2 dá ao elemento gráfico em estado vazio, reusado aqui para que um mês passado seja miniatura e não um segundo herói |
+| Campo de busca no cabeçalho (Fase 7) | linha inteira até 768px; `22rem` acima | Em 390px o cabeçalho já estava cheio com logotipo e conta (ver a linha do logotipo acima), então o campo desce para a segunda linha em vez de espremer os dois. Acima de 768px, `22rem` cabe um nome completo com folga e ainda deixa o logotipo e a conta com a parte delas do `--container-max`. O painel de sugestões não tem medida própria: nasce da largura do campo, e o limite de cinco resultados é o que o impede de precisar de rolagem |
+| Cartão de membro na busca (Fase 7) | coluna mínima de `16rem` | É a menor largura em que um nome de duas palavras ainda fica ao lado do avatar de `2.75rem` em vez de quebrar embaixo dele. Ao contrário da estante (quatro lugares fixos, ADR-08), aqui a grade *é* auto-ajustável: a lista de membros não tem número certo de lugares |
+| Painel de "quem já terminou" | `18rem` de altura máxima, com rolagem própria | É a medida que faz a promessa do controle ser verdadeira: por mais gente que termine o livro, o resto da página não se afasta. Cabe cerca de seis linhas de nome + estrelas, que é onde um painel deixa de ser painel. O fundo é `--clubi-surface-sunken`, que 3.3 já dá a área recuada |
+| Balão de postagens no cabeçalho | `1.25rem` de largura | Alinha com a altura de caixa alta da palavra ao lado — é o menor dos elementos usados no site (a linha do elemento gráfico acima dá `2rem` embutido em linha), porque aqui ele divide espaço com o logotipo, a busca e a conta |
+| Bolinha de não lidas | `1.25rem` de altura, largura mínima igual, `--radius-pill`, `--text-xs` | O mesmo `1.25rem` do balão sob ela, para caber sobreposta sem cobrir o desenho. Não é alvo de toque e não precisa ser: quem se clica é o link inteiro. Laranja `--clubi-accent` com `--clubi-accent-ink` por cima (5.93, AA), que é a tinta pesada que 3.3 exige sobre laranja |
+| Foto da conta no cabeçalho (`AccountMenu`) | `2rem` | Menor que os `2.75rem` do avatar de leitor porque aqui o círculo **não é** o alvo de toque: ele está dentro de um controle de `44px`, que é quem 10.4 mede. `2rem` é o valor que 6.2 já dá ao elemento embutido em linha, e é o que mantém a linha do cabeçalho na altura do logotipo em vez de crescer com a foto |
+| Seta do menu de conta (`AccountMenu`) | glifo de `0.875rem` | Um degrau abaixo do balão de `1.25rem` ao lado, de propósito: o balão *significa* (é o post), a seta só pontua que há um segundo nível. É a menor medida de elemento no site, e sobrevive porque a seta é duas linhas e não uma textura |
+| Capa no resultado do catálogo externo (Fase 8, `BookPicker`) | `3rem` de largura | É a menor largura em que a capa ainda é uma imagem: a borda creme grossa que 8.7 dá a toda capa gasta `--space-2` de cada lado, então sobram `2rem` de desenho. Menor que a miniatura de `5rem` do histórico porque aqui é linha de painel e não seção de página — a `4,5rem` de altura que a proporção `2 / 3` produz é a de uma linha de resultado com duas linhas de texto, o que mantém a lista externa no ritmo da lista local logo acima. **Nesse tamanho o marcador tipográfico da capa some**: o `--space-4` de respiro dele é mais largo que os `2rem` disponíveis, e a linha já imprime título e autoria ao lado — um livro sem capa fica com a moldura vazia, que é o próprio sinal de "sem capa" |
+
 ---
 
 ## 9. Tom da interface
@@ -633,9 +740,18 @@ produto, porque o backend expõe justamente progresso, nota e histórico:
 
 - `ProgressBar` **informa, não cobra.** Sem "você está atrasado", sem contagem regressiva, sem
   vermelho para progresso baixo. 8% lidos é uma leitura começada, e a interface celebra isso.
-- **Sem ranking, sem ofensiva, sem comparação entre membros.** "Quem está lendo"
-  (`GET /monthly-picks/current/readers`) é presença — companhia, não placar. Não ordene por
-  progresso decrescente; não exiba "top leitores".
+- **Sem ranking, sem ofensiva, sem comparação entre membros.** Não ordene por progresso
+  decrescente; não exiba "top leitores"; não mostre média de nota do clube.
+  `GET /monthly-picks/current/readers` **deixou de ser "quem está lendo" e passou a ser "quem já
+  terminou"** — só quem tem `finished_at` e uma nota, com a nota à vista. **Isto é a tensão mais
+  próxima do limite desta seção que o site tem**, e foi decidida assim por pedido do fundador: uma
+  lista de notas lado a lado *é* comparável, e exigir nota para aparecer nela transforma a
+  avaliação — que esta mesma seção diz ser opcional — em preço de entrada. O que segura a régua,
+  e precisa continuar segurando: a ordem é **alfabética** (nunca por nota, nunca por quem terminou
+  primeiro), não há média nem contagem, e **a lista não aparece sozinha** — ela fica dobrada dentro
+  do bloco do livro, atrás de "Ver quem já terminou", porque uma lista de notas que o membro não
+  pediu para ver é outra coisa. Nada no site cobra a nota, e tirar a nota
+  (`MonthlyReadingIn.clear_rating`) tira o membro da lista.
 - **Nota e resenha são opcionais e reversíveis.** Nunca bloqueie um fluxo por falta de avaliação.
 - **Estado vazio é convite.** Sem pick do mês (404) → "ainda não há livro do mês" com elemento
   `nuvem` e um caminho adiante. Perfil sem favoritos → convite para montar a estante, não "nenhum
@@ -645,7 +761,9 @@ produto, porque o backend expõe justamente progresso, nota e histórico:
   (regra do `frontend/CLAUDE.md`) e adicione o que fazer a seguir.
 - **Controle é palavra, não símbolo** (6.3). "Publicar", "Ver mais", "Excluir" em vez de `+`,
   chevron e lixeira. Não é só coerência de marca: rótulo escrito é mais acessível que ícone sozinho,
-  e a marca já resolve tudo com texto.
+  e a marca já resolve tudo com texto. A exceção é onde a densidade derruba a regra — os três
+  botões repetidos nos quatro lugares da estante (6.3, E-15) —, e mesmo lá a frase não sumiu:
+  foi para o `aria-label`, nomeando o livro.
 
 **Calibragem**
 
@@ -807,12 +925,16 @@ apoiou e o que faria revisá-lo.
 | **E-04** | Entrelinha 1.6 em texto corrido (brandbook diz 1.1) | 1.1 em parágrafo web é ilegível. O 1.1/1.0 foi preservado em display, onde o brandbook o aplicava | Não rever: é requisito de legibilidade |
 | **E-05** | Escala tipográfica de 9 degraus, razão ~1.25 | O brandbook não define tamanhos. Razão conservadora, arredondada para pixel inteiro | Se o layout pedir salto maior entre `h1` e corpo |
 | **E-06** | Respiro de 1/3 da largura; mínimo 96px | Medido do próprio arquivo: os PNGs trazem 216px laterais para 648px de mancha | Se sair um manual de logo formal |
-| **E-07** ✅ | **Decidido (2026-08-27): sem biblioteca de ícones.** Elementos da marca no que é conteúdo, **palavra** no que é controle. Ver 6.3 | Os dez elementos cobrem bem o significado (nota, anexo, post, livro, vazio) mas não cobrem controle (fechar, menu, seta). Forçar a adaptação seria óbvio; adotar biblioteca traria traço estranho ao lado do desenho à mão. A marca já é verbal — todas as peças resolvem com texto | Se a densidade de interface crescer a ponto de o texto atrapalhar. Aí entram os 2 glifos de 6.3, desenhados no traço da marca |
+| **E-07** ✅ | **Decidido (2026-08-27): sem biblioteca de ícones.** Elementos da marca no que é conteúdo, **palavra** no que é controle. Ver 6.3 | Os dez elementos cobrem bem o significado (nota, anexo, post, livro, vazio) mas não cobrem controle (fechar, menu, seta). Forçar a adaptação seria óbvio; adotar biblioteca traria traço estranho ao lado do desenho à mão. A marca já é verbal — todas as peças resolvem com texto | **Gatilho disparado uma vez (E-15):** a densidade cresceu exatamente onde esta linha previa — os controles da estante — e entraram os glifos de 6.3, desenhados no traço da marca, sem biblioteca. A decisão em si continua de pé. **Terceiro lugar disparado (E-16)**, o `×` do aviso de postagens novas, e lá quem paga não é a densidade e sim a regra 3. Rever a redação desta linha se um quarto lugar pedir o mesmo |
 | **E-08** | Textura de grão no fundo, ≤3% de opacidade | Todas as peças têm grão de papel. A opacidade é escolha nossa | Se afetar contraste ou peso de página |
 | **E-09** | Rotação de ±1.5° só em decoração | As peças rotacionam selos e cartões livremente. Rotacionar conteúdo funcional quebra alinhamento e leitura | Se aparecer proposta de layout com rotação estrutural |
 | **E-10** | Espaçamento, raio, breakpoints, container | Sem respaldo. Grade de 4px é convenção; o raio duplo (0 e pílula) foi observado nas peças; o container vem da margem de ~5% do brandbook | Convenção web padrão; baixo risco |
 | **E-11** | Durações e curva de movimento | Sem respaldo — a marca é estática. Valores curtos por coerência com "leve" e "desacelerar" | Se entrar animação de marca |
 | **E-12** ✅ | **Mantida (2026-08-27): sem tema escuro.** | A inversão creme ⇄ vinho já é o modo escuro da marca. Um dark neutro exigiria cores fora do brandbook. **O fundador revisou e manteve** | Se for pedido explicitamente — volta como ADR, não como ajuste de token |
+| **E-14** ⏳ | **Elemento de marca ao lado de palavra num controle** — o balão + "Postagens" no cabeçalho, com a bolinha de não lidas sobre o balão | A seção 6.3 separa dois problemas (elemento onde o ícone significa, palavra onde ele controla) e este caso é os dois de uma vez. Resolvido somando em vez de escolher, porque cada metade sozinha quebraria uma das duas regras: balão mudo é o botão-símbolo que a E-07 recusa, palavra sozinha joga fora o elemento que a própria tabela de 6.3 reserva para post. Continua sem biblioteca de ícones | **Pendente de revisão pelo fundador.** Rever se um segundo controle pedir o mesmo tratamento: dois já são um padrão, e aí a regra de 6.3 precisa ser reescrita em vez de excepcionada |
+| **E-15** ⏳ | **Glifo no lugar da palavra num controle repetido** — as setas e o `×` dos quatro lugares da estante, no lugar de "Subir", "Descer" e "Tirar" (ver 6.3) | Pedido do fundador, e é o caso que a E-07 tinha deixado escrito como gatilho: doze rótulos numa grade de quatro colunas de `7rem` é a densidade em que o texto atrapalha. Resolvido do jeito que 6.3 rule 3 manda — desenho no traço da marca, versionado em `src/assets/elements/`, nenhuma biblioteca — e a frase que o botão perdeu foi para `aria-label`/`title` nomeando o livro, então 10.5 continua satisfeita | **Pendente de revisão pelo fundador**, junto da E-13 e da E-14. **Gatilho disparado (E-16):** o controle isolado apareceu — o `×` que dispensa o aviso de postagens novas —, e foi resolvido pela regra 3 (`×` é o glifo de *fechar*) em vez de pela densidade. A E-07 continua de pé, mas é o terceiro lugar: rever a redação dela se houver um quarto |
+| **E-16** ⏳ | **Glifo num controle isolado** — o `×` que dispensa o aviso de postagens novas (`UnreadNotice`), no lugar do botão "Depois" — e o link "Ver as postagens" saiu da faixa junto com ele (ver 6.3) | Pedido do fundador, e é exatamente o gatilho que a E-15 deixou escrito: um só botão, sem repetição, então a densidade não paga por ele. O que paga é a regra 3, que já reservava o `×` para *fechar* — e fechar um aviso é a ação mais convencionada de uma interface. A frase foi para `aria-label`/`title` ("Dispensar o aviso"), o caminho até as postagens continua sendo palavra uma linha acima (o balão + "Postagens" da E-14, com a mesma contagem), e o arquivo é o `x.svg` que já existia. O alvo de 44px de 10.4 ficou inteiro mas transborda a faixa por margem negativa, e o desenho foi para `0.8rem`: numa faixa de uma linha, o quadrado da estante media mais que o dobro do que ele dispensa | **Pendente de revisão pelo fundador**, junto da E-13, da E-14 e da E-15. **A E-07 precisa ser reescrita se um quarto caso aparecer**: com estante, conta e aviso, o glifo deixou de ser exceção de densidade e virou um resíduo com três empregos |
+| **E-13** ⏳ | **Dimensões de componente** — largura de logotipo, capa, avatar, trilho de progresso, campo numérico (seção 8.7, Fase 4), mais área de texto, botão de remover imagem e proporção de imagem de post (Fase 5), mais foto de perfil, estrela de nota, slot da estante e capa do histórico (Fase 6), mais campo de busca do cabeçalho e cartão de membro (Fase 7), mais recorte da meia estrela e prévia da nota, mais capa no resultado do catálogo externo (Fase 8), mais painel de quem terminou, balão do cabeçalho e bolinha de não lidas, mais o botão de ordenar/tirar da estante (E-15) e o × que dispensa o aviso (E-16), mais foto da conta e seta do menu de conta no cabeçalho | Nasceu na Fase 4: a seção 8 dava espaçamento, raio, container e breakpoints, mas nenhum tamanho de componente, e a Home precisava deles. Cresceu na Fase 5, na Fase 6, na Fase 7, na nota com meia estrela e na Fase 8 pelo mesmo motivo — formulários de post, depois perfil e estante, depois a busca, depois a metade da estrela, depois a capa vinda da Open Library, precisavam de medidas que a seção 8 não cobria. Cada medida se apoia numa regra que já existia — o alvo de toque de 10.4, a faixa de logotipo de 5.3, o teto de ~240px de 6.2, o `--container-max` | **Pendente de revisão pelo fundador**, junto da E-14. Rever quando um componente novo pedir medida que não caiba nessas |
 
 ---
 
@@ -837,7 +959,10 @@ Em aberto:
 7. **Otimizar os SVGs** (SVGO ou equivalente) se o peso incomodar. `estrela-8` (28,8 KB) e
    `livro-fechado` (27,1 KB) carregam muito nó por causa da textura de pincel; os outros oito somam
    ~41 KB juntos. Não é urgente — é menos que uma foto de capa.
-8. **Incluir `/static` no proxy do `vite.config.ts`** quando a Fase 4 começar — ver o aviso em 2.1.
+8. ~~Incluir `/static` no proxy do `vite.config.ts`~~ — **feito** na Fase 4. Fontes e logotipo
+   chegam à SPA em `:5173` pelo proxy. Junto veio uma correção que o aviso de 2.1 não previa: o
+   proxy também reescreve `Origin` e `Host` para o alvo, senão a verificação de origem do CSRF do
+   Django recusa todo POST vindo de `:5173` — login, logout e o `PUT` de progresso inclusive.
 
 ## 14. O que de `frontend/clubi/` está no Git
 

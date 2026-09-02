@@ -13,7 +13,10 @@ class BookAdmin(admin.ModelAdmin):
 class MonthlyReadingInline(admin.TabularInline):
     model = MonthlyReading
     extra = 0
+    # "rating" is the model property, so the column reads 3.5 rather than the 7 the database
+    # holds; rating_halves is excluded so the founder is never shown both numbers for one rating.
     readonly_fields = ("user", "pages_read", "rating", "updated_at")
+    exclude = ("rating_halves",)
     can_delete = False
 
 

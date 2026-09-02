@@ -1,0 +1,1885 @@
+/* clubi — SPA base styles. Every value here comes from styles/tokens.css, which is section 11 of
+   frontend/DESIGN.md. Do not introduce a colour, size, radius, shadow or duration outside the
+   tokens: a value born in a component is a process bug even when it looks fine (ADR-17). */
+
+/* ---------------------------------------------------------------- brand typography
+   The four weights the brandbook names, served by Django from /static/brand/fonts/
+   (DESIGN.md 2.1 and 4.2) — one copy for both the rendered /accounts/ pages and the SPA.
+   Clash Semibold declares itself as family "Clash Display Semibold"; renaming it here to
+   "Clash Display" weight 600 is what keeps font-weight working at all. */
+@font-face {
+  font-family: "Clash Display";
+  src: url("/static/brand/fonts/ClashDisplay-Regular.woff2") format("woff2");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Clash Display";
+  src: url("/static/brand/fonts/ClashDisplay-Semibold.woff2") format("woff2");
+  font-weight: 600;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Manrope";
+  src: url("/static/brand/fonts/Manrope-Regular.woff2") format("woff2");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Manrope";
+  src: url("/static/brand/fonts/Manrope-Bold.woff2") format("woff2");
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+
+:root {
+  /* The logotype is hand-drawn lettering, never type (DESIGN.md 4.6 and 5.4). It lives in the
+     backend because the rendered pages use it too; painted as a mask so it inherits
+     currentColor, which is what lets one file cover all three brandbook variants (5.5). */
+  --logo-src: url("/static/brand/logo-clubi.svg");
+  --logo-ratio: 553.19 / 258.53;
+
+  /* Paper grain: every brand piece has it (DESIGN.md 7). The opacity is ours and the documented
+     ceiling is 3% (E-08), above which it would start eating the measured contrast. */
+  --paper-grain: url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22160%22%20height%3D%22160%22%3E%3Cfilter%20id%3D%22g%22%3E%3CfeTurbulence%20type%3D%22fractalNoise%22%20baseFrequency%3D%220.9%22%20numOctaves%3D%222%22%20stitchTiles%3D%22stitch%22%2F%3E%3C%2Ffilter%3E%3Crect%20width%3D%22160%22%20height%3D%22160%22%20filter%3D%22url(%23g)%22%2F%3E%3C%2Fsvg%3E");
+
+  /* Decorative tilt. E-09 fixes it at +/-1.5deg and only outside the functional core. */
+  --tilt: 1.5deg;
+}
+
+/* ---------------------------------------------------------------- short reset */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  margin: 0;
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  background: var(--clubi-bg);
+  color: var(--clubi-ink);
+  font-family: var(--clubi-font-text);
+  font-size: var(--text-base);
+  line-height: var(--leading-body);
+  letter-spacing: var(--tracking-text);
+}
+
+/* The grain covers the whole page, wine bands included. It sits outside the flow and takes no
+   pointer events; at 3% it does not move the ratios measured in DESIGN.md 3.2. */
+body::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  pointer-events: none;
+  opacity: 0.03;
+  background-image: var(--paper-grain);
+}
+
+#root {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+}
+
+main {
+  flex: 1;
+}
+
+img {
+  max-width: 100%;
+}
+
+/* Never outline: none (DESIGN.md 10.2). Over wine the ring turns yellow, which measures 6.84. */
+:focus-visible {
+  outline: 2px solid var(--clubi-focus);
+  outline-offset: 2px;
+}
+
+.on-invert :focus-visible {
+  outline-color: var(--clubi-highlight);
+}
+
+/* ---------------------------------------------------------------- typography */
+h1,
+h2,
+h3,
+h4 {
+  margin: 0;
+  font-family: var(--clubi-font-display);
+  font-weight: 600;
+  line-height: var(--leading-display);
+  letter-spacing: var(--tracking-display);
+}
+
+h4 {
+  font-weight: 400;
+  font-size: var(--text-lg);
+  line-height: var(--leading-tight);
+}
+
+p {
+  margin: 0;
+}
+
+a {
+  color: var(--clubi-ink-brand);
+  text-decoration-thickness: 1px;
+  text-underline-offset: 2px;
+}
+
+.on-invert a {
+  color: var(--clubi-highlight);
+}
+
+.muted {
+  color: var(--clubi-ink-muted);
+}
+
+.on-invert .muted {
+  color: var(--clubi-ink-muted-on-invert);
+}
+
+/* ---------------------------------------------------------------- layout */
+.container {
+  width: 100%;
+  max-width: var(--container-max);
+  margin-inline: auto;
+  padding-inline: max(var(--space-4), var(--container-gutter));
+}
+
+.section {
+  padding-block: var(--space-7);
+}
+
+.section + .section {
+  border-top: 1px solid var(--clubi-line);
+}
+
+/* The seam between two sections that are two halves of one subject — the profile's shelf and its
+   reading history — rather than two independent blocks of a page. The rule stays; what shrinks is
+   the air on either side of it, from the --space-7/8 that 8.1 calls "respiro de seção" down to
+   the --space-6 it calls "entre componentes". Put the class on the *first* of the pair: the
+   sibling selector reaches the second one's top, so the seam is declared in one place and the
+   section below keeps its full breathing room against whatever follows it. */
+.section--tight {
+  padding-block-end: var(--space-6);
+}
+
+.section--tight + .section {
+  padding-block-start: var(--space-6);
+}
+
+/* Full-page sections alternating cream and wine — the rhythm device of the carousel pieces
+   (DESIGN.md 3.4). Never inside a list of cards: the zebra belongs to the page, not the item. */
+.section--invert {
+  background: var(--clubi-bg-invert);
+  color: var(--clubi-ink-on-invert);
+  border-top: 0;
+}
+
+.section-title {
+  font-size: var(--text-xl);
+  color: var(--clubi-ink-brand);
+}
+
+.section-title + * {
+  margin-top: var(--space-4);
+}
+
+@media (min-width: 768px) {
+  .section {
+    padding-block: var(--space-8);
+  }
+
+  /* Restated because the rule above sets the shorthand, which would otherwise win on order. */
+  .section--tight {
+    padding-block-end: var(--space-6);
+  }
+
+  .section--tight + .section {
+    padding-block-start: var(--space-6);
+  }
+}
+
+/* ---------------------------------------------------------------- brand marks */
+.brand-mark {
+  display: block;
+  width: clamp(104px, 26vw, 132px); /* 96px floor, 120-140 target in a header (DESIGN.md 5.3) */
+  aspect-ratio: var(--logo-ratio); /* its own 2.14 ratio — never distort */
+  background-color: currentColor;
+  -webkit-mask: var(--logo-src) center / contain no-repeat;
+  mask: var(--logo-src) center / contain no-repeat;
+}
+
+/* Graphic elements are decoration: always aria-hidden, at most two per screen (DESIGN.md 6.2).
+   The SVGs paint with currentColor, so the same artwork serves cream-on-wine and wine-on-cream
+   without a second file. */
+.brand-element {
+  display: block;
+  color: inherit;
+}
+
+.brand-element svg {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+/* ---------------------------------------------------------------- controls */
+.button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 44px; /* touch target (DESIGN.md 10.4) */
+  padding: var(--space-2) var(--space-5);
+  border: 0;
+  border-radius: var(--radius-md);
+  background: var(--clubi-action);
+  color: var(--clubi-action-ink);
+  font-family: var(--clubi-font-text);
+  font-size: var(--text-base);
+  font-weight: 700;
+  letter-spacing: var(--tracking-text);
+  cursor: pointer;
+  transition: background var(--motion-base) var(--motion-ease);
+}
+
+.button:hover {
+  background: var(--clubi-action-hover);
+}
+
+.button:active {
+  background: var(--clubi-action-active);
+}
+
+.button[disabled] {
+  cursor: progress;
+  opacity: 0.7;
+}
+
+/* Secondary control. The label stays a word, never a glyph (DESIGN.md 6.3). */
+.button--quiet {
+  padding-inline: var(--space-3);
+  background: transparent;
+  color: var(--clubi-ink-brand);
+  font-size: var(--text-sm);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.button--quiet:hover,
+.button--quiet:active {
+  background: var(--clubi-tint-wine);
+}
+
+/* A disabled quiet button is "not applicable here" — not "wait, something is running", which is
+   what the primary button's cursor: progress says. */
+.button--quiet[disabled] {
+  cursor: default;
+}
+
+.field-label {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: var(--text-sm);
+  font-weight: 700;
+}
+
+.field-label .brand-element {
+  width: 1.25rem;
+  flex: none;
+}
+
+.field-number {
+  width: 6rem;
+  min-height: 44px;
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--clubi-line-strong);
+  border-radius: var(--radius-sm);
+  background: var(--clubi-surface-sunken);
+  color: inherit;
+  font: inherit;
+  letter-spacing: inherit;
+}
+
+/* ---------------------------------------------------------------- header */
+.site-header {
+  /* Positioned so the search suggestions paint over the page instead of behind the first card
+     below them; the grain overlay of body::after stays above everything at z-index 100. */
+  position: relative;
+  z-index: 30;
+  background: var(--clubi-bg);
+  border-bottom: 1px solid var(--clubi-line);
+}
+
+/* Wraps because at 390px the logo, the search field and the account do not share a line — the
+   member arrives by phone (DESIGN.md 8.5) and the field takes the second row. */
+.site-header__inner {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3) var(--space-4);
+  padding-block: var(--space-4);
+}
+
+.site-header__brand {
+  color: var(--clubi-ink-brand);
+}
+
+.site-header__account {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2) var(--space-4);
+}
+
+/* The way into the postagens. DESIGN.md 6.3 keeps brand elements for meaning and words for
+   controls; this is both at once, so it carries both — the balão it already assigns to a post,
+   and the word beside it. The account row wraps because at 390px this is the third thing on a
+   line that was already full. */
+.site-header__posts {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: var(--text-sm);
+  font-weight: 700;
+  color: var(--clubi-ink-brand);
+  text-decoration: none;
+}
+
+.site-header__posts:hover,
+.site-header__posts:focus-visible {
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+/* The positioning context for the badge, and the only place a brand element is sized in the
+   header — 1.25rem sits it on the cap height of the word next to it. */
+.site-header__balao {
+  position: relative;
+  display: inline-flex;
+  width: 1.25rem;
+}
+
+/* The unread count, over the balão. Accent orange on the cream header, with --clubi-accent-ink
+   over it — the heavier tint DESIGN.md 3.3 mandates on orange, which measures 5.93. The number
+   is inside it because colour alone is never a signal here (10.3), and the full sentence is in
+   a .visually-hidden span for anyone who is not reading the dot. */
+.site-header__badge {
+  position: absolute;
+  top: -0.4rem;
+  right: -0.55rem;
+  display: grid;
+  place-items: center;
+  min-width: 1.25rem;
+  height: 1.25rem;
+  padding-inline: 0.25rem;
+  border-radius: var(--radius-pill);
+  background: var(--clubi-accent);
+  color: var(--clubi-accent-ink);
+  font-size: var(--text-xs);
+  font-weight: 700;
+  line-height: 1;
+}
+
+/* ---------------------------------------------------------------- account menu
+   The greeting, the photo and the two things you can do with your account, folded under one
+   control. Every word here is --clubi-ink-brand at 700, the same treatment as "Postagens" beside
+   it: the header speaks in the marca's vinho, and two weights of the same colour on one line read
+   as two different reds. */
+.account-menu {
+  position: relative;
+}
+
+.account-menu__trigger {
+  display: inline-flex;
+  align-items: center;
+  /* --space-1, not --space-2: the four parts are one control, and the avatar's own 2px cream
+     border already reads as a gap. The greeting is a single item so "Olá," and the name are
+     separated by a real word space instead of by this gap. */
+  gap: var(--space-1);
+  min-height: 44px; /* touch target (DESIGN.md 10.4) */
+  padding: var(--space-1) var(--space-2);
+  border: 0;
+  border-radius: var(--radius-pill);
+  background: transparent;
+  color: var(--clubi-ink-brand);
+  font-family: var(--clubi-font-text);
+  font-size: var(--text-sm);
+  font-weight: 700;
+  letter-spacing: var(--tracking-text);
+  cursor: pointer;
+}
+
+.account-menu__trigger:hover,
+.account-menu__trigger[aria-expanded="true"] {
+  background: var(--clubi-tint-wine);
+}
+
+/* The photo is smaller here than the 2.75rem it has everywhere else (E-13): inside a 44px control
+   the circle no longer has to be the touch target itself, and 2rem is the size 6.2 gives an
+   element set inline — it keeps the header row at the logotype's height. */
+.account-menu__trigger .avatar {
+  width: 2rem;
+  height: 2rem;
+}
+
+/* The disclosure affordance, one step under the word so it reads as punctuation and not as the
+   control (DESIGN.md 6.3 rule 2 — the word is what is clicked). */
+.account-menu__arrow {
+  display: inline-flex;
+  width: 0.875rem;
+}
+
+/* Floating over the page, so --shadow-lifted rather than the resting --shadow-paper (8.3), and
+   right-aligned because this is the last thing on the line — a left-aligned panel would hang off
+   the container's gutter. */
+.account-menu__panel {
+  position: absolute;
+  z-index: 20;
+  top: calc(100% + var(--space-2));
+  right: 0;
+  min-width: 11rem;
+  border: 1px solid var(--clubi-line);
+  border-radius: var(--radius-sm);
+  background: var(--clubi-surface);
+  box-shadow: var(--shadow-lifted);
+  overflow: hidden;
+}
+
+.account-menu__item {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  min-height: 44px; /* touch target (DESIGN.md 10.4) */
+  padding: var(--space-2) var(--space-4);
+  border: 0;
+  background: transparent;
+  color: var(--clubi-ink-brand);
+  font-family: var(--clubi-font-text);
+  font-size: var(--text-sm);
+  font-weight: 700;
+  letter-spacing: var(--tracking-text);
+  text-align: left;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.account-menu__item:hover,
+.account-menu__item:focus-visible {
+  background: var(--clubi-tint-wine);
+}
+
+.account-menu__panel form {
+  border-top: 1px solid var(--clubi-line);
+}
+
+/* The greeting word is what drops at 390px, not the name and not the photo — the member arrives
+   by phone (DESIGN.md 8.5) and this control is the only way into their own profile. */
+@media (max-width: 479px) {
+  .account-menu__hello {
+    display: none;
+  }
+}
+
+/* ---------------------------------------------------------------- member search
+   The site's one search field, in the header. No magnifier: where an icon would be a control the
+   brand uses a word, and DESIGN.md 6.3 names this case by hand — a field whose placeholder says
+   "Buscar membros" (E-07). The input reuses .field-text, so it is the same box as every other
+   text field on the site. */
+.member-search {
+  position: relative;
+  order: 3; /* under the logo and the account, on its own row, at phone width */
+  flex: 1 1 100%;
+}
+
+@media (min-width: 768px) {
+  .member-search {
+    /* E-13: 22rem fits a full name with room to spare and still leaves the logotype and the
+       account their share of a 1120px container. */
+    order: 0;
+    flex: 0 1 22rem;
+  }
+}
+
+/* Floating over the page, so --shadow-lifted rather than the resting --shadow-paper (8.3). Five
+   suggestions is the request limit, which is what keeps this panel from ever needing to scroll. */
+.member-search__panel {
+  position: absolute;
+  z-index: 20;
+  top: calc(100% + var(--space-2));
+  left: 0;
+  right: 0;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  border: 1px solid var(--clubi-line);
+  border-radius: var(--radius-sm);
+  background: var(--clubi-surface);
+  box-shadow: var(--shadow-lifted);
+  overflow: hidden;
+}
+
+.member-search__panel li:not(:last-child) {
+  border-bottom: 1px solid var(--clubi-line);
+}
+
+.member-search__hit {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-2) var(--space-3);
+  color: inherit;
+  text-decoration: none;
+}
+
+.member-search__hit:hover,
+.member-search__hit:focus-visible {
+  background: var(--clubi-tint-wine);
+}
+
+.member-search__names {
+  display: grid;
+  min-width: 0;
+}
+
+.member-search__username {
+  font-size: var(--text-sm);
+}
+
+.member-search__note {
+  display: block;
+  padding: var(--space-3);
+  font-size: var(--text-sm);
+}
+
+.member-search__all {
+  color: var(--clubi-ink-brand);
+}
+
+.member-search__all:hover,
+.member-search__all:focus-visible {
+  background: var(--clubi-tint-wine);
+}
+
+/* ---------------------------------------------------------------- footer */
+.site-footer {
+  background: var(--clubi-bg-invert);
+  color: var(--clubi-ink-on-invert);
+  padding-block: var(--space-7);
+}
+
+.site-footer__inner {
+  display: grid;
+  gap: var(--space-3);
+}
+
+.site-footer__brand {
+  color: var(--clubi-ink-on-invert);
+}
+
+.site-footer__note {
+  max-width: var(--measure);
+  font-family: var(--clubi-font-display);
+  font-size: var(--text-md);
+  line-height: var(--leading-tight);
+  letter-spacing: var(--tracking-display);
+}
+
+/* ---------------------------------------------------------------- monthly highlight
+   Collage lives in the frame (DESIGN.md 7): the checker, the cream-bordered cutout and the
+   tilted stamp all belong to this hero. From the progress bar down everything stays clean. */
+.pick {
+  padding-block: var(--space-8);
+}
+
+.pick__eyebrow {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  margin-bottom: var(--space-6);
+  color: var(--clubi-highlight); /* yellow on wine: 6.84, the only background it is allowed */
+  font-size: var(--text-sm);
+  font-weight: 700;
+}
+
+.pick__eyebrow .brand-element {
+  width: 2rem;
+  flex: none;
+}
+
+.pick__inner {
+  display: grid;
+  gap: var(--space-7);
+  align-items: start;
+}
+
+@media (min-width: 768px) {
+  .pick__inner {
+    grid-template-columns: minmax(0, 17rem) minmax(0, 1fr);
+    gap: var(--space-8);
+    /* The cutout is a good deal taller than the text beside it; centring keeps the two halves
+       reading as one composition instead of leaving a void under the blurb. */
+    align-items: center;
+  }
+}
+
+/* The pasted-in cutout: an offset checkered patch behind, the cover in a thick cream border with
+   a warm shadow, and a highlighter stamp tilted at the corner. The one bold place on the page. */
+.pick__cutout {
+  position: relative;
+  width: min(15rem, 62vw);
+}
+
+@media (min-width: 768px) {
+  .pick__cutout {
+    width: 100%;
+  }
+}
+
+.pick__cutout::before {
+  content: "";
+  position: absolute;
+  z-index: 0;
+  inset: var(--space-3) auto auto calc(var(--space-3) * -1);
+  width: 100%;
+  height: 100%;
+  border-radius: var(--radius-none); /* a highlight block never rounds (DESIGN.md 8.2) */
+  background-image: repeating-conic-gradient(
+    var(--clubi-line-invert) 0% 25%,
+    transparent 0% 50%
+  );
+  background-size: 1rem 1rem;
+  transform: rotate(var(--tilt));
+}
+
+.pick__stamp {
+  position: absolute;
+  z-index: 2;
+  right: calc(var(--space-3) * -1);
+  bottom: var(--space-5);
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-none); /* the highlighter mark has square corners (DESIGN.md 7) */
+  background: var(--clubi-highlight);
+  color: var(--clubi-highlight-ink);
+  font-family: var(--clubi-font-display);
+  font-size: var(--text-sm);
+  font-weight: 600;
+  line-height: var(--leading-tight);
+  letter-spacing: var(--tracking-display);
+  box-shadow: var(--shadow-paper);
+  transform: rotate(calc(var(--tilt) * -1));
+}
+
+.pick__title {
+  font-size: clamp(var(--text-xl), 9vw, var(--text-3xl));
+}
+
+.pick__author {
+  margin-top: var(--space-3);
+  font-size: var(--text-md);
+  line-height: var(--leading-tight);
+  color: var(--clubi-ink-muted-on-invert);
+}
+
+.pick__blurb {
+  max-width: var(--measure);
+  margin-top: var(--space-5);
+}
+
+.pick__more {
+  margin-top: var(--space-4);
+  font-size: var(--text-sm);
+}
+
+.pick__dates {
+  margin-top: var(--space-5);
+  font-size: var(--text-sm);
+  color: var(--clubi-ink-muted-on-invert);
+}
+
+/* ---------------------------------------------------------------- book cover */
+.book-cover {
+  position: relative;
+  z-index: 1;
+  display: block;
+  width: 100%;
+  aspect-ratio: 2 / 3;
+  border: var(--space-2) solid var(--clubi-cream); /* cutout with a light border (DESIGN.md 7) */
+  border-radius: var(--radius-lg);
+  background: var(--clubi-surface-sunken);
+  box-shadow: var(--shadow-lifted);
+  overflow: hidden;
+}
+
+.book-cover img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+/* With no cover on file the cover becomes type — no brand element spent on a placeholder. */
+.book-cover--blank {
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  gap: var(--space-2);
+  padding: var(--space-4);
+  color: var(--clubi-ink-brand);
+}
+
+/* Only the hero needs room under the type: the stamp is pinned to the bottom-right of the
+   cutout. Fase 6 put the same placeholder in a 7rem shelf slot, where reserving 4rem of it for
+   a stamp that is not there pushed a long title out of the top of the card. */
+.pick__cutout .book-cover--blank {
+  padding-bottom: var(--space-8);
+}
+
+.book-cover__title {
+  overflow-wrap: anywhere; /* a long title must break, not spill out of the card */
+  font-family: var(--clubi-font-display);
+  font-size: var(--text-lg);
+  font-weight: 600;
+  line-height: var(--leading-tight);
+  letter-spacing: var(--tracking-display);
+}
+
+.book-cover__author {
+  font-size: var(--text-sm);
+  color: var(--clubi-ink-muted);
+}
+
+/* The placeholder's type is sized for the hero, where the cover is 15rem wide. In the 7rem
+   shelf slot and the 5rem history thumbnail it has to step down a token, or "Memórias Póstumas
+   de Brás Cubas" breaks mid-word to fit. */
+.shelf .book-cover__title {
+  font-size: var(--text-base);
+}
+
+.history__cover .book-cover__title {
+  font-size: var(--text-sm);
+}
+
+.history__cover .book-cover__author {
+  font-size: var(--text-xs);
+}
+
+/* ---------------------------------------------------------------- progress
+   Functional core: clean, aligned, no collage. And anti-metric by product decision
+   (DESIGN.md 9) — the bar informs, it does not nag, and its colour never varies with the value. */
+.progress {
+  max-width: var(--measure);
+}
+
+.progress__track {
+  height: 0.875rem;
+  border-radius: var(--radius-pill);
+  background: var(--clubi-tint-wine);
+  overflow: hidden;
+}
+
+.progress__fill {
+  height: 100%;
+  border-radius: var(--radius-pill);
+  background: var(--clubi-action);
+  transition: width var(--motion-slow) var(--motion-ease);
+}
+
+.progress__readout {
+  margin-top: var(--space-3);
+  font-size: var(--text-sm);
+  color: var(--clubi-ink-muted);
+}
+
+.progress__readout strong {
+  font-size: var(--text-md);
+  color: var(--clubi-ink);
+}
+
+.progress__form {
+  display: grid;
+  gap: var(--space-2);
+  margin-top: var(--space-6);
+}
+
+.progress__row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+}
+
+/* The rating hangs off the same reading row as the progress, so it lives inside .progress —
+   separated by a rule, never presented as a step you have to complete (DESIGN.md 9). */
+.progress__rating {
+  margin-top: var(--space-6);
+  padding-top: var(--space-5);
+  border-top: 1px solid var(--clubi-line);
+}
+
+/* ---------------------------------------------------------------- notices
+   State is never signalled by colour alone (DESIGN.md 3.3 and 10.3): every notice opens with a
+   word saying what happened, because danger sits close to the brand wine in lightness. */
+.notice {
+  margin-top: var(--space-4);
+  padding-left: var(--space-4);
+  border-left: 3px solid currentColor;
+  font-size: var(--text-sm);
+}
+
+.notice--ok {
+  color: var(--clubi-success);
+}
+
+.notice--error {
+  color: var(--clubi-danger);
+}
+
+.notice__label {
+  font-weight: 700;
+}
+
+/* The unread greeting, between the header and the screen. Plain .notice, with no --ok/--error
+   modifier: those two colours say something went right or wrong, and an invitation is neither
+   (DESIGN.md 9). The top margin .notice carries is the gap under the header, so it needs none
+   of its own. */
+.unread-notice {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  /* The gap is on the row, not on .notice: the sentence and the × are one line and have to
+     share a baseline, and .notice's own top margin would have pushed only one of them down.
+     Symmetric, because the faixa is a band between the header and the screen and not a heading
+     for what follows it — the same air above and below is what keeps it from reading as
+     belonging to the block underneath. Same total height the 1rem/0.5rem pair had. */
+  padding-block: var(--space-3);
+}
+
+.unread-notice .notice {
+  flex: 1;
+  margin-top: 0;
+}
+
+/* Dispensing with the aviso is the residual × of DESIGN.md 6.3 rule 3, coloured like the shelf's
+   — but not sized like it. The shelf's 44px box sits in a grid of covers; here it would be more
+   than twice the height of the one line it belongs to. So the touch target of 10.4 is kept as
+   *area* and taken out of the flow: the negative block margin lets the 44px square overhang a
+   row the text alone decides the height of, and the glyph is cut to the size of the sentence so
+   the × reads as punctuation on that line instead of a second element beside it. */
+.unread-notice__dismiss {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  margin-block: calc(var(--space-3) * -1);
+  padding: 0;
+  border: 0;
+  border-radius: var(--radius-md);
+  background: transparent;
+  color: var(--clubi-ink-brand);
+  cursor: pointer;
+  transition: background var(--motion-base) var(--motion-ease);
+}
+
+.unread-notice__dismiss .brand-element {
+  width: 0.8rem;
+}
+
+.unread-notice__dismiss:hover,
+.unread-notice__dismiss:active {
+  background: var(--clubi-tint-wine);
+}
+
+/* ---------------------------------------------------------------- who finished
+   A disclosure inside the reading card, not a section of the page: it opens on a word, and the
+   panel is recessed (--clubi-surface-sunken, which 3.3 gives to sunken areas) so an open list
+   reads as part of this card instead of a new block stacked under it.
+
+   Still not a scoreboard (DESIGN.md 9): alphabetical, no average, no count, no podium. */
+.finished {
+  margin-top: var(--space-6);
+  padding-top: var(--space-5);
+  border-top: 1px solid var(--clubi-line);
+}
+
+/* The panel's own scroll is what keeps the promise the disclosure makes: however many people
+   finish, the page below it never moves further away (E-13). */
+.finished__panel {
+  margin-top: var(--space-4);
+  padding: var(--space-4);
+  border-radius: var(--radius-md);
+  background: var(--clubi-surface-sunken);
+  max-height: 18rem;
+  overflow-y: auto;
+}
+
+.finished__list {
+  display: grid;
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+/* ---------------------------------------------------------------- avatar
+   A member's photo or their initials, at the touch-target diameter of DESIGN.md 10.4 reused as
+   a circle (E-13). Shared by the post author, the search suggestions and the member cards. */
+.avatar {
+  display: grid;
+  place-items: center;
+  width: 2.75rem;
+  height: 2.75rem;
+  flex: none;
+  border: 2px solid var(--clubi-cream);
+  border-radius: var(--radius-pill);
+  background: var(--clubi-tint-wine);
+  box-shadow: var(--shadow-paper);
+  color: var(--clubi-ink-brand);
+  font-weight: 700;
+  object-fit: cover;
+  overflow: hidden;
+}
+
+/* ---------------------------------------------------------------- feed
+   Functional core (DESIGN.md 7): a plain surface, no checker, no tilt, no stamp. The collage
+   budget for this screen is spent on the balão heading icon alone. */
+.feed__heading {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+  margin-bottom: var(--space-6);
+}
+
+/* The h1 of a list screen: Feed, Search and PickHistory. It was .feed__title until Fase 7 gave
+   it a second and third caller — one class, so the three headings cannot drift apart. */
+.page-title {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  font-size: var(--text-xl);
+  color: var(--clubi-ink-brand);
+}
+
+.page-title .brand-element {
+  width: 2rem; /* E-13: inline element size, far under the ~240px ceiling of DESIGN.md 6.2 */
+  flex: none;
+}
+
+.feed__more {
+  margin-top: var(--space-6);
+}
+
+.post-list {
+  display: grid;
+  gap: var(--space-6);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+/* ---------------------------------------------------------------- post card
+   Shared by RecentPosts, Feed and PostDetail's header. Plain surface, no rotation or texture —
+   the card is data, not a frame (DESIGN.md 7). */
+.post-card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: var(--space-5);
+  border: 1px solid var(--clubi-line);
+  border-radius: var(--radius-md);
+  background: var(--clubi-surface);
+  box-shadow: var(--shadow-paper);
+}
+
+.post-card__header {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.post-card__author {
+  font-weight: 700;
+}
+
+.post-card__date {
+  font-size: var(--text-sm);
+}
+
+/* The author's name is a link to their profile since Fase 6, but it is not styled as one: it
+   already reads as the card's byline, and painting it wine would put a second brand-coloured
+   line right above the title. */
+.post-card__author-link {
+  color: inherit;
+  text-decoration: none;
+}
+
+.post-card__author-link:hover,
+.post-card__author-link:focus-visible {
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.post-card__title-link {
+  display: block;
+  color: var(--clubi-ink);
+  text-decoration: none;
+}
+
+.post-card__title {
+  font-size: var(--text-lg);
+}
+
+.post-card__title-link:hover .post-card__title,
+.post-card__title-link:focus-visible .post-card__title {
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.post-card__book {
+  font-size: var(--text-sm);
+}
+
+/* Feed and Home show a preview; PostDetail renders the full body in .post-detail__body
+   instead, so this clamp never touches the single-post reading view. */
+.post-card__body {
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-line-clamp: 4;
+  line-clamp: 4;
+  -webkit-box-orient: vertical;
+}
+
+.post-card__images {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: var(--space-2);
+}
+
+.post-card__images img {
+  display: block;
+  width: 100%;
+  aspect-ratio: 4 / 3;
+  object-fit: cover;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--clubi-line);
+}
+
+/* The author's own controls, at the foot of the card. A hairline above them says they belong to
+   the card without belonging to the postagem: everything above is what the club wrote, this row is
+   what the author can do about it. Pushed to the end so it never reads as part of the text, and
+   the label stays the word "Excluir" — DESIGN.md 6.3 rule 2 names the lixeira as the icon not to
+   draw.
+
+   The negative bottom margin is what keeps this row from costing a band of empty card. The button
+   keeps its 44px touch target (DESIGN.md 10.4) — that is not negotiable and is not what shrank —
+   but a 44px box around a 14px label is mostly air, and that air used to *stack on top of* the
+   card's own 1.5rem bottom padding. Pulling the row down by most of that padding lets the two
+   overlap: the target is still 44px, it simply reaches into space the card was already leaving.
+   The calc is written against --space-5 because that **is** .post-card's padding; if that padding
+   ever changes, this line changes with it. */
+.post-card__manage {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: var(--space-2);
+  padding-top: var(--space-1);
+  margin-bottom: calc(var(--space-1) - var(--space-5));
+  border-top: 1px solid var(--clubi-line);
+}
+
+/* The second click, and a sibling of the row rather than its child — the tightening above is for
+   a lone quiet button, and would pull this panel's sunken box into the card's edge. It sinks below
+   the card's surface so an irreversible action never looks like the quiet link that opened it. */
+.post-card__confirm {
+  display: grid;
+  gap: var(--space-3);
+  padding: var(--space-4);
+  border: 1px solid var(--clubi-line-strong);
+  border-radius: var(--radius-md);
+  background: var(--clubi-surface-sunken);
+}
+
+.post-card__confirm-text {
+  font-size: var(--text-sm);
+}
+
+.post-card__confirm-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+}
+
+/* ---------------------------------------------------------------- post detail */
+.post-detail {
+  display: grid;
+  gap: var(--space-4);
+}
+
+.post-detail__title {
+  font-size: var(--text-2xl);
+}
+
+.post-detail__body {
+  max-width: var(--measure);
+  white-space: pre-wrap;
+}
+
+.post-detail__images {
+  max-width: var(--measure);
+}
+
+.post-detail__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+}
+
+.post-detail__confirm {
+  display: grid;
+  gap: var(--space-3);
+  padding: var(--space-4);
+  border: 1px solid var(--clubi-line-strong);
+  border-radius: var(--radius-md);
+  background: var(--clubi-surface-sunken);
+}
+
+/* ---------------------------------------------------------------- forms
+   NewPost and PostDetail's inline edit. Miolo funcional: clean, no collage (DESIGN.md 7). */
+.post-form {
+  display: grid;
+  gap: var(--space-5);
+  max-width: var(--measure);
+}
+
+.field {
+  display: grid;
+  gap: var(--space-2);
+}
+
+.field-text,
+.field-textarea {
+  width: 100%;
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--clubi-line-strong);
+  border-radius: var(--radius-sm);
+  background: var(--clubi-surface-sunken);
+  color: inherit;
+  font: inherit;
+  letter-spacing: inherit;
+}
+
+.field-text {
+  min-height: 44px; /* touch target (DESIGN.md 10.4) */
+}
+
+.field-textarea {
+  min-height: 8rem; /* DESIGN.md 8.7 — enough for the body of a post without scrolling */
+  resize: vertical;
+}
+
+.field-file {
+  display: block;
+  font: inherit;
+}
+
+/* ---------------------------------------------------------------- book picker */
+.book-picker__results {
+  margin: var(--space-2) 0 0;
+  padding: 0;
+  list-style: none;
+  border: 1px solid var(--clubi-line);
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+  background: var(--clubi-surface);
+}
+
+.book-picker__results li:not(:last-child) {
+  border-bottom: 1px solid var(--clubi-line);
+}
+
+.book-picker__result {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-2);
+  width: 100%;
+  padding: var(--space-3);
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  letter-spacing: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.book-picker__result:hover,
+.book-picker__result:focus-visible {
+  background: var(--clubi-tint-wine);
+}
+
+.book-picker__empty {
+  margin-top: var(--space-2);
+  font-size: var(--text-sm);
+}
+
+/* ---- the external catalogue half (Fase 8)
+   Same panel, same rows: the Open Library results reuse .book-picker__results and
+   .book-picker__result so the two lists read as one field, and only the row's own layout
+   changes to make room for a cover. */
+.book-picker__external {
+  display: grid;
+  justify-items: start;
+  gap: var(--space-2);
+  margin-top: var(--space-3);
+}
+
+.book-picker__external > .book-picker__results {
+  justify-self: stretch;
+  margin-top: 0;
+}
+
+.book-picker__external-note {
+  font-size: var(--text-sm);
+}
+
+/* The local row is two baselines pushed apart; this one is a cover beside two lines, so the
+   justify-content and the wrap both have to go. */
+.book-picker__result--external {
+  flex-wrap: nowrap;
+  align-items: center;
+  justify-content: flex-start;
+  gap: var(--space-3);
+}
+
+/* E-13: 3rem. The cover keeps the thick cream border DESIGN.md 8.7 gives every cover, which
+   spends 1rem of the width, so below this the picture stops being one. */
+.book-picker__external-cover {
+  flex: none;
+  width: 3rem;
+}
+
+.book-picker__external-cover .book-cover {
+  box-shadow: var(--shadow-paper); /* a row, not a card lifted off the page (8.3) */
+}
+
+/* At 3rem the typographic placeholder has nothing to say: --space-4 of padding alone is wider
+   than the 2rem the cream border leaves, so the type is clipped to nothing anyway. The row
+   already prints the title and the author right beside the frame, so a hit with no cover is an
+   empty frame — which is the "sem capa" signal, without a second, broken copy of the title. */
+.book-picker__external-cover .book-cover--blank {
+  padding: 0;
+}
+
+.book-picker__external-cover .book-cover__title,
+.book-picker__external-cover .book-cover__author {
+  display: none;
+}
+
+.book-picker__external-names {
+  display: grid;
+  gap: var(--space-1);
+  min-width: 0;
+  font-size: var(--text-sm);
+  /* The catalogue is not ours and its titles are not bounded: a 200-character title with no
+     space in it would otherwise push the panel past the form. Same reason .book-cover__title
+     carries this. */
+  overflow-wrap: anywhere;
+}
+
+/* Not the danger colour: the row is not an error, it is a book the acervo cannot hold. The
+   sentence is the signal and the disabled row is the second one (DESIGN.md 3.3). */
+.book-picker__external-problem {
+  color: var(--clubi-warning);
+}
+
+.book-picker__result--external[disabled] {
+  cursor: default;
+}
+
+.book-picker__result--external[disabled]:hover {
+  background: transparent;
+}
+
+.book-picker__selected {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+  padding: var(--space-3) var(--space-4);
+  border: 1px solid var(--clubi-line-strong);
+  border-radius: var(--radius-sm);
+  background: var(--clubi-surface-sunken);
+}
+
+/* ---------------------------------------------------------------- image picker
+   NewPost's staged uploads, before Postar. The × glyph here is the one residual control
+   DESIGN.md 6.3 allows outside brand elements and words — removing a staged image is not the
+   same action as deleting a published post, so it does not borrow "Excluir". */
+.image-picker__list {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: var(--space-3);
+  margin: var(--space-3) 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.image-picker__item {
+  position: relative;
+  aspect-ratio: 1;
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+  border: 1px solid var(--clubi-line);
+}
+
+.image-picker__item img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.image-picker__remove {
+  position: absolute;
+  top: var(--space-1);
+  right: var(--space-1);
+  display: grid;
+  place-items: center;
+  width: 44px; /* touch target (DESIGN.md 10.4) */
+  height: 44px;
+  border: 0;
+  border-radius: var(--radius-pill);
+  background: var(--clubi-ink-brand);
+  color: var(--clubi-ink-on-invert);
+  box-shadow: var(--shadow-paper);
+  cursor: pointer;
+}
+
+.image-picker__remove .brand-element {
+  width: 1rem;
+}
+
+/* ---------------------------------------------------------------- utilities */
+/* Text that only the screen reader needs — the star labels, where the drawing carries the
+   meaning visually (DESIGN.md 10.5 keeps decoration aria-hidden; this is the reverse case). */
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  border: 0;
+  clip-path: inset(50%);
+  overflow: hidden;
+  white-space: nowrap;
+}
+
+.field-help {
+  font-size: var(--text-sm);
+}
+
+/* The one button that sits on a wine ground: a wine button would vanish into it, and yellow on
+   wine is the pair DESIGN.md 3.2 measures at 6.84 — the only background yellow is allowed on.
+   The hover is E-02's 12% darkening, applied as brightness because the fill is a token. */
+/* The second selector is load-bearing, not redundant: this button only ever renders inside
+   .on-invert, and `.on-invert a` (0,1,1) outweighs a lone `.button--highlight` (0,1,0) — which
+   painted the label yellow on yellow when the button was a <Link>. */
+.button--highlight,
+.on-invert .button--highlight {
+  background: var(--clubi-highlight);
+  color: var(--clubi-highlight-ink);
+}
+
+.button--highlight:hover,
+.button--highlight:active {
+  background: var(--clubi-highlight);
+  filter: brightness(0.88);
+}
+
+/* ---------------------------------------------------------------- star rating
+   The brand's five-pointed star (DESIGN.md 6.3), painted with currentColor so "não avaliado" is
+   the same drawing in --clubi-line. A *half* star is that same drawing twice: an empty one, and a
+   filled copy stacked over it inside a box clipped to 50% of its width (DESIGN.md 8.7).
+   Anti-metric by product decision (DESIGN.md 9): no club average, no ranking, nothing gated
+   behind giving a note. */
+.star-rating {
+  display: grid;
+  gap: var(--space-2);
+  justify-items: start;
+}
+
+/* The control. One slider, not five inputs, so the value is read off this box's own rectangle —
+   which is what makes the row continuous: no dead pixel between two stars, and 22px of slack for
+   each half of each star. */
+.star-rating__bar {
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  /* The page still scrolls vertically off the stars, but a horizontal drag is ours. Without it
+     a drag on touch scrolls the page instead of setting a rating. */
+  touch-action: pan-y;
+}
+
+/* The bar is the focusable element now that there are no radio inputs behind the glyphs, so it
+   carries the focus ring itself (DESIGN.md 10.2). */
+.star-rating__bar:focus-visible {
+  outline: 2px solid var(--clubi-focus);
+  outline-offset: 2px;
+}
+
+.star-rating__bar[aria-disabled="true"] {
+  cursor: default;
+  opacity: 0.6;
+}
+
+.star-rating__stars {
+  display: flex;
+  align-items: center;
+}
+
+/* 44px is the touch target of DESIGN.md 10.4, which names the stars as one of the two places
+   most likely to miss it. The glyph is 1.5rem; the rest of the square is target. */
+.star-rating__star {
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  color: var(--clubi-line);
+}
+
+/* The stack. It is the glyph's own size rather than the target's, so the clip below cuts the
+   drawing down its middle instead of somewhere in the slack around it. */
+.star-rating__glyphs {
+  position: relative;
+  width: 1.5rem;
+  line-height: 0;
+}
+
+/* Filled is orange — 3.06 on cream, above the 3:1 minimum for a non-text mark. Empty is the
+   rule line. Fill is never the only signal (DESIGN.md 10.3): the star's own shape changes with
+   it, the static caption spells the number out, and the control announces it in
+   `aria-valuetext`. */
+.star-rating__fill {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 0;
+  height: 100%;
+  overflow: hidden;
+  color: var(--clubi-accent);
+}
+
+/* The width is the whole trick, and it is why the copy inside keeps a fixed 1.5rem: at 100% it
+   would shrink with the box instead of being cut in half by it. */
+.star-rating__fill .brand-element {
+  width: 1.5rem;
+}
+
+.star-rating__star.is-half .star-rating__fill {
+  width: 50%;
+}
+
+.star-rating__star.is-on .star-rating__fill {
+  width: 100%;
+}
+
+.on-invert .star-rating__fill {
+  color: var(--clubi-highlight);
+}
+
+/* The preview — where the pointer is, not what the member chose. Fading it apart from the
+   committed fill is the visual half of that distinction; the caption's "prévia:" is the half
+   that does not depend on colour (DESIGN.md 10.3). */
+.star-rating__bar.is-preview .star-rating__fill {
+  opacity: 0.55;
+}
+
+.star-rating__caption {
+  font-size: var(--text-sm);
+  color: var(--clubi-ink-muted);
+}
+
+/* Read-only, on the profile history: a caption with stars rather than a control, so there is no
+   touch target to reserve. */
+.star-rating--static {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.star-rating--static .star-rating__star {
+  width: 1.5rem;
+  height: 1.5rem;
+}
+
+/* ---------------------------------------------------------------- profile header
+   The frame, so it carries the collage and the wine ground of the section alternation
+   (DESIGN.md 3.4 and 7). Shelf and history below it stay clean. */
+.profile-header__inner {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-5);
+}
+
+/* Same cutout treatment as the book cover (DESIGN.md 7): thick cream border, warm shadow. The
+   diameter is E-13 — about half the hero's cover column, enough to anchor the header without
+   competing with the name. */
+.profile-photo {
+  display: grid;
+  place-items: center;
+  width: clamp(6rem, 22vw, 8rem);
+  height: clamp(6rem, 22vw, 8rem);
+  flex: none;
+  border: var(--space-2) solid var(--clubi-cream);
+  border-radius: var(--radius-pill);
+  background: var(--clubi-tint-wine);
+  box-shadow: var(--shadow-lifted);
+  object-fit: cover;
+  overflow: hidden;
+}
+
+.profile-photo--blank {
+  color: var(--clubi-ink-brand);
+  font-family: var(--clubi-font-display);
+  font-size: var(--text-xl);
+  font-weight: 600;
+  letter-spacing: var(--tracking-display);
+}
+
+.profile-header__name {
+  font-size: clamp(var(--text-xl), 8vw, var(--text-2xl));
+}
+
+.profile-header__username {
+  margin-top: var(--space-1);
+  font-size: var(--text-sm);
+}
+
+.profile-header__quote {
+  max-width: var(--measure);
+  margin-top: var(--space-4);
+  font-family: var(--clubi-font-display);
+  font-size: var(--text-md);
+  line-height: var(--leading-tight);
+  letter-spacing: var(--tracking-display);
+}
+
+.profile-header__birth {
+  margin-top: var(--space-3);
+  font-size: var(--text-sm);
+}
+
+.profile-header__actions {
+  margin-top: var(--space-5);
+}
+
+/* ---------------------------------------------------------------- favorites shelf
+   Four slots, always four columns — the shelf has a fixed size by design (ADR-08), so an
+   auto-fitting grid would misrepresent it. 7rem is E-13: below it the title of a book with no
+   cover stops fitting inside the typographic placeholder. */
+.shelf {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(7rem, 1fr));
+  gap: var(--space-5);
+  max-width: var(--measure);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+@media (min-width: 768px) {
+  .shelf {
+    grid-template-columns: repeat(4, minmax(7rem, 1fr));
+  }
+}
+
+/* Flex, not grid, so the controls can be pushed to the bottom of the tallest slot — otherwise
+   each column's row of subir/descer/tirar buttons sits wherever that book's title happens to
+   end, and four slots would have four different baselines. */
+.shelf__item {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.shelf__title {
+  overflow-wrap: anywhere;
+  font-family: var(--clubi-font-display);
+  font-size: var(--text-base);
+  font-weight: 600;
+  line-height: var(--leading-tight);
+  letter-spacing: var(--tracking-display);
+}
+
+.shelf__author {
+  font-size: var(--text-sm);
+}
+
+/* Buttons, not drag handles — which is what keeps reordering operable by keyboard and by thumb.
+   The labels are the three residual glyphs of DESIGN.md 6.3 rule 3 (two arrows and the ×), drawn
+   in the marca's stroke; the words they replaced moved into aria-label and title. Three 44px
+   targets plus the gaps come to 140px, inside the ~163px the 2-column shelf leaves at 390px, so
+   the row never wraps at the width the shelf is designed for. */
+.shelf__controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1);
+  margin-top: auto;
+  padding-top: var(--space-2);
+}
+
+/* A quiet control the size of a touch target (10.4), the same trade StarRating makes: a 1.25rem
+   glyph centred in 44px, so the drawing stays small enough to read as the marca's hand and the
+   target stays big enough for a thumb. */
+.shelf__control {
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  border: 0;
+  border-radius: var(--radius-md);
+  background: transparent;
+  color: var(--clubi-ink-brand);
+  cursor: pointer;
+  transition: background var(--motion-base) var(--motion-ease);
+}
+
+.shelf__control .brand-element {
+  width: 1.25rem;
+}
+
+/* Optical, not arbitrary: the × fills its 100×100 viewBox corner to corner while the arrows are
+   tall and narrow, so at an equal width it reads heavier than the two beside it. */
+.shelf__control--remove .brand-element {
+  width: 1.05rem;
+}
+
+.shelf__control:hover,
+.shelf__control:active {
+  background: var(--clubi-tint-wine);
+}
+
+/* Same as the quiet button: "not applicable here" — subir on the first slot — is not "wait,
+   something is running". The glyph fades rather than changing colour, because a fifth colour is
+   not in the palette (3.1) and colour alone was never the signal anyway (10.3): the button is
+   also `disabled`, so it is out of the tab order and announced as such. */
+.shelf__control[disabled] {
+  background: transparent;
+  opacity: 0.35;
+  cursor: default;
+}
+
+.shelf-editor {
+  display: grid;
+  gap: var(--space-5);
+}
+
+.shelf-editor__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+}
+
+/* ---------------------------------------------------------------- reading history
+   One row per past month. The cover is a 5rem thumbnail (E-13) — the same width the empty-state
+   graphic element uses, so a past reading never reads as a second hero. */
+.history {
+  display: grid;
+  gap: var(--space-6);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.history__item {
+  display: grid;
+  grid-template-columns: 5rem minmax(0, 1fr);
+  gap: var(--space-5);
+  align-items: start;
+}
+
+.history__item:not(:last-child) {
+  padding-bottom: var(--space-6);
+  border-bottom: 1px solid var(--clubi-line);
+}
+
+.history__text {
+  display: grid;
+  justify-items: start;
+  gap: var(--space-2);
+  max-width: var(--measure);
+}
+
+.history__month,
+.history__author,
+.history__progress {
+  font-size: var(--text-sm);
+}
+
+.history__title {
+  font-size: var(--text-lg);
+}
+
+.history__review {
+  white-space: pre-wrap;
+}
+
+/* ---------------------------------------------------------------- photo upload
+   No "Remover foto": upload_photo only writes and ProfileIn has no photo field, so the API
+   cannot express it (see EditProfile). */
+.photo-form {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: var(--space-5);
+}
+
+.photo-form__controls {
+  display: grid;
+  justify-items: start;
+  gap: var(--space-3);
+}
+
+/* ---------------------------------------------------------------- search results
+   Functional core (DESIGN.md 7): plain cards, no tilt and no texture. The list is alphabetical
+   and carries no number next to anyone — a directory of the club, never a ranking (9). */
+.search__lead {
+  margin-top: var(--space-2);
+  max-width: var(--measure);
+}
+
+.search__results {
+  margin-top: var(--space-6);
+}
+
+.search__note {
+  margin-top: var(--space-4);
+  max-width: var(--measure);
+  font-size: var(--text-sm);
+}
+
+.member-list {
+  display: grid;
+  /* E-13: 16rem is the narrowest column where a two-word name still sits beside the 2.75rem
+     avatar instead of wrapping under it. */
+  grid-template-columns: repeat(auto-fill, minmax(16rem, 1fr));
+  gap: var(--space-4);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.member-card {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  height: 100%;
+  padding: var(--space-3) var(--space-4);
+  border: 1px solid var(--clubi-line);
+  border-radius: var(--radius-md);
+  background: var(--clubi-surface);
+  box-shadow: var(--shadow-paper);
+  color: inherit;
+  text-decoration: none;
+  transition: box-shadow var(--motion-base) var(--motion-ease);
+}
+
+.member-card:hover,
+.member-card:focus-visible {
+  box-shadow: var(--shadow-lifted);
+}
+
+.member-card__name {
+  display: block;
+  font-weight: 700;
+}
+
+.member-card__username {
+  display: block;
+  font-size: var(--text-sm);
+}
+
+/* The month being read, inside the club's list of choices. Marca-texto: solid tint, square
+   corners, no shadow (DESIGN.md 7); wine on tint-yellow measures 8.15 (3.3). */
+.pick-badge {
+  display: inline-block;
+  margin-left: var(--space-2);
+  padding-inline: var(--space-2);
+  border-radius: var(--radius-none);
+  background: var(--clubi-tint-yellow);
+  color: var(--clubi-ink-brand);
+  font-size: var(--text-xs);
+  font-weight: 700;
+}
+
+/* ---------------------------------------------------------------- page states */
+.state {
+  display: grid;
+  justify-items: start;
+  gap: var(--space-4);
+  max-width: var(--measure);
+}
+
+.state .brand-element {
+  width: 5rem;
+  transform: rotate(calc(var(--tilt) * -1));
+}
+
+.state__title {
+  font-size: var(--text-2xl);
+}
+
+.splash {
+  display: grid;
+  place-items: center;
+  align-content: center;
+  gap: var(--space-5);
+  min-height: 100dvh;
+  padding: var(--space-6) var(--space-4);
+  text-align: center;
+  color: var(--clubi-ink-muted);
+}
+
+.splash .brand-mark {
+  color: var(--clubi-ink-brand);
+}
+
+/* ---------------------------------------------------------------- motion
+   Short and without elasticity (E-11), and none of it is essential: under
+   prefers-reduced-motion the decorative rotation and the transitions go (DESIGN.md 10.7). */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    transition: none !important;
+    animation: none !important;
+  }
+
+  .pick__cutout::before,
+  .pick__stamp,
+  .state .brand-element {
+    transform: none;
+  }
+}
