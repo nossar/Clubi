@@ -755,7 +755,51 @@ a {
    (DESIGN.md 9). The top margin .notice carries is the gap under the header, so it needs none
    of its own. */
 .unread-notice {
-  padding-block-end: var(--space-2);
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  /* The gap is on the row, not on .notice: the sentence and the × are one line and have to
+     share a baseline, and .notice's own top margin would have pushed only one of them down.
+     Symmetric, because the faixa is a band between the header and the screen and not a heading
+     for what follows it — the same air above and below is what keeps it from reading as
+     belonging to the block underneath. Same total height the 1rem/0.5rem pair had. */
+  padding-block: var(--space-3);
+}
+
+.unread-notice .notice {
+  flex: 1;
+  margin-top: 0;
+}
+
+/* Dispensing with the aviso is the residual × of DESIGN.md 6.3 rule 3, coloured like the shelf's
+   — but not sized like it. The shelf's 44px box sits in a grid of covers; here it would be more
+   than twice the height of the one line it belongs to. So the touch target of 10.4 is kept as
+   *area* and taken out of the flow: the negative block margin lets the 44px square overhang a
+   row the text alone decides the height of, and the glyph is cut to the size of the sentence so
+   the × reads as punctuation on that line instead of a second element beside it. */
+.unread-notice__dismiss {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  margin-block: calc(var(--space-3) * -1);
+  padding: 0;
+  border: 0;
+  border-radius: var(--radius-md);
+  background: transparent;
+  color: var(--clubi-ink-brand);
+  cursor: pointer;
+  transition: background var(--motion-base) var(--motion-ease);
+}
+
+.unread-notice__dismiss .brand-element {
+  width: 0.8rem;
+}
+
+.unread-notice__dismiss:hover,
+.unread-notice__dismiss:active {
+  background: var(--clubi-tint-wine);
 }
 
 /* ---------------------------------------------------------------- who finished
