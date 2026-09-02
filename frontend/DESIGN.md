@@ -627,6 +627,14 @@ Nada nesta seção está no brandbook (E-10). Tudo é derivado do que se observa
 | `--space-7`, `--space-8` | 48, 64px | Entre blocos, respiro de seção |
 | `--space-9` | 96px | Entre seções de página inteira |
 
+**Duas seções podem ser meias de um assunto só, e aí a costura cai uma faixa.** No perfil, "Estante"
+e "Leituras do clubi" são as duas metades do que aquela pessoa lê — não dois blocos independentes
+da página. O fio entre elas continua lá, mas o ar dos dois lados desce de `--space-7`/`--space-8`
+("respiro de seção") para `--space-6` ("entre componentes"): `.section--tight` no primeiro do par,
+que alcança o topo do segundo pelo irmão adjacente. É exceção, não o padrão — o ritmo da página
+continua sendo o da tabela acima, e duas seções que tratam de assuntos diferentes ficam longe uma
+da outra de propósito.
+
 ### 8.2 Raio
 
 O brandbook mistura dois vocabulários de forma **de propósito**: quadrado duro nos blocos de

@@ -167,6 +167,20 @@ a {
   border-top: 1px solid var(--clubi-line);
 }
 
+/* The seam between two sections that are two halves of one subject — the profile's shelf and its
+   reading history — rather than two independent blocks of a page. The rule stays; what shrinks is
+   the air on either side of it, from the --space-7/8 that 8.1 calls "respiro de seção" down to
+   the --space-6 it calls "entre componentes". Put the class on the *first* of the pair: the
+   sibling selector reaches the second one's top, so the seam is declared in one place and the
+   section below keeps its full breathing room against whatever follows it. */
+.section--tight {
+  padding-block-end: var(--space-6);
+}
+
+.section--tight + .section {
+  padding-block-start: var(--space-6);
+}
+
 /* Full-page sections alternating cream and wine — the rhythm device of the carousel pieces
    (DESIGN.md 3.4). Never inside a list of cards: the zebra belongs to the page, not the item. */
 .section--invert {
@@ -187,6 +201,15 @@ a {
 @media (min-width: 768px) {
   .section {
     padding-block: var(--space-8);
+  }
+
+  /* Restated because the rule above sets the shorthand, which would otherwise win on order. */
+  .section--tight {
+    padding-block-end: var(--space-6);
+  }
+
+  .section--tight + .section {
+    padding-block-start: var(--space-6);
   }
 }
 

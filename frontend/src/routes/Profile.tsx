@@ -157,7 +157,10 @@ export function Profile() {
         </div>
       </section>
 
-      <section className="section">
+      {/* --tight closes the seam with the section below: the shelf and the reading history are
+          two halves of one subject — what this member reads — not two independent blocks, so the
+          rule between them keeps "entre componentes" air instead of a full section's. */}
+      <section className="section section--tight">
         <div className="container">
           <h2 className="section-title">{isMe ? "Sua estante" : "Estante"}</h2>
           <FavoritesShelf books={profile.favorites} canEdit={isMe} />
