@@ -23,7 +23,6 @@ Written and working:
 
 Not written yet:
 - Nothing on the frontend. Two things are *deliberately* absent rather than owed, and both are argued in `frontend/CLAUDE.md`: `BookOfTheMonth` (Fase 7 — the Home already is that screen, and `/book-of-the-month` redirects to it) and a "cadastro de livro" screen (Fase 8 — a book is registered from inside `BookPicker`, where the member already is, and anything the Open Library does not have is a job for the Admin, ADR-14).
-- **One backend gap the frontend found and did not fix** (Fase 6, raised rather than acted on): `PatchDict[ProfileIn]` discards the schema's `max_length`, so `PATCH /api/me` writes a 200-character `full_name` into a 120-character column and answers 200 OK. SQLite does not check varchar length; the Neon Postgres of ADR-13 would raise `DataError` → 500. `EditProfile`'s `maxLength` attributes are the only length validation in the path today.
 - The Neon Postgres wiring (see below). The root `Makefile` now exists and no longer gates the frontend steps.
 
 Follow the phase order in the implementation guide rather than inventing structure.
@@ -106,6 +105,7 @@ Three things about the Ninja wiring that are easy to get wrong:
 - `NinjaAPI` takes no `csrf=` argument (the guide's snippet predates Ninja 1.x). CSRF is enforced by the auth class — `django_auth` checks it on every unsafe method by default. Do not add `csrf_exempt` anywhere.
 - Multipart on `PUT` needs `ninja.compatibility.files.fix_request_files_middleware` in `MIDDLEWARE`; Django only fills `request.FILES` on POST. `PUT /api/me/photo` depends on it.
 - Partial updates use `PatchDict[Schema]`, which widens every field to optional. The routes re-narrow it: a `null` for a field the model stores as a blank string becomes `""`, and only genuinely nullable fields (`birth_date`, `Post.book_id`) accept `null`.
+- **A length limit on a `PatchDict` schema must live in `Annotated`, never on the right-hand side.** `create_patch_schema` rebuilds every non-optional field as `annotation = Optional[annotation]`, `default = getattr(cls, name, None)` — and on a pydantic model that `getattr` is `None`, so a `Field(max_length=...)` written as the default is *overwritten* and the limit silently disappears. An `Annotated[str, Field(max_length=...)]` rides inside the annotation and survives. This was a live bug on `PATCH /api/me` (a 200-character `full_name` into a 120-character column, 200 OK on SQLite, `DataError` → 500 on the Neon Postgres of ADR-13) and on `PATCH /api/posts/{id}`; both are fixed, and `users/test_api.py` and `posts/test_api.py` hold the regression tests.
 
 **Monorepo, two folders, one deploy (ADR-03).** `backend/` and `frontend/`, built together, served by one Django process. `settings.py` already picks up `frontend/dist` as a staticfiles dir once it exists.
 

@@ -1,4 +1,5 @@
 from datetime import date
+from typing import Annotated
 
 from ninja import Field, Schema
 
@@ -8,10 +9,21 @@ from books.schemas import ReadingHistoryOut
 
 
 class ProfileIn(Schema):
-    """Only ever used through PatchDict — every field is optional on the wire."""
+    """Only ever used through PatchDict — every field is optional on the wire.
 
-    full_name: str = Field(default="", max_length=120)
-    quote: str = Field(default="", max_length=180)
+    The constraints are in `Annotated`, not in the assigned `Field(...)`, and that is
+    load-bearing. `PatchDict` rebuilds the schema field by field: for every field whose
+    annotation is not already optional it writes `annotation = Optional[annotation]` and
+    `default = getattr(cls, name, None)` — which on a pydantic model is `None`, so a
+    `Field(max_length=...)` sitting on the right-hand side is *overwritten* and the limit
+    silently disappears. An `Annotated` constraint rides along inside the annotation instead
+    and survives the rewrite. Written the obvious way, `PATCH /api/me` accepted a 200-character
+    `full_name` into a 120-character column: 200 OK on SQLite, `DataError` → 500 on the Neon
+    Postgres of ADR-13.
+    """
+
+    full_name: Annotated[str, Field(max_length=120)] = ""
+    quote: Annotated[str, Field(max_length=180)] = ""
     birth_date: date | None = None
 
 

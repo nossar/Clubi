@@ -221,12 +221,14 @@ Each of these was a real conflict, and the resolution is deliberate rather than 
    list captioned "sem nota". So the backend grew `MonthlyReadingIn.clear_rating`, and `0` became
    the zero-star rating it always looked like. The reversibility DESIGN.md 9 asks for now comes
    from the erase field, not from the 0.
-3. **`PatchDict` drops `ProfileIn`'s `max_length`.** A 200-character `full_name` (column: 120) and
-   a 200-character `quote` (column: 180) both answer 200 OK and are written — SQLite does not
-   enforce varchar length, but the Neon Postgres of ADR-13 would raise `DataError` → 500. So the
-   `maxLength` attributes in `EditProfile` are not a convenience, they are **the only length
-   validation in the path today**. Fixing the backend is a decision to raise, not something to
-   change inside a phase declared frontend-only.
+3. ~~**`PatchDict` drops `ProfileIn`'s `max_length`.**~~ **Fixed in the backend.** It was true: a
+   200-character `full_name` (column: 120) and a 200-character `quote` (column: 180) both answered
+   200 OK and were written — SQLite does not enforce varchar length, but the Neon Postgres of
+   ADR-13 would have raised `DataError` → 500. `ProfileIn` now carries its limits in
+   `Annotated[str, Field(max_length=...)]`, which is the one form that survives the rewrite
+   `PatchDict` performs; `PATCH /api/me` answers 422 past the limit. So `EditProfile`'s
+   `maxLength` attributes are back to being what they look like — a convenience that stops the
+   member before the request — rather than the only validation in the path.
 
 One thing Fase 6 changed in a file Fase 4 had already written:
 

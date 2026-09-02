@@ -1,4 +1,5 @@
 from datetime import datetime
+from typing import Annotated
 
 from ninja import Field, Schema
 
@@ -6,7 +7,10 @@ from api.schemas import BookOut, UserBrief
 
 
 class PostIn(Schema):
-    title: str = Field(max_length=140)
+    # Annotated, not `Field(max_length=...)` on the right-hand side: this schema is also used
+    # through `PatchDict` in `update_post`, which rebuilds each field and drops a constraint
+    # that lives in the default. See the ProfileIn docstring in users/schemas.py.
+    title: Annotated[str, Field(max_length=140)]
     body: str
     book_id: int | None = None
 

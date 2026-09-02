@@ -57,6 +57,34 @@ class TestMe:
         member.refresh_from_db()
         assert member.birth_date is None
 
+    def test_patch_rejects_a_full_name_longer_than_the_column(self, auth, member):
+        """PatchDict rebuilds every field, so ProfileIn keeps its limits in Annotated.
+
+        Written the obvious way the limit vanished and this wrote 200 characters into a
+        120-character column — 200 OK on SQLite, DataError on Postgres (ADR-13).
+        """
+        response = auth.patch("/api/me", {"full_name": "a" * 121}, content_type="application/json")
+
+        assert response.status_code == 422
+        member.refresh_from_db()
+        assert member.full_name == "Ana Ribeiro"
+
+    def test_patch_rejects_a_quote_longer_than_the_column(self, auth, member):
+        response = auth.patch("/api/me", {"quote": "a" * 181}, content_type="application/json")
+
+        assert response.status_code == 422
+
+    def test_patch_still_accepts_the_longest_allowed_values(self, auth, member):
+        response = auth.patch(
+            "/api/me",
+            {"full_name": "a" * 120, "quote": "b" * 180},
+            content_type="application/json",
+        )
+
+        assert response.status_code == 200
+        member.refresh_from_db()
+        assert (member.full_name, member.quote) == ("a" * 120, "b" * 180)
+
     def test_photo_upload_is_compressed_to_jpeg(self, auth, member, image_upload):
         payload = encode_multipart(BOUNDARY, {"file": image_upload("foto.png")})
 

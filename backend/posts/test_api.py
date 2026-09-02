@@ -70,6 +70,25 @@ class TestPosts:
         post.refresh_from_db()
         assert (post.title, post.body, post.book_id) == ("Depois", "Corpo", book.id)
 
+    def test_patch_rejects_a_title_longer_than_the_column(self, staff_auth, organiser):
+        """PostIn goes through PatchDict here, which drops a limit written as a default."""
+        post = Post.objects.create(author=organiser, title="Antes", body="Corpo")
+
+        response = staff_auth.patch(
+            f"/api/posts/{post.id}", {"title": "a" * 141}, content_type="application/json"
+        )
+
+        assert response.status_code == 422
+        post.refresh_from_db()
+        assert post.title == "Antes"
+
+    def test_create_still_rejects_a_title_longer_than_the_column(self, staff_auth):
+        response = staff_auth.post(
+            "/api/posts", {"title": "a" * 141, "body": "B"}, content_type="application/json"
+        )
+
+        assert response.status_code == 422
+
     def test_author_can_detach_the_book(self, staff_auth, organiser, book):
         post = Post.objects.create(author=organiser, title="T", body="B", book=book)
 
