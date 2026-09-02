@@ -212,7 +212,7 @@ export function FavoritesShelf({
         </div>
       ) : (
         <p className="muted">
-          A estante está cheia. Tire um livro para abrir espaço — são quatro lugares, de propósito.
+          A estante está cheia. Tire um livro para abrir espaço.
         </p>
       )}
 
