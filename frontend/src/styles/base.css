@@ -373,15 +373,102 @@ a {
   line-height: 1;
 }
 
-/* Also the only way into your own profile, so it stays on screen at 390px — the member arrives
-   by phone (DESIGN.md 8.5). What drops there is the greeting word, not the link. */
-.site-header__greeting {
-  font-size: var(--text-sm);
-  color: var(--clubi-ink-brand);
+/* ---------------------------------------------------------------- account menu
+   The greeting, the photo and the two things you can do with your account, folded under one
+   control. Every word here is --clubi-ink-brand at 700, the same treatment as "Postagens" beside
+   it: the header speaks in the marca's vinho, and two weights of the same colour on one line read
+   as two different reds. */
+.account-menu {
+  position: relative;
 }
 
+.account-menu__trigger {
+  display: inline-flex;
+  align-items: center;
+  /* --space-1, not --space-2: the four parts are one control, and the avatar's own 2px cream
+     border already reads as a gap. The greeting is a single item so "Olá," and the name are
+     separated by a real word space instead of by this gap. */
+  gap: var(--space-1);
+  min-height: 44px; /* touch target (DESIGN.md 10.4) */
+  padding: var(--space-1) var(--space-2);
+  border: 0;
+  border-radius: var(--radius-pill);
+  background: transparent;
+  color: var(--clubi-ink-brand);
+  font-family: var(--clubi-font-text);
+  font-size: var(--text-sm);
+  font-weight: 700;
+  letter-spacing: var(--tracking-text);
+  cursor: pointer;
+}
+
+.account-menu__trigger:hover,
+.account-menu__trigger[aria-expanded="true"] {
+  background: var(--clubi-tint-wine);
+}
+
+/* The photo is smaller here than the 2.75rem it has everywhere else (E-13): inside a 44px control
+   the circle no longer has to be the touch target itself, and 2rem is the size 6.2 gives an
+   element set inline — it keeps the header row at the logotype's height. */
+.account-menu__trigger .avatar {
+  width: 2rem;
+  height: 2rem;
+}
+
+/* The disclosure affordance, one step under the word so it reads as punctuation and not as the
+   control (DESIGN.md 6.3 rule 2 — the word is what is clicked). */
+.account-menu__arrow {
+  display: inline-flex;
+  width: 0.875rem;
+}
+
+/* Floating over the page, so --shadow-lifted rather than the resting --shadow-paper (8.3), and
+   right-aligned because this is the last thing on the line — a left-aligned panel would hang off
+   the container's gutter. */
+.account-menu__panel {
+  position: absolute;
+  z-index: 20;
+  top: calc(100% + var(--space-2));
+  right: 0;
+  min-width: 11rem;
+  border: 1px solid var(--clubi-line);
+  border-radius: var(--radius-sm);
+  background: var(--clubi-surface);
+  box-shadow: var(--shadow-lifted);
+  overflow: hidden;
+}
+
+.account-menu__item {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  min-height: 44px; /* touch target (DESIGN.md 10.4) */
+  padding: var(--space-2) var(--space-4);
+  border: 0;
+  background: transparent;
+  color: var(--clubi-ink-brand);
+  font-family: var(--clubi-font-text);
+  font-size: var(--text-sm);
+  font-weight: 700;
+  letter-spacing: var(--tracking-text);
+  text-align: left;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.account-menu__item:hover,
+.account-menu__item:focus-visible {
+  background: var(--clubi-tint-wine);
+}
+
+.account-menu__panel form {
+  border-top: 1px solid var(--clubi-line);
+}
+
+/* The greeting word is what drops at 390px, not the name and not the photo — the member arrives
+   by phone (DESIGN.md 8.5) and this control is the only way into their own profile. */
 @media (max-width: 479px) {
-  .site-header__hello {
+  .account-menu__hello {
     display: none;
   }
 }

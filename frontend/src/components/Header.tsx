@@ -1,8 +1,7 @@
 import { Link } from "react-router-dom";
 
-import { csrfToken } from "../api/client";
-import { useCurrentUser } from "../context/CurrentUser";
 import { useUnreadPosts } from "../unreadPosts";
+import { AccountMenu } from "./AccountMenu";
 import { BrandElement } from "./BrandElement";
 import { MemberSearch } from "./MemberSearch";
 
@@ -10,9 +9,7 @@ import { MemberSearch } from "./MemberSearch";
 const BADGE_CEILING = 9;
 
 export function Header() {
-  const user = useCurrentUser();
   const unread = useUnreadPosts();
-  const firstName = user.full_name.trim().split(" ")[0] || user.username;
 
   return (
     <header className="site-header">
@@ -50,21 +47,10 @@ export function Header() {
             ) : null}
           </Link>
 
-          {/* The greeting is also the way into your own profile — without it /u/:username
-              would only be reachable through someone else's post or the search. */}
-          <Link className="site-header__greeting" to={`/u/${user.username}`}>
-            <span className="site-header__hello">Olá, </span>
-            {firstName}
-          </Link>
-          {/* Logout is a rendered POST, not an API call: it belongs to django.contrib.auth
-              (ADR-05), and LogoutView refuses GET. The token comes from the same cookie the
-              API client uses. */}
-          <form method="post" action="/accounts/logout/">
-            <input type="hidden" name="csrfmiddlewaretoken" value={csrfToken()} />
-            <button className="button button--quiet" type="submit">
-              Sair
-            </button>
-          </form>
+          {/* The greeting, the photo and the two things you can do with your account, under one
+              control — the way into your own profile included. See AccountMenu for why the two
+              used to sit side by side and no longer do. */}
+          <AccountMenu />
         </div>
       </div>
     </header>

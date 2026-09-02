@@ -349,9 +349,14 @@ Fase 5 taught it two things the guide's snippet doesn't cover, both needed by po
 default JSON header so the browser can write its own multipart boundary. Both are additive — no
 existing caller needed to change.
 
-Logout is not a fetch either: `Header` posts a plain HTML form to `/accounts/logout/` with the
-`csrfmiddlewaretoken` read from the same cookie, because `LogoutView` refuses GET and the view
-belongs to `django.contrib.auth`, not to the API.
+Logout is not a fetch either: `AccountMenu` posts a plain HTML form to `/accounts/logout/` with
+the `csrfmiddlewaretoken` read from the same cookie, because `LogoutView` refuses GET and the view
+belongs to `django.contrib.auth`, not to the API. It moved out of `Header` when the greeting and
+"Sair" were folded into one control: **the greeting, the photo, "Meu perfil" and "Sair" are now a
+disclosure**, the same `aria-expanded` + `aria-controls` pattern `MemberSearch` and
+`FinishedReaders` use rather than `role="menu"` — two items do not earn a virtual cursor, and Tab
+already walks a link and a button. `/u/:username` is still reachable from every screen, one level
+down. The panel stays in the DOM (`hidden`) so `aria-controls` never dangles.
 
 **`src/api/generated.ts` is generated and never edited by hand** (ADR-12), not even to fix a type.
 `src/api/types.ts` is the thin hand-written layer over it:
