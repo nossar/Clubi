@@ -168,14 +168,14 @@ export function ProgressBar({ pick }: { pick: MonthlyPick }) {
             ) : null}
           </div>
 
-          <p className="progress__note">
-            Comece por onde der: a gente não cobra ter lido o livro inteiro.
-          </p>
-
           <div className="progress__rating">
             <StarRating
               value={reading.rating}
               label="Se quiser, dê uma nota"
+              // Under the bar, and only while there is no note: it is the offer, so it goes away
+              // the moment the offer is taken. `StarRating` owns it because it holds the value
+              // the member just clicked, which this component only sees once the PUT comes back.
+              hint="Altere quando quiser"
               onRate={(rating) => rate.mutate({ rating })}
               onClear={() => rate.mutate({ clear_rating: true })}
               disabled={rate.isPending}
@@ -189,10 +189,6 @@ export function ProgressBar({ pick }: { pick: MonthlyPick }) {
                 </p>
               ) : null}
             </div>
-
-            <p className="progress__note">
-              A nota é sua e dá para mudar ou tirar quando quiser. Ninguém compara notas por aqui.
-            </p>
           </div>
 
           {/* Folded away until asked for, and inside this card rather than under it: it is about

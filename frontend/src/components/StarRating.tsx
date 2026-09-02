@@ -32,7 +32,7 @@ import {
  * `MonthlyReadingIn.clear_rating` erases, so 0 was free to become the opinion it looks like, and
  * the club's "quem já terminou" list counts a zero in. What follows from that split:
  * dragging off the left end of the bar reaches 0 and *keeps* a note rather than removing it,
- * Home is the minimum of the scale and not the way out of it, and **"Tirar a nota" is the only
+ * Home is the minimum of the scale and not the way out of it, and **"Remover nota" is the only
  * way back to `null`** — so it shows for a 0 as much as for a 5.
  *
  * Interaction is one `role="slider"` driven by Pointer Events, which is one handler for mouse,
@@ -44,6 +44,7 @@ import {
 export function StarRating({
   value,
   label,
+  hint,
   onRate,
   onClear,
   disabled = false,
@@ -51,6 +52,8 @@ export function StarRating({
   /** 0 to 5 in steps of 0.5, or `null` for "sem nota". */
   value: number | null;
   label: string;
+  /** Offered under the bar while there is no note, and nowhere else. Omit to say nothing. */
+  hint?: string;
   /** Omit to render a read-only row (the profile history). */
   onRate?: (rating: number) => void;
   /** Sends `{"clear_rating": true}` — the only way back to `null`. Omit to leave it unclearable. */
@@ -167,6 +170,17 @@ export function StarRating({
     if (next !== rating) commit(next);
   }
 
+  // The stars already say what the note is, so the caption stopped repeating it as a number:
+  // once there is a note, the line under the bar holds nothing but the way back out of it. What
+  // survives is what the row cannot draw — the prévia, which is the half of that distinction that
+  // does not depend on opacity (DESIGN.md 10.3), and the invitation while no note exists.
+  const clearable = onClear && rating !== null;
+  const caption = previewing(preview)
+    ? `prévia: ${ratingCaption(preview)}`
+    : rating === null
+      ? hint
+      : null;
+
   return (
     <div className="star-rating">
       <span className="field-label" id={labelId}>
@@ -199,22 +213,24 @@ export function StarRating({
         <Stars value={shown} />
       </div>
 
-      <p className="star-rating__caption">
-        {previewing(preview) ? `prévia: ${ratingCaption(preview)}` : ratingCaption(rating)}
-        {onClear && rating !== null ? (
-          <>
-            {" · "}
-            <button
-              className="button button--quiet"
-              type="button"
-              onClick={clear}
-              disabled={disabled}
-            >
-              Tirar a nota
-            </button>
-          </>
-        ) : null}
-      </p>
+      {caption || clearable ? (
+        <p className="star-rating__caption">
+          {caption}
+          {clearable ? (
+            <>
+              {caption ? " · " : null}
+              <button
+                className="button button--quiet"
+                type="button"
+                onClick={clear}
+                disabled={disabled}
+              >
+                Remover nota
+              </button>
+            </>
+          ) : null}
+        </p>
+      ) : null}
     </div>
   );
 }
@@ -236,8 +252,10 @@ function Stars({ value }: { value: number | null }) {
   return (
     <span className="star-rating__stars" aria-hidden="true">
       {STARS.map((star) => {
-        // No rating draws like a zero — five empty stars. The caption beside them is what says
-        // which of the two it is, because colour and shape here cannot (DESIGN.md 10.3).
+        // No rating draws like a zero — five empty stars. What says which of the two it is sits
+        // beside the row, never in it, because colour and shape here cannot (DESIGN.md 10.3):
+        // `aria-valuetext` and the static caption spell it out, and on the control the line
+        // under the bar carries the hint until a note exists and "Remover nota" once it does.
         const fill = starFill(value ?? 0, star);
         return (
           <span
@@ -267,7 +285,7 @@ function Stars({ value }: { value: number | null }) {
  * The APG slider keys: arrows by half a star, PageUp/PageDown by a whole one, Home to zero stars
  * and End to five. A returned `null` means the key was not ours and the browser keeps it.
  *
- * Home is the bottom of the scale, not the way off it: erasing a note is "Tirar a nota", the one
+ * Home is the bottom of the scale, not the way off it: erasing a note is "Remover nota", the one
  * control wired to `clear_rating`. From "sem nota" the arrows start counting at zero, so a right
  * arrow gives half a star and a left arrow gives a deliberate zero.
  */

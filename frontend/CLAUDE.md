@@ -539,7 +539,7 @@ to `/accounts/login/` — retrying either only fires requests at a page that is 
   Until "quem já terminou" needed to tell the two apart, `{"rating": 0}` was the only erasure the
   API offered and the SPA printed both as "sem nota". Now: `ratingCaption(0)` is "0 de 5" and only
   `ratingCaption(null)` is "sem nota"; dragging off the left end of the bar and pressing Home both
-  give a deliberate zero; **"Tirar a nota" is the only path back to `null`**, so it shows for a 0
+  give a deliberate zero; **"Remover nota" is the only path back to `null`**, so it shows for a 0
   as much as for a 5. A `{"rating": null}` still means "leave it alone" — that is what makes the
   `PUT` partial, and it is why erasing needed a field of its own rather than a null.
 - **`GET /api/me` carries `is_staff`; no other response does.** It is `MeOut`, a subclass of
