@@ -12,12 +12,16 @@ import estrela5 from "../assets/elements/estrela-5.svg?raw";
 import livroAberto from "../assets/elements/livro-aberto.svg?raw";
 import livroFechado from "../assets/elements/livro-fechado.svg?raw";
 import nuvem from "../assets/elements/nuvem.svg?raw";
+import setaBaixo from "../assets/elements/seta-baixo.svg?raw";
+import setaCima from "../assets/elements/seta-cima.svg?raw";
 import x from "../assets/elements/x.svg?raw";
 
 // Add an entry when a screen actually needs it, and keep to at most two elements per screen
-// (DESIGN.md 6.2) — they are punctuation, not content. "x" is the one glyph that is not from
-// the brandbook: DESIGN.md 6.3 calls for a residual "×" drawn in the marca's stroke, versioned
-// here alongside the ten brandbook elements, since no icon library is used (E-07).
+// (DESIGN.md 6.2) — they are punctuation, not content. "x", "seta-cima" and "seta-baixo" are the
+// glyphs that are not from the brandbook: DESIGN.md 6.3 rule 3 keeps a short residue of interface
+// glyphs *drawn in the marca's stroke* — irregular line, open ends, the elements' weight — and
+// versioned here beside the ten brandbook drawings, precisely so that no icon library is needed
+// (E-07). They are the whole residue; a fourth one is a decision, not a file.
 const ELEMENTS = {
   balao,
   clips,
@@ -28,6 +32,10 @@ const ELEMENTS = {
   // The closed book is what DESIGN.md 6.3 assigns to a history of choices: PickHistory.
   "livro-fechado": livroFechado,
   nuvem,
+  // The three residual interface glyphs (DESIGN.md 6.3 rule 3), drawn to match: same 100×100
+  // viewBox, same 9-unit round stroke, same hand tremor as the brandbook elements.
+  "seta-baixo": setaBaixo,
+  "seta-cima": setaCima,
   x,
 } as const;
 

@@ -261,8 +261,8 @@ a {
   background: var(--clubi-tint-wine);
 }
 
-/* A disabled quiet button is "not applicable here" — "Subir" on the first shelf slot — not
-   "wait, something is running", which is what the primary button's cursor: progress says. */
+/* A disabled quiet button is "not applicable here" — not "wait, something is running", which is
+   what the primary button's cursor: progress says. */
 .button--quiet[disabled] {
   cursor: default;
 }
@@ -1422,7 +1422,8 @@ a {
 }
 
 /* Flex, not grid, so the controls can be pushed to the bottom of the tallest slot — otherwise
-   each column's "Subir/Descer/Tirar" row sits wherever that book's title happens to end. */
+   each column's row of subir/descer/tirar buttons sits wherever that book's title happens to
+   end, and four slots would have four different baselines. */
 .shelf__item {
   display: flex;
   flex-direction: column;
@@ -1442,14 +1443,59 @@ a {
   font-size: var(--text-sm);
 }
 
-/* Words, not drag handles (DESIGN.md 6.3) — which is also what keeps reordering operable by
-   keyboard and by thumb. */
+/* Buttons, not drag handles — which is what keeps reordering operable by keyboard and by thumb.
+   The labels are the three residual glyphs of DESIGN.md 6.3 rule 3 (two arrows and the ×), drawn
+   in the marca's stroke; the words they replaced moved into aria-label and title. Three 44px
+   targets plus the gaps come to 140px, inside the ~163px the 2-column shelf leaves at 390px, so
+   the row never wraps at the width the shelf is designed for. */
 .shelf__controls {
   display: flex;
   flex-wrap: wrap;
   gap: var(--space-1);
   margin-top: auto;
   padding-top: var(--space-2);
+}
+
+/* A quiet control the size of a touch target (10.4), the same trade StarRating makes: a 1.25rem
+   glyph centred in 44px, so the drawing stays small enough to read as the marca's hand and the
+   target stays big enough for a thumb. */
+.shelf__control {
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  border: 0;
+  border-radius: var(--radius-md);
+  background: transparent;
+  color: var(--clubi-ink-brand);
+  cursor: pointer;
+  transition: background var(--motion-base) var(--motion-ease);
+}
+
+.shelf__control .brand-element {
+  width: 1.25rem;
+}
+
+/* Optical, not arbitrary: the × fills its 100×100 viewBox corner to corner while the arrows are
+   tall and narrow, so at an equal width it reads heavier than the two beside it. */
+.shelf__control--remove .brand-element {
+  width: 1.05rem;
+}
+
+.shelf__control:hover,
+.shelf__control:active {
+  background: var(--clubi-tint-wine);
+}
+
+/* Same as the quiet button: "not applicable here" — subir on the first slot — is not "wait,
+   something is running". The glyph fades rather than changing colour, because a fifth colour is
+   not in the palette (3.1) and colour alone was never the signal anyway (10.3): the button is
+   also `disabled`, so it is out of the tab order and announced as such. */
+.shelf__control[disabled] {
+  background: transparent;
+  opacity: 0.35;
+  cursor: default;
 }
 
 .shelf-editor {

@@ -573,8 +573,12 @@ open a file:
   `balao` is the way to the postagens. Where it is a control, use a word: "Postar", "Ver mais",
   "Excluir", and a search field with a placeholder rather than a magnifier. The header's postagens
   link is the one place both apply at once, and it does both — balão *and* the word, never a mute
-  icon (DESIGN.md 6.3, registered as E-14). Do not install Lucide, Feather or Heroicons — that is a
-  deviation to raise, not a default.
+  icon (DESIGN.md 6.3, registered as E-14). The shelf editor is the one place the word lost: three
+  controls repeated across four slots is the density E-07 named as its own revisit trigger, so
+  `FavoritesShelf` uses the two arrows and the × (DESIGN.md 6.3 rule 3, registered as E-15) with
+  the sentence moved into `aria-label`/`title`. **That did not open a door** — it is still three
+  hand-drawn glyphs in `src/assets/elements/`, and a fourth one is a DESIGN.md decision, not a new
+  file. Do not install Lucide, Feather or Heroicons — that is a deviation to raise, not a default.
 - **The tone is anti-metric and it is load-bearing** (DESIGN.md section 9). No ranking, no streaks,
   no "you're behind", no red for low progress. `ProgressBar` and `StarRating` are the two
   components most likely to get this wrong — and `FinishedReaders` is the one that lives closest to

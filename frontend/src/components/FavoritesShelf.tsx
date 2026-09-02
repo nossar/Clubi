@@ -40,9 +40,12 @@ function sameOrder(a: Book[], b: Book[]): boolean {
  *   Pydantic answers a violation with an English, array-shaped `detail` (see client.ts). So the
  *   editor locks at four slots and generates contiguous 1..N positions itself. A gap in the
  *   positions would be accepted by the API and then be invisible on read, which is worse.
- * - **Reordering is words, not drag-and-drop.** "Subir"/"Descer" is what DESIGN.md 6.3 asks for,
- *   and a drag library would be a stack deviation (frontend/CLAUDE.md) for one control on one
- *   screen — while also being the harder thing to operate by keyboard and by touch.
+ * - **Reordering is buttons, not drag-and-drop.** Two arrows and an × — the residual glyphs of
+ *   DESIGN.md 6.3 rule 3, drawn in the marca's stroke and versioned in `assets/elements/`, never
+ *   pulled from an icon set. A drag library would be a stack deviation (frontend/CLAUDE.md) for
+ *   one control on one screen — while also being the harder thing to operate by keyboard and by
+ *   touch. The words they replaced live on in `aria-label` and `title`, so nothing was lost for a
+ *   screen reader or for a mouse that hovers: the glyph is what changed, not the label.
  */
 export function FavoritesShelf({
   books,
@@ -150,25 +153,39 @@ export function FavoritesShelf({
               <BookCover book={book} />
               <p className="shelf__title">{book.title}</p>
               <p className="muted shelf__author">{book.author}</p>
+              {/* The three glyphs of DESIGN.md 6.3 rule 3, not words and not a library. Each
+                  button still carries its sentence for anyone not reading the drawing — and the
+                  sentence names the book, because "Subir" repeated four times down a shelf tells
+                  a screen reader nothing about which slot it is on. */}
               <div className="shelf__controls">
                 <button
-                  className="button button--quiet"
+                  className="shelf__control"
                   type="button"
                   onClick={() => move(index, index - 1)}
                   disabled={index === 0}
+                  title={`Subir “${book.title}”`}
+                  aria-label={`Subir “${book.title}” para o lugar ${index}`}
                 >
-                  Subir
+                  <BrandElement name="seta-cima" />
                 </button>
                 <button
-                  className="button button--quiet"
+                  className="shelf__control"
                   type="button"
                   onClick={() => move(index, index + 1)}
                   disabled={index === draft.length - 1}
+                  title={`Descer “${book.title}”`}
+                  aria-label={`Descer “${book.title}” para o lugar ${index + 2}`}
                 >
-                  Descer
+                  <BrandElement name="seta-baixo" />
                 </button>
-                <button className="button button--quiet" type="button" onClick={() => remove(index)}>
-                  Tirar
+                <button
+                  className="shelf__control shelf__control--remove"
+                  type="button"
+                  onClick={() => remove(index)}
+                  title={`Tirar “${book.title}” da estante`}
+                  aria-label={`Tirar “${book.title}” da estante`}
+                >
+                  <BrandElement name="x" />
                 </button>
               </div>
             </li>
