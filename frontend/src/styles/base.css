@@ -1065,6 +1065,51 @@ a {
   border: 1px solid var(--clubi-line);
 }
 
+/* The author's own controls, at the foot of the card. A hairline above them says they belong to
+   the card without belonging to the postagem: everything above is what the club wrote, this row is
+   what the author can do about it. Pushed to the end so it never reads as part of the text, and
+   the label stays the word "Excluir" — DESIGN.md 6.3 rule 2 names the lixeira as the icon not to
+   draw.
+
+   The negative bottom margin is what keeps this row from costing a band of empty card. The button
+   keeps its 44px touch target (DESIGN.md 10.4) — that is not negotiable and is not what shrank —
+   but a 44px box around a 14px label is mostly air, and that air used to *stack on top of* the
+   card's own 1.5rem bottom padding. Pulling the row down by most of that padding lets the two
+   overlap: the target is still 44px, it simply reaches into space the card was already leaving.
+   The calc is written against --space-5 because that **is** .post-card's padding; if that padding
+   ever changes, this line changes with it. */
+.post-card__manage {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: var(--space-2);
+  padding-top: var(--space-1);
+  margin-bottom: calc(var(--space-1) - var(--space-5));
+  border-top: 1px solid var(--clubi-line);
+}
+
+/* The second click, and a sibling of the row rather than its child — the tightening above is for
+   a lone quiet button, and would pull this panel's sunken box into the card's edge. It sinks below
+   the card's surface so an irreversible action never looks like the quiet link that opened it. */
+.post-card__confirm {
+  display: grid;
+  gap: var(--space-3);
+  padding: var(--space-4);
+  border: 1px solid var(--clubi-line-strong);
+  border-radius: var(--radius-md);
+  background: var(--clubi-surface-sunken);
+}
+
+.post-card__confirm-text {
+  font-size: var(--text-sm);
+}
+
+.post-card__confirm-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+}
+
 /* ---------------------------------------------------------------- post detail */
 .post-detail {
   display: grid;

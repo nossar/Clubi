@@ -384,13 +384,17 @@ frontend/
     │                             # halves of BookPicker, which calls it twice at two delays
     ├── unreadPosts.ts            # the unread count and the "I have read them" mutation,
     │                             # shared by the header badge and UnreadNotice
+    ├── posts.ts                  # who may manage a postagem, the delete and update
+    │                             # mutations, and the edit payload rules — shared by
+    │                             # PostCard (on the feed) and PostDetail
     ├── assets/    elements/ (10 svg, currentColor). Fonts and the logo live in
     │              backend/core/static/brand/ — one copy, both surfaces (DESIGN.md 2.1)
     ├── api/       client.ts, generated.ts, types.ts
     ├── context/   CurrentUser.tsx
     ├── routes/    Home, Feed, NewPost, PostDetail, Profile, EditProfile,
     │              PickHistory, Search
-    ├── components/ Header, Footer, PostCard, MonthlyPickHighlight,
+    ├── components/ Header, AccountMenu, Footer, PostCard, PostEditForm,
+    │              MonthlyPickHighlight,
     │              ProgressBar, StarRating (+ starRating.ts, its pure
     │              position-to-value logic, tested in starRating.test.ts),
     │              FavoritesShelf, BookCover,
@@ -404,8 +408,10 @@ frontend/
 Everything above is written. **`BookOfTheMonth.tsx` is not in the tree on purpose** — see the
 Fase 7 decision above; `/book-of-the-month` redirects to the Home, which is that screen.
 
-Six components are not in guide 7.4: `BrandElement` (inlines a brand SVG so `currentColor`
-applies), `FinishedReaders` (the folded "quem já terminou" panel inside the reading card),
+Eight components are not in guide 7.4: `BrandElement` (inlines a brand SVG so `currentColor`
+applies), `PostEditForm` (the one edit form, rendered by both `PostDetail` and `PostCard`),
+`AccountMenu` (the header's account corner — see below), `FinishedReaders` (the folded
+"quem já terminou" panel inside the reading card),
 `UnreadNotice` (the one-line greeting for a member arriving with postagens waiting),
 `BookPicker` — the search-select behind `PostIn.book_id`, written for `NewPost`, reused by
 `PostDetail`'s inline edit and, since Fase 6, by `FavoritesShelf` (its input `id` is a prop with a
@@ -425,6 +431,37 @@ would address the first field), and since Fase 8 **the only place in the SPA tha
 `PostCard` renders on the Feed and nowhere else — **one screen, not the three guide 7.4
 predicted**. Profile is not a caller because `GET /api/posts` has no author filter (see the first
 of the three disagreements above); the Home stopped being one when `RecentPosts` was deleted.
+
+**The card edits and deletes its own postagem, so it is not purely presentational any more.** The
+author gets "Editar" and "Excluir" at the foot of the card as well as on `/posts/:id`, over one
+`PostEditForm` and one `useDeletePost`; the ownership test lives in `src/posts.ts` as
+`canManagePost`, because it is **author *and* staff** — the same pair `_own_post` checks in
+`posts/api.py`, and easy to write as just one of the two. That does not reopen state rule 2: the
+card still fetches nothing (`useCurrentUser` is a context read, and the mutations only fire on a
+click), and ten cards are still one request.
+
+**Editing on the feed did not cost a second form.** `PostEditForm` was `PostDetail`'s own JSX
+until the card needed it; both hosts now render the same component, which owns its draft state,
+the `useUpdatePost` mutation and `postEditPayload`. That last one is the reason a copy would have
+been dangerous rather than merely redundant: `update_post` ignores a `null` in `title`/`body` and
+accepts one only in `book_id`, so an untouched field has to be **absent** from the PATCH, and an
+empty payload means close the form without a request. Editing swaps the card for the form, the
+same move the detail makes on its article — nothing has to be fetched, since `PostOut` carries the
+whole body and the four-line clamp is only CSS.
+
+**Every field id in that form comes from `useId()`, and on the feed that is load-bearing.**
+`PostDetail` could hardcode `edit-title` because one screen holds one postagem; the feed can have
+several cards in edit mode at once, and duplicate ids would point every `<label htmlFor>` at the
+first card's input. `BookPicker`'s `inputId` prop exists for the same reason and is fed from the
+same `useId()`. Verified with two forms open: four unique ids, every label resolving inside its
+own form.
+
+**Erasing is two clicks in both places, and the second one is ours.** `window.confirm` is not in
+the brand's voice and is not pt-BR by our choosing, so the confirmation is an inline panel that
+names the postagem it is about to destroy. The controls are **the words "Editar" and "Excluir"**,
+never a lápis and a lixeira: DESIGN.md 6.3 rule 2 names those exact icons and those exact
+replacements, and E-15 (the shelf's arrows) does not apply — that exception was bought by density,
+twelve labels across four 7rem columns, and two controls on a card is not that.
 
 ## State rules
 

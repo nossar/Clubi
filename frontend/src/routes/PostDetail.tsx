@@ -1,14 +1,14 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
-import type { FormEvent } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 
 import { ApiError, api } from "../api/client";
-import type { Book, Post, PostPatch } from "../api/types";
-import { BookPicker } from "../components/BookPicker";
+import type { Post } from "../api/types";
 import { MemberAvatar } from "../components/MemberAvatar";
+import { PostEditForm } from "../components/PostEditForm";
 import { useCurrentUser } from "../context/CurrentUser";
 import { formatDateTime } from "../format";
+import { canManagePost, useDeletePost } from "../posts";
 
 function NotFoundState() {
   return (
@@ -33,12 +33,15 @@ function NotFoundState() {
  * and the backend has no endpoint to detach an already-uploaded image, so edit only ever touches
  * title, body and the linked book — adding image management here would be a UI for a capability
  * that does not exist server-side.
+ *
+ * Both controls are offered here *and* on the feed's card, over the same `useDeletePost` and the
+ * same `PostEditForm`: the author who wants a postagem changed or gone should not have to open it
+ * first, and the author already reading it should not have to go back.
  */
 export function PostDetail() {
   const { id } = useParams<{ id: string }>();
   const postId = Number(id);
   const navigate = useNavigate();
-  const queryClient = useQueryClient();
   const me = useCurrentUser();
 
   const {
@@ -52,31 +55,11 @@ export function PostDetail() {
   });
 
   const [editing, setEditing] = useState(false);
-  const [editTitle, setEditTitle] = useState("");
-  const [editBody, setEditBody] = useState("");
-  const [editBook, setEditBook] = useState<Book | null>(null);
   const [confirmingDelete, setConfirmingDelete] = useState(false);
 
-  const updatePost = useMutation({
-    mutationFn: (payload: PostPatch) =>
-      api<Post>(`/posts/${postId}`, { method: "PATCH", body: JSON.stringify(payload) }),
-    onSuccess: (updated) => {
-      queryClient.setQueryData(["post", postId], updated);
-      queryClient.invalidateQueries({ queryKey: ["posts"] });
-      setEditing(false);
-    },
-  });
-
-  // DELETE answers 204 with no body — client.ts's api<T>() returns undefined for that status
-  // rather than throwing on the empty response.
-  const deletePost = useMutation({
-    mutationFn: () => api<undefined>(`/posts/${postId}`, { method: "DELETE" }),
-    onSuccess: () => {
-      queryClient.removeQueries({ queryKey: ["post", postId] });
-      queryClient.invalidateQueries({ queryKey: ["posts"] });
-      navigate("/posts");
-    },
-  });
+  // Shared with PostCard, which offers the same exclusion straight from the feed. Leaving is this
+  // caller's own business: the address the browser is sitting on stops existing.
+  const deletePost = useDeletePost(postId, () => navigate("/posts"));
 
   if (!Number.isInteger(postId)) {
     return <NotFoundState />;
@@ -111,39 +94,8 @@ export function PostDetail() {
 
   if (!post) return null;
 
-  // Staff as well as author: only the organisation writes, and `update_post`/`delete_post`
-  // check both. A member who was demoted keeps their old postagens on screen and loses the
-  // buttons — which is what the API would tell them anyway, only without the failed request.
-  const isAuthor = post.author.username === me.username && me.is_staff;
-
-  function startEditing() {
-    if (!post) return;
-    setEditTitle(post.title);
-    setEditBody(post.body);
-    setEditBook(post.book);
-    setEditing(true);
-  }
-
-  function onSubmitEdit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    if (!post) return;
-    if (!editTitle.trim() || !editBody.trim()) return;
-
-    // Only changed fields go in the payload: update_post only accepts null for book_id, so an
-    // untouched title/body must stay absent from the request rather than round-trip as null.
-    const payload: PostPatch = {};
-    if (editTitle.trim() !== post.title) payload.title = editTitle.trim();
-    if (editBody.trim() !== post.body) payload.body = editBody.trim();
-    const currentBookId = post.book?.id ?? null;
-    const nextBookId = editBook?.id ?? null;
-    if (nextBookId !== currentBookId) payload.book_id = nextBookId;
-
-    if (Object.keys(payload).length === 0) {
-      setEditing(false);
-      return;
-    }
-    updatePost.mutate(payload);
-  }
+  // Staff as well as author, mirroring `_own_post` in the backend — see `canManagePost`.
+  const isAuthor = canManagePost(post, me);
 
   return (
     <section className="section">
@@ -155,7 +107,11 @@ export function PostDetail() {
         <header className="post-card__header">
           <MemberAvatar person={post.author} />
           <div>
-            <p className="post-card__author">{post.author.full_name}</p>
+            <p className="post-card__author">
+              <Link className="post-card__author-link" to={`/u/${post.author.username}`}>
+                {post.author.full_name}
+              </Link>
+            </p>
             <p className="muted post-card__date">{formatDateTime(post.created_at)}</p>
           </div>
         </header>
@@ -186,7 +142,11 @@ export function PostDetail() {
 
             {isAuthor ? (
               <div className="post-detail__actions">
-                <button className="button button--quiet" type="button" onClick={startEditing}>
+                <button
+                  className="button button--quiet"
+                  type="button"
+                  onClick={() => setEditing(true)}
+                >
                   Editar
                 </button>
                 <button
@@ -229,66 +189,11 @@ export function PostDetail() {
             ) : null}
           </>
         ) : (
-          <form className="post-form" onSubmit={onSubmitEdit}>
-            <div className="field">
-              <label className="field-label" htmlFor="edit-title">
-                Título
-              </label>
-              <input
-                id="edit-title"
-                className="field-text"
-                type="text"
-                maxLength={140}
-                value={editTitle}
-                onChange={(event) => setEditTitle(event.target.value)}
-                required
-              />
-            </div>
-
-            <div className="field">
-              <label className="field-label" htmlFor="edit-body">
-                Texto
-              </label>
-              <textarea
-                id="edit-body"
-                className="field-textarea"
-                value={editBody}
-                onChange={(event) => setEditBody(event.target.value)}
-                required
-              />
-            </div>
-
-            <div className="field">
-              <BookPicker
-                selected={editBook}
-                onSelect={setEditBook}
-                onClear={() => setEditBook(null)}
-                label="Sobre qual livro?"
-              />
-            </div>
-
-            <div aria-live="polite">
-              {updatePost.isError ? (
-                <p className="notice notice--error">
-                  <span className="notice__label">Não deu para salvar.</span>{" "}
-                  {updatePost.error.message}
-                </p>
-              ) : null}
-            </div>
-
-            <div className="post-detail__actions">
-              <button className="button" type="submit" disabled={updatePost.isPending}>
-                {updatePost.isPending ? "Salvando…" : "Salvar"}
-              </button>
-              <button
-                className="button button--quiet"
-                type="button"
-                onClick={() => setEditing(false)}
-              >
-                Cancelar
-              </button>
-            </div>
-          </form>
+          <PostEditForm
+            post={post}
+            onDone={() => setEditing(false)}
+            onCancel={() => setEditing(false)}
+          />
         )}
       </div>
     </section>
