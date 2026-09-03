@@ -10,6 +10,7 @@ The import of `books.models` is one-directional and safe: `books.api` imports `c
 nothing in `books` imports this module, so there is no cycle.
 """
 
+from django.core.cache import cache
 from django.shortcuts import render
 from django.views.decorators.csrf import ensure_csrf_cookie
 from django.views.generic import TemplateView
@@ -22,6 +23,38 @@ from books.models import MonthlyPick
 # most likely to go missing is ensure_csrf_cookie, which fails silently until the first write of
 # the session is rejected (clubi/urls.py has the long version of that warning).
 shell = ensure_csrf_cookie(TemplateView.as_view(template_name="index.html"))
+
+CURRENT_PICK_KEY = "current_pick"
+CURRENT_PICK_TTL = 60 * 15
+
+# A miss is not the same thing as a cached None, and cache.get() with no default cannot tell them
+# apart — it returns None for both. MonthlyPick.current() legitimately answers None (between two
+# picks, or before the first one), and that is exactly the answer worth caching: the landing page
+# of a club with no active reading would otherwise be the one that queries on every hit. Hence the
+# sentinel, which is only ever compared by identity and never leaves this module.
+_MISS = object()
+
+
+def _current_pick() -> MonthlyPick | None:
+    """MonthlyPick.current(), memoised for 15 minutes.
+
+    The landing page is public and uncacheable as a whole — `/` answers with two documents chosen
+    by the session, so `Vary: Cookie` is load-bearing (ADR-18) and a page cache would have to be
+    keyed by cookie to be correct. What repeats across every anonymous hit is not the document but
+    the query behind it, and on the Neon free plan (ADR-13) each of those is a connection to a
+    database that would rather be asleep. So the query is what gets cached.
+
+    current() selects the book along with the pick, so the cached value carries it too and a hit
+    renders the whole page without touching the database. The cost is staleness: a pick edited in
+    the Admin (ADR-14) takes up to CURRENT_PICK_TTL to show up here. A monthly pick changes twelve
+    times a year, so fifteen minutes is a cheap trade — but it is a trade, and the founder seeing
+    an old blurb for a few minutes after saving is this, not a bug.
+    """
+    pick = cache.get(CURRENT_PICK_KEY, _MISS)
+    if pick is _MISS:
+        pick = MonthlyPick.current()
+        cache.set(CURRENT_PICK_KEY, pick, CURRENT_PICK_TTL)
+    return pick
 
 
 def root(request):
@@ -42,7 +75,7 @@ def root(request):
     if request.user.is_authenticated:
         return shell(request)
 
-    pick = MonthlyPick.current()
+    pick = _current_pick()
     cover = pick.book.cover_image if pick else ""
     return render(
         request,

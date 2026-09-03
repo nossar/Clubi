@@ -9,6 +9,7 @@ import io
 from datetime import timedelta
 
 import pytest
+from django.core.cache import cache
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.utils import timezone
 from PIL import Image
@@ -24,6 +25,20 @@ def media_root(settings, tmp_path):
     """Keep uploads out of backend/media/ while the suite runs."""
     settings.MEDIA_ROOT = tmp_path
     return tmp_path
+
+
+@pytest.fixture(autouse=True)
+def clear_cache():
+    """Start every test with an empty cache.
+
+    Nothing configures CACHES, so the default backend is LocMemCache — one dict per process,
+    which outlives the transaction each test is rolled back into. core/views._current_pick()
+    caches the current pick for fifteen minutes, so without this a test that creates a pick
+    leaves it visible to the next test, which created none and expects none.
+    """
+    cache.clear()
+    yield
+    cache.clear()
 
 
 @pytest.fixture

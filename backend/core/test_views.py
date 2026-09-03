@@ -7,7 +7,10 @@ and redirect. If one of those ever starts returning the landing page, the redire
 """
 
 import pytest
+from django.core.cache import cache
 from django.urls import reverse
+
+from core.views import CURRENT_PICK_KEY
 
 pytestmark = pytest.mark.django_db
 
@@ -127,6 +130,55 @@ class TestAnonymousRoot:
     def test_varies_on_cookie(self, client):
         """One URL, two documents, chosen by the session — so a shared cache must not mix them."""
         assert "Cookie" in client.get("/").headers["Vary"]
+
+
+class TestPickCache:
+    """The landing query is cached, the response is not (ADR-18 keeps `/` varying on the cookie).
+
+    On the Neon free plan every anonymous hit would otherwise open a connection to ask the same
+    question. What is asserted here is the shape of the memoisation, not the TTL: that a repeat
+    visit reads no database at all, that a *missing* pick is cached too — the sentinel's whole
+    reason to exist — and that caching the query did not quietly start caching the page.
+    """
+
+    def test_second_visit_queries_nothing(self, client, pick, django_assert_num_queries):
+        client.get("/")
+
+        with django_assert_num_queries(0):
+            content = client.get("/").content.decode()
+
+        # current() select_related's the book, so the cached value carries it: the page renders
+        # whole without a second query for the cover and the author.
+        assert pick.book.title in content
+        assert pick.book.author in content
+
+    def test_absence_of_a_pick_is_cached_too(self, client, django_assert_num_queries):
+        """cache.get() cannot tell a cached None from a miss; _MISS is what makes this pass."""
+        client.get("/")
+
+        with django_assert_num_queries(0):
+            content = client.get("/").content.decode()
+
+        assert "A próxima leitura ainda está sendo escolhida." in content
+
+    def test_a_new_pick_is_seen_once_the_entry_is_gone(self, client, pick):
+        """The staleness is bounded by the TTL — and by anything that drops the key."""
+        client.get("/")
+        pick.book.title = "Sagarana"
+        pick.book.save()
+
+        assert "Sagarana" not in client.get("/").content.decode()
+
+        cache.delete(CURRENT_PICK_KEY)
+
+        assert "Sagarana" in client.get("/").content.decode()
+
+    def test_the_member_shell_is_not_served_from_the_cache(self, client, member, pick):
+        """Caching the query must not have turned into caching the document."""
+        client.get("/")
+        client.force_login(member)
+
+        assert "index.html" in templates_used(client.get("/"))
 
 
 class TestMemberRoot:
