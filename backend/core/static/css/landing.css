@@ -68,9 +68,18 @@ p {
 
 /* --------------------------------------------------------------------------- layout */
 
+/* The gutter is proportional, so past --container-max it kept *subtracting* from a box that had
+   stopped growing: the content settled at 928px on a 1920 screen and 864px on a 2560 one — the
+   wider the screen, the narrower the page. The hero's h1 needs 945px at its 4rem ceiling, so it
+   wrapped to two lines on exactly the monitors with the most room to spare (and fitted again at
+   110% browser zoom, which shrinks 5vw while leaving the px sizes alone).
+
+   Folding the gutter into the cap makes it a margin instead of a subtraction: the content box
+   grows to the declared 1120px and stops. Below --container-max the element is viewport-bound and
+   nothing changes; the tokens keep the values DESIGN.md 11 gives them. */
 .container {
   width: 100%;
-  max-width: var(--container-max);
+  max-width: calc(var(--container-max) + 2 * max(var(--space-4), var(--container-gutter)));
   margin-inline: auto;
   padding-inline: max(var(--space-4), var(--container-gutter));
 }
@@ -274,7 +283,7 @@ p {
 }
 
 /* Mobile-first, as 8.5 asks. Stacked below --bp-sm, where two content-width buttons of unequal
-   length ("Criar conta" / "Já sou do clube") read as ragged rather than as a pair — and where
+   length ("Criar conta" / "Já sou do clubi") read as ragged rather than as a pair — and where
    auth.css already gives .button the full width on the rendered forms. Side by side above it. */
 .hero__actions {
   display: grid;

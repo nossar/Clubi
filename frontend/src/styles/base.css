@@ -152,9 +152,17 @@ a {
 }
 
 /* ---------------------------------------------------------------- layout */
+/* The gutter is proportional, so past --container-max it kept *subtracting* from a box that had
+   stopped growing: the content settled at 928px on a 1920 screen and 864px on a 2560 one — the
+   wider the screen, the narrower the site. Folding the gutter into the cap makes it a margin
+   instead of a subtraction, so the content box grows to the declared 1120px and stops. Below
+   --container-max the element is viewport-bound and nothing changes.
+
+   The landing's .container carries the same formula, and the two must stay identical: a member
+   crossing from / into the SPA would otherwise watch the page change width at the login. */
 .container {
   width: 100%;
-  max-width: var(--container-max);
+  max-width: calc(var(--container-max) + 2 * max(var(--space-4), var(--container-gutter)));
   margin-inline: auto;
   padding-inline: max(var(--space-4), var(--container-gutter));
 }
