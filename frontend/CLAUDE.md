@@ -293,7 +293,7 @@ Run them from `frontend/`, or prefer the root `Makefile` targets that wrap them.
 ```bash
 npm install                # npm ci in CI/deploy
 npm run dev                # Vite dev server; needs manage.py runserver on :8000
-npm test                   # vitest, once — the pure logic beside a component (starRating.ts)
+npm test                   # vitest, once — the pure logic beside a component (ratingScale.ts)
 npm run build              # emits frontend/dist, which Django picks up as a staticfiles dir
 npx tsc --noEmit           # the contract guard (ADR-12) — run after touching API types
 ```
@@ -416,8 +416,11 @@ frontend/
     ├── components/ Header, AccountMenu, Footer, PostCard, PostEditForm,
     │              PostImages (the thumbnails plus the expanded view, shared
     │              by PostCard and PostDetail), MonthlyPickHighlight,
-    │              ProgressBar, StarRating (+ starRating.ts, its pure
-    │              position-to-value logic, tested in starRating.test.ts),
+    │              ProgressBar, StarRating (+ ratingScale.ts, its pure
+    │              position-to-value logic, tested in ratingScale.test.ts —
+    │              named apart from the component on purpose: same name
+    │              differing only in case broke module resolution on a
+    │              case-insensitive filesystem, see git history),
     │              FavoritesShelf, BookCover,
     │              BrandElement, FinishedReaders, UnreadNotice,
     │              BookPicker (+ externalBook.ts, the pure hit-to-BookIn
@@ -577,7 +580,7 @@ to `/accounts/login/` — retrying either only fires requests at a page that is 
 - **`rating` is 0 to 5 in steps of 0.5**, and `multiple_of=0.5` on the schema means a 3.3 or a 5.3
   is a 422, not a rounded write. The column behind it stores half-stars as an integer (a 3.5 is a
   7 in `rating_halves`); that is undone by a property on the model, so the wire never carries it
-  and nothing on this side should double or halve anything. `starRating.ts` is where the 0.5 grid
+  and nothing on this side should double or halve anything. `ratingScale.ts` is where the 0.5 grid
   lives on the client.
 - **`0` is a rating and `null` is the absence of one, and erasing is `{"clear_rating": true}`.**
   Until "quem já terminou" needed to tell the two apart, `{"rating": 0}` was the only erasure the

@@ -10,7 +10,7 @@ import {
   ratingFromPosition,
   starFill,
   stepRating,
-} from "./starRating";
+} from "./ratingScale";
 
 /**
  * The rating for one reading, drawn with the brand's own five-pointed star (DESIGN.md 6.3) — the

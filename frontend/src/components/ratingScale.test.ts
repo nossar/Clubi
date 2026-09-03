@@ -7,7 +7,7 @@ import {
   ratingFromPosition,
   starFill,
   stepRating,
-} from "./starRating";
+} from "./ratingScale";
 
 // A 5-star bar 220px wide: 44px per star (the touch target of DESIGN.md 10.4), 22px per half.
 const WIDTH = 220;
