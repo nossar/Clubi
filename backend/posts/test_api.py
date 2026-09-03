@@ -1,3 +1,5 @@
+from datetime import timedelta
+
 import pytest
 
 from posts import api as posts_api
@@ -245,10 +247,24 @@ class TestUnreadPosts:
         assert member.posts_seen_at is not None
 
     def test_only_what_came_after_the_last_visit_counts(self, auth, member, organiser):
+        """The stamp cuts the feed in two: what predates it is read, what follows it is not.
+
+        The postagem is dated explicitly instead of being written and trusted to land later.
+        `auto_now_add` and mark_posts_seen both read `timezone.now()`, and when the clock's tick
+        is coarser than the two statements between them — Windows ticks every ~15ms — the two
+        reads return the very same microsecond. Then `created_at__gt=posts_seen_at` is false and
+        the count is 0: a flake that fires a few times in a hundred and says nothing about the
+        code. Moving the postagem a minute past the stamp is only asserting the arrangement the
+        wall clock was being relied on to produce anyway.
+        """
         Post.objects.create(author=organiser, title="Antiga", body="...")
         auth.post("/api/posts/seen")
+        member.refresh_from_db()
 
-        Post.objects.create(author=organiser, title="Nova", body="...")
+        nova = Post.objects.create(author=organiser, title="Nova", body="...")
+        Post.objects.filter(pk=nova.pk).update(
+            created_at=member.posts_seen_at + timedelta(minutes=1)
+        )
 
         assert auth.get("/api/posts/unread").json() == {"count": 1}
 
