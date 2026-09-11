@@ -9,21 +9,21 @@ pytestmark = pytest.mark.django_db
 
 
 class TestPosts:
-    def test_feed_is_public_and_paginated(self, client, member):
+    def test_feed_is_paginated(self, auth, member):
         for i in range(3):
             Post.objects.create(author=member, title=f"Post {i}", body="...")
 
-        body = client.get("/api/posts?page=1&size=2").json()
+        body = auth.get("/api/posts?page=1&size=2").json()
 
         assert body["total"] == 3
         assert body["page"] == 1
         assert body["has_next"] is True
         assert len(body["items"]) == 2
 
-    def test_feed_hides_unpublished_posts(self, client, member):
+    def test_feed_hides_unpublished_posts(self, auth, member):
         Post.objects.create(author=member, title="Rascunho", body="...", published=False)
 
-        assert client.get("/api/posts").json()["total"] == 0
+        assert auth.get("/api/posts").json()["total"] == 0
 
     def test_create_returns_the_full_post(self, staff_auth, book):
         response = staff_auth.post(

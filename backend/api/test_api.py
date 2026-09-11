@@ -16,18 +16,16 @@ class TestApiSurface:
         assert "Clubi" not in response.content.decode()
 
     @pytest.mark.parametrize(
-        ("path", "expected"),
-        [
-            ("/api/users", 200),
-            ("/api/books", 200),
-            ("/api/monthly-picks", 200),
-            ("/api/posts", 200),
-            # Mounted with auth=django_auth, so anonymous is 401 — not 404.
-            ("/api/me", 401),
-        ],
+        "path",
+        ["/api/me", "/api/users", "/api/books", "/api/monthly-picks", "/api/posts"],
     )
-    def test_every_app_router_answers_under_its_prefix(self, client, path, expected):
-        assert client.get(path).status_code == expected
+    def test_every_app_router_answers_under_its_prefix(self, auth, path):
+        """That a mounted prefix answers at all — the policy behind it is TestAnonymousAccess.
+
+        A signed-in member is what this needs: since ADR-19 an anonymous GET is 401 everywhere,
+        which would make this pass even for a prefix nobody mounted.
+        """
+        assert auth.get(path).status_code != 404
 
 
 class TestOperationIds:

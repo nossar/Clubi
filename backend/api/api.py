@@ -27,16 +27,25 @@ class ClubiAPI(NinjaAPI):
         return operation.view_func.__name__
 
 
-# No csrf= argument: since django-ninja 1.x the CSRF check lives in the auth class,
-# and django_auth (SessionAuth) enforces it on every unsafe method by default.
+# auth=django_auth is declared once, here, and it is the whole authentication policy: the API is
+# for members, and a route that says nothing about auth inherits "authenticated" rather than
+# "public" (ADR-19). It used to be the reverse — no global auth, so a new route was born readable
+# by anyone and, because ninja marks every API view csrf_exempt at the middleware level, writable
+# without a CSRF token too. Nothing failed when someone forgot the decorator, which is why the
+# default is now the safe one and the exceptions are named in PUBLIC_OPERATIONS below.
+#
+# No csrf= argument: since django-ninja 1.x the CSRF check lives in the auth class, and
+# django_auth (SessionAuth) enforces it on every unsafe method by default. Safe methods are
+# exempted by CsrfViewMiddleware.process_view, so authenticating GETs globally costs them nothing.
 api = ClubiAPI(
     title="Clubi API",
     version="1.0.0",
     description="API do Clubi — clube do livro da ESPM.",
+    auth=django_auth,
     docs_url="/docs",
 )
 
-api.add_router("/me", me_router, auth=django_auth, tags=["me"])
+api.add_router("/me", me_router, tags=["me"])
 api.add_router("/users", users_router, tags=["users"])
 api.add_router("/books", books_router, tags=["books"])
 api.add_router("/monthly-picks", picks_router, tags=["monthly-picks"])
