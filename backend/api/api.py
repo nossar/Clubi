@@ -5,6 +5,8 @@ this file decides the prefix, the auth and the tag. It is the one place that
 shows the whole surface the SPA can call.
 """
 
+from django.conf import settings
+from django.http import Http404
 from ninja import NinjaAPI
 from ninja.security import django_auth
 
@@ -37,12 +39,37 @@ class ClubiAPI(NinjaAPI):
 # No csrf= argument: since django-ninja 1.x the CSRF check lives in the auth class, and
 # django_auth (SessionAuth) enforces it on every unsafe method by default. Safe methods are
 # exempted by CsrfViewMiddleware.process_view, so authenticating GETs globally costs them nothing.
+def development_or_staff_only(view):
+    """Gate for /api/docs and /api/openapi.json — ninja applies this to both.
+
+    Swagger and the raw schema are development tools; in production they hand a map of the whole
+    surface to whoever asks. Nothing behind them is secret — every operation is authenticated
+    since ADR-19 — but the shape of an API is a courtesy only the people building it need, and the
+    founder operating the club through the Admin (ADR-14) is the one exception worth keeping.
+
+    Decided per request rather than by passing `docs_url=None`. Reading `settings.DEBUG` at import
+    time would make the site's behaviour depend on when this module happened to be imported, which
+    is a thing that varies between the dev server, gunicorn and the test run — and it did: pytest
+    imports this during collection, before the test environment sets DEBUG to False.
+
+    404 rather than 403, because the answer to "is there an API doc here" should not be yes.
+    """
+
+    def guarded(request, *args, **kwargs):
+        if not settings.DEBUG and not request.user.is_staff:
+            raise Http404
+        return view(request, *args, **kwargs)
+
+    return guarded
+
+
 api = ClubiAPI(
     title="Clubi API",
     version="1.0.0",
     description="API do Clubi — clube do livro da ESPM.",
     auth=django_auth,
     docs_url="/docs",
+    docs_decorator=development_or_staff_only,
 )
 
 # The exceptions to the line above, by operationId, and it is deliberately empty.
