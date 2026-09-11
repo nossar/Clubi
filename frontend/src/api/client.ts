@@ -70,7 +70,11 @@ export async function api<T>(
   });
 
   if (response.status === 401) {
-    const next = encodeURIComponent(location.pathname);
+    // pathname + search, not pathname alone: /search?q=machado and /posts?page=3 are different
+    // places, and dropping the query sent a member who signed in from one of them back to a
+    // reset version of the screen they had asked for. Not `hash` — it never reaches the server,
+    // so Django would only echo it back into a URL the browser already knew.
+    const next = encodeURIComponent(location.pathname + location.search);
     window.location.href = `/accounts/login/?next=${next}`;
     throw new ApiError(401, "Not authenticated");
   }
