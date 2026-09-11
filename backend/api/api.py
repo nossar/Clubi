@@ -45,6 +45,22 @@ api = ClubiAPI(
     docs_url="/docs",
 )
 
+# The exceptions to the line above, by operationId, and it is deliberately empty.
+#
+# Nothing is public. The Clubi's public surface is the landing page of ADR-18 and nothing else:
+# it is rendered by Django and reads the current pick straight from the ORM
+# (core.views._current_pick → MonthlyPick.current), so closing /api/monthly-picks costs it
+# nothing. /api/users, /api/users/{username}, /api/books and /api/posts are closed for the same
+# reason they were the problem — a profile carries birth_date, the shelf and every review the
+# member ever wrote, and ADR-18 exists to get the address in front of strangers.
+#
+# This is the single place to decide otherwise, and api/test_api.py reads it as the source of
+# truth: every operation NOT named here must answer 401 to an anonymous caller, and every
+# operation named here must not. Adding an entry takes a comment saying why that route is
+# something a stranger may read — "the SPA needs it" is not a reason, because the SPA is
+# authenticated (ADR-19).
+PUBLIC_OPERATIONS: frozenset[str] = frozenset()
+
 api.add_router("/me", me_router, tags=["me"])
 api.add_router("/users", users_router, tags=["users"])
 api.add_router("/books", books_router, tags=["books"])
