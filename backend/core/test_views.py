@@ -58,6 +58,28 @@ def templates_used(response):
     return {template.name for template in response.templates if template.name}
 
 
+class TestCrawlerSurface:
+    """What a robot is allowed to file away, which is the landing page and nothing else.
+
+    The two documents `/` can answer (ADR-18) want opposite things from a crawler, so the tag
+    that separates them is worth asserting rather than assuming: the landing exists to be
+    indexed and shared, and the shell has nothing to show a robot at all — every route behind it
+    is authenticated since ADR-19, and the markup is empty until React mounts.
+    """
+
+    def test_the_landing_page_stays_indexable(self, client):
+        assert 'name="robots"' not in client.get("/").content.decode()
+
+    def test_the_shell_is_noindex_for_a_member(self, client, member):
+        client.force_login(member)
+
+        assert '<meta name="robots" content="noindex">' in client.get("/").content.decode()
+
+    def test_the_shell_is_noindex_on_a_deep_link(self, client):
+        """The case that matters: /u/ana served to a robot that never logs in."""
+        assert '<meta name="robots" content="noindex">' in client.get("/u/ana").content.decode()
+
+
 class TestAnonymousRoot:
     def test_renders_the_landing_page(self, client):
         response = client.get("/")

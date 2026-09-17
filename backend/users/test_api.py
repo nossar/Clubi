@@ -32,9 +32,9 @@ class TestMe:
 
         assert client.get("/api/me").json()["is_staff"] is True
 
-    def test_is_staff_is_not_public_on_a_profile(self, client, organiser):
+    def test_is_staff_is_not_exposed_on_a_profile(self, auth, organiser):
         """It belongs to MeOut, not to UserOut — UserProfileOut extends the latter (ADR-15)."""
-        body = client.get(f"/api/users/{organiser.username}").json()
+        body = auth.get(f"/api/users/{organiser.username}").json()
 
         assert "is_staff" not in body
 
@@ -153,20 +153,21 @@ class TestFavorites:
 
 
 class TestUsers:
-    def test_search_matches_name_and_username(self, client, member, other):
-        assert [u["username"] for u in client.get("/api/users?q=ribeiro").json()] == ["ana"]
-        assert [u["username"] for u in client.get("/api/users?q=brun").json()] == ["bruno"]
+    def test_search_matches_name_and_username(self, auth, member, other):
+        assert [u["username"] for u in auth.get("/api/users?q=ribeiro").json()] == ["ana"]
+        assert [u["username"] for u in auth.get("/api/users?q=brun").json()] == ["bruno"]
 
-    def test_public_profile_carries_shelf_and_history(self, client, member, book, pick):
+    def test_a_profile_carries_shelf_and_history(self, auth, member, book, pick):
+        """ "Public" left the name with ADR-19: a profile is for members, not for the web."""
         Favorite.objects.create(user=member, book=book, position=1)
         MonthlyReading.objects.create(user=member, pick=pick, pages_read=300, rating=5)
 
-        body = client.get("/api/users/ana").json()
+        body = auth.get("/api/users/ana").json()
 
         assert body["full_name"] == "Ana Ribeiro"
         assert [b["title"] for b in body["favorites"]] == [book.title]
         assert body["readings"][0]["percent"] == 50
         assert body["readings"][0]["pick"]["book"]["title"] == book.title
 
-    def test_unknown_username_is_404(self, client):
-        assert client.get("/api/users/ninguem").status_code == 404
+    def test_unknown_username_is_404(self, auth):
+        assert auth.get("/api/users/ninguem").status_code == 404

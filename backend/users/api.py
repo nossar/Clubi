@@ -11,10 +11,12 @@ from core.images import compress_image
 from users.models import User
 from users.schemas import FavoritesIn, MeOut, ProfileIn, UserProfileOut
 
-# Mounted at /api/me, authenticated as a whole (see api/api.py).
+# Mounted at /api/me. Like every router here it inherits the API's global auth (ADR-19); the
+# routers no longer carry an auth= of their own, so api/api.py is the only place that grants it.
 me_router = Router()
 
-# Mounted at /api/users — public.
+# Mounted at /api/users. A profile carries birth_date, the shelf and the whole reading history,
+# reviews included — members only, and named as such in ADR-19 rather than left to the default.
 users_router = Router()
 
 MAX_PHOTO_BYTES = 8 * 1024 * 1024

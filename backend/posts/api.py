@@ -6,7 +6,6 @@ from django.utils import timezone
 from ninja import File, PatchDict, Router, Status
 from ninja.errors import HttpError
 from ninja.files import UploadedFile
-from ninja.security import django_auth
 
 from books.models import Book
 from core.images import compress_image
@@ -80,7 +79,7 @@ def list_posts(request, page: int = 1, size: int = 10):
     }
 
 
-@posts_router.post("", response=PostOut, auth=django_auth)
+@posts_router.post("", response=PostOut)
 def create_post(request, payload: PostIn):
     _staff_only(request)
     _checked_book_id(payload.book_id)
@@ -90,13 +89,13 @@ def create_post(request, payload: PostIn):
 
 # Feed-level, so they sit above the /{post_id} routes. The `int:` converter is what keeps
 # /posts/unread from ever being read as a post id, whatever the registration order.
-@posts_router.get("/unread", response=UnreadPostsOut, auth=django_auth)
+@posts_router.get("/unread", response=UnreadPostsOut)
 def unread_posts(request):
     """The number behind the badge on the balão in the header."""
     return {"count": _unread(request.user).count()}
 
 
-@posts_router.post("/seen", response=UnreadPostsOut, auth=django_auth)
+@posts_router.post("/seen", response=UnreadPostsOut)
 def mark_posts_seen(request):
     """Opening the feed is what marks the postagens as read — there is no per-post state.
 
@@ -115,7 +114,7 @@ def read_post(request, post_id: int):
     return get_object_or_404(queryset, pk=post_id, published=True)
 
 
-@posts_router.patch("/{int:post_id}", response=PostOut, auth=django_auth)
+@posts_router.patch("/{int:post_id}", response=PostOut)
 def update_post(request, post_id: int, payload: PatchDict[PostIn]):
     post = _own_post(request, post_id)
 
@@ -135,13 +134,13 @@ def update_post(request, post_id: int, payload: PatchDict[PostIn]):
     return _with_relations(post)
 
 
-@posts_router.delete("/{int:post_id}", response={204: None}, auth=django_auth)
+@posts_router.delete("/{int:post_id}", response={204: None})
 def delete_post(request, post_id: int):
     _own_post(request, post_id).delete()
     return Status(204, None)
 
 
-@posts_router.post("/{int:post_id}/images", response=PostOut, auth=django_auth)
+@posts_router.post("/{int:post_id}/images", response=PostOut)
 def attach_image(request, post_id: int, file: File[UploadedFile]):
     post = _own_post(request, post_id)
 

@@ -7,11 +7,11 @@ pytestmark = pytest.mark.django_db
 
 
 class TestBooks:
-    def test_search_is_public_and_filters(self, client, book):
+    def test_search_filters_by_title_and_author(self, auth, book):
         Book.objects.create(title="Outro livro", author="Outra pessoa")
 
-        assert len(client.get("/api/books").json()) == 2
-        assert len(client.get("/api/books?q=guimarães").json()) == 1
+        assert len(auth.get("/api/books").json()) == 2
+        assert len(auth.get("/api/books?q=guimarães").json()) == 1
 
     def test_create_requires_login(self, client):
         response = client.post(
@@ -31,9 +31,9 @@ class TestBooks:
         assert Book.objects.filter(title="Vidas Secas").count() == 1
         assert Book.objects.get(title="Vidas Secas").added_by == member
 
-    def test_detail_and_404(self, client, book):
-        assert client.get(f"/api/books/{book.id}").json()["title"] == book.title
-        assert client.get("/api/books/9999").status_code == 404
+    def test_detail_and_404(self, auth, book):
+        assert auth.get(f"/api/books/{book.id}").json()["title"] == book.title
+        assert auth.get("/api/books/9999").status_code == 404
 
     def test_external_search_maps_open_library(self, auth, monkeypatch):
         class FakeResponse:
@@ -76,17 +76,17 @@ class TestBooks:
 
 
 class TestMonthlyPicks:
-    def test_current_is_404_without_an_active_pick(self, client):
-        assert client.get("/api/monthly-picks/current").status_code == 404
+    def test_current_is_404_without_an_active_pick(self, auth):
+        assert auth.get("/api/monthly-picks/current").status_code == 404
 
-    def test_current_returns_the_pick_and_its_book(self, client, pick):
-        body = client.get("/api/monthly-picks/current").json()
+    def test_current_returns_the_pick_and_its_book(self, auth, pick):
+        body = auth.get("/api/monthly-picks/current").json()
 
         assert body["book"]["title"] == pick.book.title
         assert body["blurb"] == pick.blurb
 
-    def test_history_is_public(self, client, pick):
-        assert len(client.get("/api/monthly-picks").json()) == 1
+    def test_history_lists_every_pick(self, auth, pick):
+        assert len(auth.get("/api/monthly-picks").json()) == 1
 
     def test_reading_is_created_on_first_read(self, auth, member, pick):
         assert not MonthlyReading.objects.exists()
@@ -130,12 +130,12 @@ class TestMonthlyPicks:
         assert response.status_code == 400
         assert "600" in response.json()["detail"]
 
-    def test_readers_list_is_public(self, client, member, pick):
+    def test_readers_list_carries_the_name_and_the_rating(self, auth, member, pick):
         MonthlyReading.objects.create(
             user=member, pick=pick, pages_read=600, finished_at=timezone.now(), rating_halves=8
         )
 
-        body = client.get("/api/monthly-picks/current/readers").json()
+        body = auth.get("/api/monthly-picks/current/readers").json()
 
         assert body == [
             {
@@ -206,10 +206,10 @@ class TestRating:
 
         assert body["rating"] == 4.5
 
-    def test_the_profile_history_reads_back_in_stars(self, client, member, pick):
+    def test_the_profile_history_reads_back_in_stars(self, auth, member, pick):
         MonthlyReading.objects.create(user=member, pick=pick, pages_read=300, rating_halves=1)
 
-        body = client.get("/api/users/ana").json()
+        body = auth.get("/api/users/ana").json()
 
         assert body["readings"][0]["rating"] == 0.5
 
@@ -234,50 +234,52 @@ class TestWhoFinished:
     def readers(self, client):
         return client.get("/api/monthly-picks/current/readers").json()
 
-    def test_a_reading_in_progress_stays_out(self, client, member, pick):
+    def test_a_reading_in_progress_stays_out(self, auth, member, pick):
         MonthlyReading.objects.create(user=member, pick=pick, pages_read=60, rating_halves=8)
 
-        assert self.readers(client) == []
+        assert self.readers(auth) == []
 
-    def test_finishing_without_a_rating_stays_out(self, client, member, pick):
+    def test_finishing_without_a_rating_stays_out(self, auth, member, pick):
         self.finished(member, pick, rating_halves=None)
 
-        assert self.readers(client) == []
+        assert self.readers(auth) == []
 
-    def test_a_rating_of_zero_is_a_rating_and_gets_in(self, client, member, pick):
+    def test_a_rating_of_zero_is_a_rating_and_gets_in(self, auth, member, pick):
         self.finished(member, pick, rating_halves=0)
 
-        assert self.readers(client) == [
+        assert self.readers(auth) == [
             {
                 "user": {"username": "ana", "full_name": "Ana Ribeiro", "photo": None},
                 "rating": 0.0,
             }
         ]
 
-    def test_a_full_rating_gets_in(self, client, member, pick):
+    def test_a_full_rating_gets_in(self, auth, member, pick):
         self.finished(member, pick, rating_halves=10)
 
-        assert [reader["rating"] for reader in self.readers(client)] == [5.0]
+        assert [reader["rating"] for reader in self.readers(auth)] == [5.0]
 
-    def test_the_list_is_alphabetical_rather_than_a_race(self, client, member, other, pick):
+    def test_the_list_is_alphabetical_rather_than_a_race(self, auth, member, other, pick):
         # Bruno finished first and read fastest; the list still opens with Ana (DESIGN.md 9).
         self.finished(other, pick, rating_halves=10)
         self.finished(member, pick, rating_halves=1)
 
-        assert [reader["user"]["full_name"] for reader in self.readers(client)] == [
+        assert [reader["user"]["full_name"] for reader in self.readers(auth)] == [
             "Ana Ribeiro",
             "Bruno Alves",
         ]
 
     def test_it_takes_one_query_for_the_whole_list(
-        self, client, member, other, pick, django_assert_num_queries
+        self, auth, member, other, pick, django_assert_num_queries
     ):
         self.finished(member, pick, rating_halves=6)
         self.finished(other, pick, rating_halves=8)
 
-        # One for the pick, one for the readings joined to their users.
-        with django_assert_num_queries(2):
-            self.readers(client)
+        # Two for the request itself (session row, then the member behind it, which the API's
+        # global auth resolves on every call), then one for the pick and one for the readings
+        # joined to their users. What this test guards is the last one: it must not become N.
+        with django_assert_num_queries(4):
+            self.readers(auth)
 
 
 class TestClearingARating:
