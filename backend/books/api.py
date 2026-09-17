@@ -4,7 +4,6 @@ from django.shortcuts import get_object_or_404
 from django.utils import timezone
 from ninja import Router
 from ninja.errors import HttpError
-from ninja.security import django_auth
 
 from api.schemas import BookOut
 from books.models import Book, MonthlyPick, MonthlyReading
@@ -74,7 +73,7 @@ def search_books(request, q: str = "", limit: int = 20):
     return queryset[: max(1, min(limit, 50))]
 
 
-@books_router.post("", response=BookOut, auth=django_auth)
+@books_router.post("", response=BookOut)
 def create_book(request, payload: BookIn):
     """Idempotent on (title, author): the same book coming twice from the
     autocomplete must not blow up on the unique constraint."""
@@ -93,7 +92,7 @@ def create_book(request, payload: BookIn):
     return book
 
 
-@books_router.get("/external", response=list[ExternalBookOut], auth=django_auth)
+@books_router.get("/external", response=list[ExternalBookOut])
 def search_external_books(request, q: str, limit: int = 10):
     term = q.strip()
     if not term:
@@ -141,13 +140,13 @@ def finished_readers(request):
     )
 
 
-@picks_router.get("/current/reading", response=MonthlyReadingOut, auth=django_auth)
+@picks_router.get("/current/reading", response=MonthlyReadingOut)
 def my_reading(request):
     reading, _ = MonthlyReading.objects.get_or_create(user=request.user, pick=_current_pick())
     return reading
 
 
-@picks_router.put("/current/reading", response=MonthlyReadingOut, auth=django_auth)
+@picks_router.put("/current/reading", response=MonthlyReadingOut)
 def update_reading(request, payload: MonthlyReadingIn):
     pick = _current_pick()
     reading, _ = MonthlyReading.objects.get_or_create(user=request.user, pick=pick)

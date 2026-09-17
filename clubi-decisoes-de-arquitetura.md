@@ -26,6 +26,7 @@ Formato: cada decisão traz **contexto**, **decisão**, **alternativas considera
 | ADR-16 | Ferramental de desenvolvimento do frontend |
 | ADR-17 | Brandbook como fonte da verdade visual |
 | ADR-18 | Página de apresentação renderizada em `/` |
+| ADR-19 | API fechada por padrão |
 
 ---
 
@@ -449,6 +450,34 @@ Os outros três critérios avaliados **não** decidiram, e vale registrar por qu
 
 ---
 
+## ADR-19 — API fechada por padrão
+
+**Contexto.** O ADR-04 e o ADR-05 descrevem o **mecanismo** da autenticação — mesma origem, cookie de sessão, `X-CSRFToken`, telas de login renderizadas sob `/accounts/`. Nenhum dos dois declara a **política**: quais rotas exigem login. O fluxo canônico do ADR-05 ("anônimo abre a SPA → `/api/me` responde 401 → o cliente manda para `/accounts/login/`") induz a ler a API inteira como fechada, e isso era falso. A `NinjaAPI` era instanciada sem `auth=` global, então o default de uma rota nova era **pública** — e, como o django-ninja marca toda view da API com `csrf_exempt` no nível do middleware e delega a checagem à classe de auth, uma escrita sem `auth=` nasceria também **sem proteção CSRF**. A política de fato era a soma de onde alguém lembrou de escrever `auth=django_auth`: dois terços dos GETs respondiam 200 a anônimo.
+
+Entre eles, `GET /api/users/{username}`, que devolve data de nascimento, frase, estante e o histórico completo de leituras — nota e resenha em texto livre — de qualquer membro, por username adivinhável, com `GET /api/users` entregando a lista de usernames para adivinhar. Enquanto o site existia para quem já era do clube, isso era teórico. O ADR-18 é o que o tornou concreto: ele nasceu para o endereço ser **divulgado**, e com isso colocou perfis de estudantes identificáveis ao alcance de crawlers. O ADR-18 chegou a registrar de passagem que "`GET /api/monthly-picks/current` já é público", usando o fato como argumento sem que ninguém tivesse decidido que ele devia ser.
+
+**Decisão.** A API é **fechada por padrão e pública por exceção nomeada e testada**. `auth=django_auth` é declarado uma vez, na instanciação da `NinjaAPI`, e os `add_router` e decorators não repetem mais o que o mount point já diz. As exceções vivem numa constante `PUBLIC_OPERATIONS` em `api/api.py`, cada entrada exigindo comentário que a justifique — e **ela nasce vazia**. A superfície pública do Clubi é a landing renderizada do ADR-18, e só ela: a landing lê o livro do mês pelo ORM (`MonthlyPick.current()`), não pela rota, então fechar `/api/monthly-picks` não lhe custa nada.
+
+Isso inclui, explicitamente, perfis, busca de membros, acervo, feed e seleções mensais. Os checks de autoria e de `is_staff` dentro das views (`_own_post`, `_staff_only`) continuam onde estão: são **autorização**, uma pergunta diferente de autenticação, e nenhum auth global responde por eles.
+
+**O perfil é decidido, não pendente.** Data de nascimento, histórico de leitura e resenha em texto livre são dados pessoais de estudantes identificáveis, escritos para o clube e não para a web. E a direção é assimétrica: abrir depois é acrescentar um `auth=None` a uma linha; fechar depois de indexado não desfaz o índice, o cache do buscador nem a cópia que alguém guardou.
+
+**Alternativas consideradas.**
+
+- *Manter leitura pública e proteger caso a caso.* É o estado anterior. Ele não falhava nas rotas que existiam — falhava no **default**: nada quebrava quando alguém esquecia o `auth=`, nenhum teste reprovava, e o modo de falha era silencioso e permanente. Uma política que depende de memória não é uma política.
+- *Perfil público com os campos sensíveis omitidos.* Descartada por ora. Exigiria decidir consentimento campo a campo — quem opta por expor a estante, quem não expõe a resenha — sem que ninguém tenha pedido a funcionalidade. É desenho de produto disfarçado de ajuste de schema, e o ADR-15 mantém `UserProfileOut` como contrato: mexer nele por um requisito inexistente é custo sem demanda.
+
+**Consequências.**
+
+- Positivas: o default passa a ser o seguro, e o esquecimento agora falha fechado em vez de aberto; toda escrita ganha CSRF por construção, não por convenção; a política vira uma linha lida num arquivo só; e uma varredura em `api/test_api.py` percorre o registro de routers e asserta 401 para toda operação fora de `PUBLIC_OPERATIONS`, o que torna a regra verificável em vez de declarada.
+- Negativas: uma rota que **deva** ser pública agora exige um gesto deliberado — que é o ponto, mas é atrito real para quem vier depois. E o `/api/docs` sai do ar em produção (fica sob `DEBUG`), o que custa a quem usava o Swagger contra o ambiente publicado; `make types` não depende dele, porque o `export_openapi_schema` resolve a instância pela raiz `/api/` e não pela URL do schema.
+- Neutra, mas vale saber: o shell da SPA ganhou `<meta name="robots" content="noindex">`. Ele nunca teve conteúdo indexável — deep links como `/u/ana` chegam vazios para um crawler, porque o React só monta depois do `/api/me` —, e agora que esses caminhos respondem 401 o que um robô indexaria seria uma casca. A `landing.html` **não** recebeu a meta: ela existe para ser indexada e compartilhada, que é o ADR-18 inteiro.
+- O ADR-18 tem uma afirmação que esta decisão invalida: a de que `GET /api/monthly-picks/current` é público. Ela era descritiva, não normativa, e o argumento que ela sustentava (a landing não precisaria de endpoint novo) continua valendo pelo outro caminho — a view chama o ORM.
+
+**Quando revisar.** Se a fundadora pedir perfil visível a não-membros. Nesse caso a decisão a tomar **não é esta de novo**: é quais **campos** ficam públicos, um a um. `birth_date` e `review` não são candidatos por default — o primeiro é dado pessoal sem função pública, o segundo é texto escrito para um público conhecido. A pergunta correspondente na seção 10 do guia ("Perfis são públicos ou só para logados?") sai da lista de pendências com esta decisão.
+
+---
+
 ## Resumo executivo
 
 Se for para levar uma frase de cada decisão:
@@ -462,3 +491,4 @@ Se for para levar uma frase de cada decisão:
 7. **Apps autocontidos, com só as projeções compartilhadas** porque schema de resposta pertence à rota, não à entidade que ele cita.
 8. **Brandbook como fonte da verdade visual** porque a identidade do clube é anterior ao site — e o que a web precisa e ele não cobre fica registrado como extrapolação, não decidido no CSS.
 9. **Apresentação renderizada em `/`** porque quem recebe o link do clube precisa de preview e de texto antes da senha — e crawler de rede social não executa JavaScript.
+10. **API fechada por padrão** porque a política nunca tinha sido declarada e o default aberto expunha perfil de estudante a quem passasse — e abrir depois é uma linha, enquanto fechar depois de indexado não desfaz nada.

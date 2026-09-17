@@ -3,6 +3,12 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <!-- The shell has nothing a crawler can read. Every route it serves is behind the session
+         (ADR-19), the markup arrives empty, and React only mounts after /api/me answers — so a
+         deep link like /u/ana would be indexed as a blank page under a member's name. The
+         landing page is the opposite case and deliberately carries no such tag: it exists to be
+         indexed and shared, which is ADR-18 entire. -->
+    <meta name="robots" content="noindex" />
     <title>clubi</title>
     <!-- Only the two faces that appear above the fold (DESIGN.md 4.2). Served by Django and
          reached through the /static proxy while this file is the dev entry point. -->

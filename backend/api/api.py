@@ -5,6 +5,8 @@ this file decides the prefix, the auth and the tag. It is the one place that
 shows the whole surface the SPA can call.
 """
 
+from django.conf import settings
+from django.http import Http404
 from ninja import NinjaAPI
 from ninja.security import django_auth
 
@@ -27,16 +29,70 @@ class ClubiAPI(NinjaAPI):
         return operation.view_func.__name__
 
 
-# No csrf= argument: since django-ninja 1.x the CSRF check lives in the auth class,
-# and django_auth (SessionAuth) enforces it on every unsafe method by default.
+# auth=django_auth is declared once, here, and it is the whole authentication policy: the API is
+# for members, and a route that says nothing about auth inherits "authenticated" rather than
+# "public" (ADR-19). It used to be the reverse — no global auth, so a new route was born readable
+# by anyone and, because ninja marks every API view csrf_exempt at the middleware level, writable
+# without a CSRF token too. Nothing failed when someone forgot the decorator, which is why the
+# default is now the safe one and the exceptions are named in PUBLIC_OPERATIONS below.
+#
+# No csrf= argument: since django-ninja 1.x the CSRF check lives in the auth class, and
+# django_auth (SessionAuth) enforces it on every unsafe method by default. Safe methods are
+# exempted by CsrfViewMiddleware.process_view, so authenticating GETs globally costs them nothing.
+def development_or_staff_only(view):
+    """Gate for /api/docs and /api/openapi.json — ninja applies this to both.
+
+    Swagger and the raw schema are development tools; in production they hand a map of the whole
+    surface to whoever asks. Nothing behind them is secret — every operation is authenticated
+    since ADR-19 — but the shape of an API is a courtesy only the people building it need, and the
+    founder operating the club through the Admin (ADR-14) is the one exception worth keeping.
+
+    Decided per request rather than by passing `docs_url=None`. Reading `settings.DEBUG` at import
+    time would make the site's behaviour depend on when this module happened to be imported, which
+    is a thing that varies between the dev server, gunicorn and the test run — and it did: pytest
+    imports this during collection, before the test environment sets DEBUG to False.
+
+    404 rather than 403, because the answer to "is there an API doc here" should not be yes.
+    """
+
+    def guarded(request, *args, **kwargs):
+        if not settings.DEBUG and not request.user.is_staff:
+            raise Http404
+        return view(request, *args, **kwargs)
+
+    return guarded
+
+
 api = ClubiAPI(
     title="Clubi API",
     version="1.0.0",
     description="API do Clubi — clube do livro da ESPM.",
+    auth=django_auth,
     docs_url="/docs",
+    docs_decorator=development_or_staff_only,
 )
 
-api.add_router("/me", me_router, auth=django_auth, tags=["me"])
+# The exceptions to the line above, by operationId, and it is deliberately empty.
+#
+# Nothing is public. The Clubi's public surface is the landing page of ADR-18 and nothing else:
+# it is rendered by Django and reads the current pick straight from the ORM
+# (core.views._current_pick → MonthlyPick.current), so closing /api/monthly-picks costs it
+# nothing. /api/users, /api/users/{username}, /api/books and /api/posts are closed for the same
+# reason they were the problem — a profile carries birth_date, the shelf and every review the
+# member ever wrote, and ADR-18 exists to get the address in front of strangers.
+#
+# Opening a route takes two edits, not one: `auth=None` on the route itself, which is what the
+# runtime reads, and an entry here, which is what says it was meant. Neither alone does anything,
+# and api/test_policy.py fails when they disagree — it partitions the whole registered surface by
+# this set, so an operation named here that still answers 401 is as loud a failure as one that
+# answers 200 without being named. The declaration stays on the route, where whoever reads the
+# endpoint sees it; this set is the register that keeps the two honest.
+#
+# Adding an entry takes a comment saying why that route is something a stranger may read — "the
+# SPA needs it" is not a reason, because the SPA is authenticated (ADR-19).
+PUBLIC_OPERATIONS: frozenset[str] = frozenset()
+
+api.add_router("/me", me_router, tags=["me"])
 api.add_router("/users", users_router, tags=["users"])
 api.add_router("/books", books_router, tags=["books"])
 api.add_router("/monthly-picks", picks_router, tags=["monthly-picks"])
