@@ -12,7 +12,8 @@ Run from `frontend/`, or use the root `Makefile`.
 ```bash
 npm install            # npm ci in CI/deploy
 npm run dev            # Vite on :5173 — needs manage.py runserver on :8000
-npm test               # vitest run: pure logic only (ratingScale.ts, externalBook.ts)
+npm test               # vitest run: pure logic (ratingScale.ts, externalBook.ts) + the
+                       # client.ts 401 redirect, which stubs the browser globals by hand
 npm run build          # emits dist/, which settings.py adds to STATICFILES_DIRS
 npm run typecheck      # tsc --noEmit — the ADR-12 guard, run after any schema change
 make types             # regenerate src/api/generated.ts — the only supported way

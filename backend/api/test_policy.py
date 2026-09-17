@@ -80,7 +80,7 @@ def _call(client, method, url, operation_id):
 
 
 class TestTheRegistryIsWalkable:
-    """If these two break, every sweep below is silently testing nothing."""
+    """If these break, every sweep below is silently testing nothing."""
 
     def test_the_sweep_sees_every_operation_in_the_openapi_schema(self):
         from_registry = {op for op, _, _ in registered_operations()}
@@ -94,6 +94,21 @@ class TestTheRegistryIsWalkable:
     def test_the_sweep_is_not_empty(self):
         # A traversal that quietly returned [] would make every parametrisation below vacuous.
         assert len(registered_operations()) > 20
+
+    def test_every_public_operation_is_a_real_one(self):
+        """A misspelled entry in PUBLIC_OPERATIONS would otherwise be ignored by both sweeps.
+
+        They start from the registry and filter by the set, so a name matching no operation
+        produces no case in either direction: the route it was meant to open stays closed and
+        passes the 401 sweep, and the public sweep runs on nothing at all. That drift is
+        fail-closed, but it is silent, which is the one thing ADR-19 is trying not to be.
+        """
+        unknown = PUBLIC_OPERATIONS - {op for op, _, _ in registered_operations()}
+
+        assert not unknown, (
+            f"PUBLIC_OPERATIONS names operations that do not exist: {sorted(unknown)}; "
+            "check the spelling against the view function names"
+        )
 
 
 class TestAnonymousAccess:

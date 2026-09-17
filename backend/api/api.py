@@ -81,11 +81,15 @@ api = ClubiAPI(
 # reason they were the problem — a profile carries birth_date, the shelf and every review the
 # member ever wrote, and ADR-18 exists to get the address in front of strangers.
 #
-# This is the single place to decide otherwise, and api/test_api.py reads it as the source of
-# truth: every operation NOT named here must answer 401 to an anonymous caller, and every
-# operation named here must not. Adding an entry takes a comment saying why that route is
-# something a stranger may read — "the SPA needs it" is not a reason, because the SPA is
-# authenticated (ADR-19).
+# Opening a route takes two edits, not one: `auth=None` on the route itself, which is what the
+# runtime reads, and an entry here, which is what says it was meant. Neither alone does anything,
+# and api/test_policy.py fails when they disagree — it partitions the whole registered surface by
+# this set, so an operation named here that still answers 401 is as loud a failure as one that
+# answers 200 without being named. The declaration stays on the route, where whoever reads the
+# endpoint sees it; this set is the register that keeps the two honest.
+#
+# Adding an entry takes a comment saying why that route is something a stranger may read — "the
+# SPA needs it" is not a reason, because the SPA is authenticated (ADR-19).
 PUBLIC_OPERATIONS: frozenset[str] = frozenset()
 
 api.add_router("/me", me_router, tags=["me"])
