@@ -1,7 +1,8 @@
 """The views that are neither the SPA nor the API.
 
 `core` has no models: what it holds is the furniture the domain apps share — `core/images.py`, the
-CSS under `core/static/`, and the two views below, which decide what the site's root actually is.
+CSS under `core/static/`, and the views below: the two that decide what the site's root actually
+is, and the health check the platform polls.
 The landing page belongs to no domain (it is about the club, not about books, users or postagens),
 which is why it is not in one of their `views.py` (ADR-15 files code by the models behind it, and
 this has none).
@@ -11,7 +12,9 @@ nothing in `books` imports this module, so there is no cycle.
 """
 
 from django.core.cache import cache
+from django.http import HttpResponse
 from django.shortcuts import render
+from django.views.decorators.cache import never_cache
 from django.views.decorators.csrf import ensure_csrf_cookie
 from django.views.generic import TemplateView
 
@@ -89,3 +92,28 @@ def root(request):
             "cover_url": request.build_absolute_uri(cover) if cover else "",
         },
     )
+
+
+@never_cache
+def healthz(request):
+    """`/healthz` — "the worker is alive", answered without a single query.
+
+    Render polls this every few seconds for as long as the service runs. On the Neon free plan
+    (ADR-13) the compute suspends after five minutes with no query and the month's allowance is
+    100 CU-hours, so a health check that so much as reads a session would reset that timer
+    forever: the database would never sleep, the allowance would run out around the 17th, and
+    Neon suspends the compute until the next billing cycle — the site goes down mid-month, every
+    month. That is why this view touches no model, and why the assertion in core/test_views.py is
+    about the query count rather than the status code.
+
+    Nothing in the middleware stack spends a query on its behalf either, but only because every
+    piece of it is lazy about the request: SessionMiddleware builds a SessionStore without loading
+    it, AuthenticationMiddleware leaves `request.user` a SimpleLazyObject, and MessageMiddleware
+    stores nothing when nothing was added. Reading `request.user` here — even to log who asked —
+    would undo all three.
+
+    A view rather than the TCP check Render falls back to when no health check path is set: a
+    worker deadlocked on something can still leave the socket accepting connections, and TCP
+    would call that healthy.
+    """
+    return HttpResponse("ok", content_type="text/plain")

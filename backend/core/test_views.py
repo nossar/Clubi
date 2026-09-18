@@ -237,6 +237,53 @@ class TestMemberRoot:
         assert "Cookie" in client.get("/").headers["Vary"]
 
 
+class TestHealthCheck:
+    """The check Render polls every few seconds, and the one query count that is a cost ceiling.
+
+    On the Neon free plan the compute sleeps after five minutes without a query, and the month
+    buys 100 CU-hours. A single query here would reset that timer forever — the database would
+    never sleep and the allowance would be gone by mid-month, which Neon answers by suspending
+    the compute until the next cycle. So `test_costs_no_query` is the test of this module: the
+    status code is incidental, the zero is the point.
+    """
+
+    def test_is_ok(self, client):
+        response = client.get("/healthz")
+
+        assert response.status_code == 200
+        assert response.content == b"ok"
+
+    def test_costs_no_query(self, client, django_assert_num_queries):
+        """Not one — not the session, not the user, not a connection opened and left idle.
+
+        Every middleware in the stack is lazy enough to spend nothing on an anonymous GET that
+        reads neither request.session nor request.user. This asserts that rather than trusting
+        it, because the way it breaks is by someone adding a line to the view.
+        """
+        with django_assert_num_queries(0):
+            client.get("/healthz")
+
+    def test_is_not_cached(self, client):
+        """A cached 200 is a health check that keeps saying yes after the worker has died."""
+        assert "no-cache" in client.get("/healthz").headers["Cache-Control"]
+
+    def test_is_exempt_from_the_https_redirect(self, client, settings):
+        """SecurityMiddleware runs before the view; without the exemption it answers instead.
+
+        Render's internal probe arrives over plain HTTP, so the redirect would fire on every
+        check. It counts a 3xx as healthy — which is why this fails silently in production and
+        has to be caught here.
+        """
+        settings.SECURE_SSL_REDIRECT = True
+        settings.SECURE_REDIRECT_EXEMPT = [r"^healthz$"]
+
+        assert client.get("/healthz").status_code == 200
+
+    def test_is_not_swallowed_by_the_catch_all(self, client):
+        """The lookahead does not exclude healthz, so only the URL order keeps the shell off it."""
+        assert "index.html" not in templates_used(client.get("/healthz"))
+
+
 class TestRoutingAround:
     """What the new `/` must not have disturbed."""
 
