@@ -4,9 +4,12 @@ Django settings for clubi project.
 https://docs.djangoproject.com/en/6.0/ref/settings/
 """
 
+import os
 from pathlib import Path
 
+import dj_database_url
 from decouple import Csv, config
+from django.core.exceptions import ImproperlyConfigured
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -41,6 +44,11 @@ if config("SECURE_HTTPS", default=not DEBUG, cast=bool):
     SECURE_HSTS_SECONDS = 60 * 60
     SECURE_HSTS_INCLUDE_SUBDOMAINS = True
     SECURE_HSTS_PRELOAD = True
+    # SecurityMiddleware runs first and would answer the platform's health check with a 301
+    # before core.views.healthz ever ran. Render counts a 3xx as healthy, so nothing would look
+    # broken — the check would just stop proving what it exists to prove, since the internal
+    # probe reaches the container over plain HTTP and only the proxy sets X-Forwarded-Proto.
+    SECURE_REDIRECT_EXEMPT = [r"^healthz$"]
 
 
 # Application definition
@@ -98,11 +106,27 @@ WSGI_APPLICATION = "clubi.wsgi.application"
 # Database
 # https://docs.djangoproject.com/en/6.0/ref/settings/#databases
 
+# The one setting that cannot come from backend/.env: dj_database_url reads os.environ directly,
+# and python-decouple never injects the file into the environment — it only answers config().
+# Locally that is the intent rather than a limitation, since no DATABASE_URL means the sqlite file
+# below, which is what every developer machine runs on.
+DATABASE_URL = os.environ.get("DATABASE_URL", "")
+
 DATABASES = {
-    "default": {
-        "ENGINE": "django.db.backends.sqlite3",
-        "NAME": BASE_DIR / "db.sqlite3",
-    }
+    "default": dj_database_url.parse(
+        DATABASE_URL or f"sqlite:///{BASE_DIR / 'db.sqlite3'}",
+        # Neon closes an idle connection when it suspends the compute after five minutes without
+        # a query (ADR-13). A pooled connection would be reused after that and raise "server
+        # closed the connection unexpectedly" — a 500 for the first visitor after every quiet
+        # spell, which on this site is most of the day. Reconnecting costs tens of milliseconds
+        # with the app and the database in the same region; the 500 costs a member.
+        conn_max_age=0,
+        # Tied to the URL and not to DEBUG. dj_database_url sets OPTIONS["sslmode"] whatever the
+        # backend turns out to be, and sqlite rejects it: with ssl_require=not DEBUG, running
+        # DEBUG=False against the local file — the rehearsal the deploy guide asks for before
+        # shipping — died with "'sslmode' is an invalid keyword argument for Connection()".
+        ssl_require=bool(DATABASE_URL),
+    )
 }
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
@@ -180,11 +204,31 @@ if R2_BUCKET:
             "custom_domain": config("R2_PUBLIC_DOMAIN"),
             "default_acl": None,
             "querystring_auth": False,
+            "region_name": "auto",
+            # FileSystemStorage never overwrites; match it, or two members who both
+            # upload "foto.jpg" to profiles/ end up sharing one photo.
+            "file_overwrite": False,
+            # Safe only because the line above makes every key immutable.
+            "object_parameters": {"CacheControl": "public, max-age=31536000, immutable"},
         },
     }
 else:
     # No R2 configured: keep user uploads on the local filesystem.
     default_storage = {"BACKEND": "django.core.files.storage.FileSystemStorage"}
+
+if not DEBUG:
+    if not DATABASE_URL:
+        # Without this the site would come up on the sqlite file, on Render's ephemeral disk, and
+        # work — until the next deploy replaced the container and took every member with it. The
+        # failure is silent in a way the others here are not, which is why it is worth a guard.
+        raise ImproperlyConfigured(
+            "DATABASE_URL é obrigatório fora de DEBUG: sem ele o site sobe em SQLite num disco "
+            "efêmero e perde todos os dados a cada deploy."
+        )
+    if not R2_BUCKET:
+        raise ImproperlyConfigured("R2_BUCKET é obrigatório fora de DEBUG (ADR-11).")
+    if not STATICFILES_DIRS:
+        raise ImproperlyConfigured("frontend/dist ausente: o build do frontend não rodou.")
 
 STORAGES = {
     "default": default_storage,
