@@ -30,7 +30,7 @@ Ruff: line-length 100, migrations excluded. `select` is unset, but do **not** re
 - `users` — custom `User` (`full_name`, `birth_date`, `photo`, `quote`, `posts_seen_at`) plus a `favorites` M2M through `books.Favorite`; `users/api.py` publishes `me_router` and `users_router`. `MeOut` is the `/api/me` response and the only schema carrying `is_staff`.
 - `books` — `Book`, `MonthlyPick`, `MonthlyReading`, `Favorite`; `books_router` and `picks_router`.
 - `posts` — `Post`, `PostImage`; `posts_router`. **Writing is `is_staff`-only**, and the router also answers the unread count.
-- `core` — no models; holds `core/images.py` (`compress_image`), the shared CSS under `core/static/css/` (`tokens.css`, `auth.css`, `landing.css`) and `core/views.py`, which owns the root view and the SPA shell.
+- `core` — no models; holds `core/images.py` (`compress_image`), the shared CSS under `core/static/css/` (`tokens.css`, `auth.css`, `landing.css`, `landing-carousel.css`), the landing's only script (`core/static/js/landing-carousel.js` — plain, served by `{% static %}`, never part of the Vite build), `core/views.py`, which owns the root view and the SPA shell, and the dev-only `seed_landing_carousel` management command (refuses to run outside `DEBUG` or with `R2_BUCKET` set).
 - `api` — no models, no routes of its own; only `api/api.py` (the `NinjaAPI` instance and the `add_router` calls) and `api/schemas.py` (the two shared projections). Docs at `/api/docs`.
 - Tests live with their app — `*/test_api.py`, `users/test_auth.py`, `core/test_views.py`, `books/test_models.py`, `books/test_migrations.py` — over shared fixtures in `conftest.py`.
 
