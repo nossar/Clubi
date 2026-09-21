@@ -68,6 +68,25 @@ class TestLogin:
         assert response.status_code == 302
         assert "_auth_user_id" not in client.session
 
+    def test_login_with_email(self, client, member):
+        response = client.post(reverse("login"), {"username": "ANA@espm.br", "password": PASSWORD})
+
+        assert response.status_code == 302
+        assert client.session["_auth_user_id"] == str(member.pk)
+
+    def test_email_shared_by_two_accounts_refuses_login(self, client, member):
+        User.objects.create_user(username="ana2", email="ana@espm.br", password=PASSWORD)
+
+        response = client.post(reverse("login"), {"username": "ana@espm.br", "password": PASSWORD})
+
+        assert response.status_code == 200
+        assert "_auth_user_id" not in client.session
+
+    def test_login_page_asks_for_username_or_email(self, client):
+        response = client.get(reverse("login"))
+
+        assert "Usuário ou e-mail" in response.content.decode()
+
     def test_wrong_password_keeps_user_out(self, client, member):
         response = client.post(reverse("login"), {"username": "ana", "password": "nope"})
 

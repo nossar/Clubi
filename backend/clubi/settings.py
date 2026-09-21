@@ -54,6 +54,8 @@ if config("SECURE_HTTPS", default=not DEBUG, cast=bool):
 # Application definition
 
 AUTH_USER_MODEL = "users.User"
+# Members may sign in with their username or their e-mail; see users/backends.py.
+AUTHENTICATION_BACKENDS = ["users.backends.EmailOrUsernameBackend"]
 
 INSTALLED_APPS = [
     "django.contrib.admin",
