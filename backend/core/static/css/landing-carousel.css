@@ -1,0 +1,313 @@
+/* The carousel of monthly picks on the landing page (experimental/landing-carousel).
+   Loaded after landing.css and only there. Tokens come from tokens.css; nothing here defines a
+   colour, a size or a radius that is not read from there or justified in frontend/DESIGN.md.
+
+   Two layouts, one markup. Without JavaScript the slides are a stack, newest first, with a rule
+   between months — a page that survives without a bundle is part of what ADR-18 promised. With
+   it, `.carousel--ready` turns the same stack into a horizontal scroll-snap track: the browser
+   owns the scrolling and the snapping, and landing-carousel.js only moves between snap points.
+   The arrows, the dots, the peek of the neighbouring months and the mouse drag are all on top of
+   that, and all of them wait for the class. No autoplay, in either mode. */
+
+/* --------------------------------------------------------------------------- the stack (no JS) */
+
+.carousel__track {
+  display: grid;
+  gap: var(--space-8); /* "respiro de seção" (8.1): each month is a block, not a list item */
+}
+
+/* The divider on wine (3.3), the same fio the SPA draws between two sections of one subject. */
+.carousel__slide + .carousel__slide {
+  padding-top: var(--space-8);
+  border-top: 1px solid var(--clubi-line-invert);
+}
+
+/* A month that is not this one. Muted where the current month is yellow: 6.3 gives the star's
+   yellow to "destaque, novidade", and what is past is neither. 5.31 on wine — AA for this size. */
+.pick__eyebrow--past {
+  color: var(--clubi-ink-muted-on-invert);
+}
+
+/* --------------------------------------------------------------------------- the track (JS) */
+
+/* Two lengths shape the track, both read from the tokens. The gutter is .container's own, so the
+   viewport bleeds exactly to the container's outer edge. The peek is how much of the neighbouring
+   month stays in sight on each side of the one in view — "there is more this way" without a
+   word. It grows with the screen: at phone width a slide has to keep most of the column
+   (DESIGN.md 8.5 designs for 390px first), on a desktop there is room to spare. */
+.carousel--ready {
+  --carousel-gutter: max(var(--space-4), var(--container-gutter));
+  --carousel-peek: var(--space-6);
+  --carousel-edge: calc(var(--carousel-gutter) + var(--carousel-peek));
+}
+
+@media (min-width: 1024px) {
+  .carousel--ready {
+    --carousel-peek: var(--space-8);
+  }
+}
+
+/* The stage the arrows and the fades are placed against: the track's own box. */
+.carousel--ready .carousel__viewport {
+  position: relative;
+  margin-inline: calc(-1 * var(--carousel-gutter));
+}
+
+/* The peek fades. The neighbouring month is dimmed, not cut: a gradient of the band's own wine
+   over the edge zone, solid for the outer third and gone where the slide in view begins. This
+   is half of the dimming — the other half is the opacity every slide but the one in view
+   carries, below — so that what shows through reads as "more", not as text to read.
+   pointer-events: none so a swipe that starts at the edge still reaches the track. */
+.carousel--ready .carousel__viewport::before,
+.carousel--ready .carousel__viewport::after {
+  content: "";
+  position: absolute;
+  inset-block: 0;
+  width: var(--carousel-edge);
+  z-index: 1;
+  pointer-events: none;
+}
+
+.carousel--ready .carousel__viewport::before {
+  left: 0;
+  background: linear-gradient(to right, var(--clubi-bg-invert) 30%, transparent);
+}
+
+.carousel--ready .carousel__viewport::after {
+  right: 0;
+  background: linear-gradient(to left, var(--clubi-bg-invert) 30%, transparent);
+}
+
+/* The padding is the edge zone (gutter + peek) on both sides, which does three jobs at once: it
+   is where the neighbour shows through, it is the room the tilted cover (E-09) needs so its
+   corner and its shadow are not clipped, and — mirrored in scroll-padding — it is what makes the
+   first and the last month snap to the same place as every other. The slides are 100% of what
+   is left, so a slide is the container's content width minus two peeks. */
+.carousel--ready .carousel__track {
+  position: relative; /* the script measures each slide's offsetLeft against this box */
+  display: flex;
+  gap: var(--space-4); /* less than the edge zone, or nothing would peek */
+  padding-inline: var(--carousel-edge);
+  scroll-padding-inline: var(--carousel-edge);
+  /* Room for --shadow-paper below the cover; overflow-x: auto clips vertically too. */
+  margin-block: calc(-1 * var(--space-5));
+  padding-block: var(--space-5);
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  scroll-snap-type: x mandatory;
+  scroll-behavior: smooth;
+  /* The arrows and the dots are the scrollbar. Keyboard and touch still scroll the track natively. */
+  scrollbar-width: none;
+  cursor: grab; /* the mouse can drag it; landing-carousel.js does the dragging */
+}
+
+.carousel--ready .carousel__track::-webkit-scrollbar {
+  display: none;
+}
+
+/* While the mouse holds the track. Snapping is off so the slides follow the pointer instead of
+   jumping between points; the script snaps to the nearest month on release. Smooth scrolling is
+   off too, or each pointermove would start an animation. Text and images must not be selected
+   or dragged out of the page on the way. */
+.carousel--ready .carousel__track--dragging {
+  scroll-snap-type: none;
+  scroll-behavior: auto;
+  cursor: grabbing;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.carousel--ready .carousel__track img {
+  -webkit-user-drag: none;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+/* The track is focusable so the arrow keys move it (the script sets tabindex). On wine the ring
+   is yellow, as 10.2 asks — the orange of --clubi-focus measures 3.09 here. */
+.carousel--ready .carousel__track:focus-visible {
+  outline: 2px solid var(--clubi-highlight);
+  outline-offset: 2px;
+}
+
+/* One month per view, on every width: the slide is the whole pick block of E-18 and needs the
+   room it already had. `order` reverses the DOM — --i counts from the newest — so the months run
+   left to right in time while the markup keeps the current book first. Negative values are
+   legal and sort ascending: the oldest gets the smallest and lands on the left. */
+.carousel--ready .carousel__slide {
+  flex: 0 0 100%;
+  order: calc(-1 * var(--i, 0));
+  padding-top: 0;
+  border-top: 0;
+  scroll-snap-align: start;
+  scroll-snap-stop: always; /* a swipe moves one month, never skips a year */
+  opacity: 0.55; /* a month that is not in view: present, dimmed — the script lifts the one that is */
+  transition: opacity var(--motion-slow) var(--motion-ease);
+}
+
+.carousel--ready .carousel__slide[data-carousel-active] {
+  opacity: 1;
+}
+
+/* --------------------------------------------------------------------------- arrows */
+
+/* The `hidden` attribute has to win over the display rules below, or a control the script never
+   showed would still render. */
+.carousel [hidden] {
+  display: none !important;
+}
+
+/* Fixed to the stage, one in each edge zone, centred on the faded neighbour they lead to. A
+   44px disc (10.4) with the same cream outline .button--quiet has on cream (E-18) — the mirror
+   for a wine surface. Hover fills with --clubi-line-invert, "cream mixed into wine" (3.3); the
+   press fills with the yellow that is only legal on wine (3.2 rule 3), so a click is answered
+   before the slide moves. The glyph is typographic, aria-hidden, and the label is the word. */
+.carousel--ready .carousel__arrow {
+  position: absolute;
+  top: 50%;
+  z-index: 2; /* above the fades */
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  margin: 0;
+  padding: 0;
+  border: 1px solid var(--clubi-ink-on-invert);
+  border-radius: var(--radius-pill);
+  background: var(--clubi-bg-invert);
+  color: var(--clubi-ink-on-invert);
+  font-family: var(--clubi-font-text);
+  font-size: var(--text-lg);
+  font-weight: 700;
+  line-height: 1;
+  cursor: pointer;
+  transform: translateY(-50%);
+  transition: background var(--motion-fast) var(--motion-ease);
+}
+
+.carousel--ready .carousel__arrow--prev {
+  left: calc((var(--carousel-edge) - 44px) / 2);
+}
+
+.carousel--ready .carousel__arrow--next {
+  right: calc((var(--carousel-edge) - 44px) / 2);
+}
+
+/* The glyph sits a hair high in the disc at this size; nudged so it reads centred. */
+.carousel--ready .carousel__arrow span {
+  position: relative;
+  top: -0.06em;
+}
+
+.carousel--ready .carousel__arrow:hover {
+  background: var(--clubi-line-invert);
+}
+
+.carousel--ready .carousel__arrow:active {
+  background: var(--clubi-highlight);
+  border-color: var(--clubi-highlight);
+  color: var(--clubi-highlight-ink);
+  transition: none; /* the press is instant feedback, not a fade */
+}
+
+.carousel--ready .carousel__arrow:focus-visible {
+  outline: 2px solid var(--clubi-highlight); /* 10.2: yellow ring on wine */
+  outline-offset: 2px;
+}
+
+/* Where the finger is the primary input the arrows come off. They exist because a mouse cannot
+   swipe; a thumb can, and it already does — and on a phone the two discs sat on top of the very
+   peek that says "there is more this way". The dots stay as the reachable control (a screen
+   reader lands on them), the peek and the swipe do the rest. By input, not by width: a phone
+   and a tablet lose them, a narrow desktop window keeps them along with the drag. */
+@media (hover: none) and (pointer: coarse) {
+  .carousel--ready .carousel__arrow {
+    display: none;
+  }
+}
+
+/* --------------------------------------------------------------------------- dots */
+
+/* One per month, centred under the stage. Each is a 44px-tall target that is only 24px wide:
+   twelve months and the "this month" slide have to fit a 390px line, and 13 × 44 does not. The
+   width is WCAG 2.5.8's minimum rather than 10.4's 44px — a trade registered in E-19, and
+   allowed because the dots are the third way to the same month (arrows, swipe), not the only
+   one. wrap is the safety net: more dots than a line holds fold under, they never overflow. */
+.carousel--ready .carousel__dots {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0;
+  margin-top: var(--space-5);
+  padding: 0;
+}
+
+.carousel--ready .carousel__dot {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 44px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+}
+
+/* The dot itself: --space-2 across, cream, as the brief asks — solid for the month in view, the
+   band's muted cream for the others, so the row reads as one lit position among dim ones. */
+.carousel--ready .carousel__dot::before {
+  content: "";
+  width: var(--space-2);
+  height: var(--space-2);
+  border-radius: var(--radius-pill);
+  background: var(--clubi-ink-muted-on-invert);
+  opacity: 0.5;
+  transition: opacity var(--motion-fast) var(--motion-ease), transform var(--motion-fast) var(--motion-ease);
+}
+
+.carousel--ready .carousel__dot:hover::before {
+  opacity: 1;
+}
+
+.carousel--ready .carousel__dot[aria-current="true"]::before {
+  background: var(--clubi-ink-on-invert);
+  opacity: 1;
+  transform: scale(1.25);
+}
+
+.carousel--ready .carousel__dot:focus-visible {
+  outline: 2px solid var(--clubi-highlight);
+  outline-offset: -2px; /* inside the 24px column, so neighbouring rings do not overlap */
+  border-radius: var(--radius-sm);
+}
+
+/* Off-screen, never display:none — that would silence the live region. */
+.carousel__sr {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* 8.6 and 10.7: the member's setting wins. The snap is kept — it is position, not motion.
+   The script's scrollTo() carries no behaviour of its own, so this one line is what makes the
+   buttons jump instead of glide; there is no second copy of the rule in JavaScript. */
+@media (prefers-reduced-motion: reduce) {
+  .carousel--ready .carousel__track {
+    scroll-behavior: auto;
+  }
+
+  .carousel--ready .carousel__slide,
+  .carousel--ready .carousel__arrow,
+  .carousel--ready .carousel__dot::before {
+    transition: none;
+  }
+}

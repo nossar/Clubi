@@ -14,6 +14,7 @@ nothing in `books` imports this module, so there is no cycle.
 from django.core.cache import cache
 from django.http import HttpResponse
 from django.shortcuts import render
+from django.utils import timezone
 from django.views.decorators.cache import never_cache
 from django.views.decorators.csrf import ensure_csrf_cookie
 from django.views.generic import TemplateView
@@ -29,6 +30,13 @@ shell = ensure_csrf_cookie(TemplateView.as_view(template_name="index.html"))
 
 CURRENT_PICK_KEY = "current_pick"
 CURRENT_PICK_TTL = 60 * 15
+
+PICK_HISTORY_KEY = "monthly_picks_history"
+# The carousel is a presentation of the club's recent readings, not the archive — that is what
+# the profile history is for, behind login. Twelve is a year of picks: enough to show that the
+# club has a rhythm, small enough that the landing never grows with the club's age. Anything
+# older than that is out of scope here on purpose (no pagination, no endpoint).
+PICK_HISTORY_LIMIT = 12
 
 # A miss is not the same thing as a cached None, and cache.get() with no default cannot tell them
 # apart — it returns None for both. MonthlyPick.current() legitimately answers None (between two
@@ -60,6 +68,37 @@ def _current_pick() -> MonthlyPick | None:
     return pick
 
 
+def _monthly_picks_history() -> list[MonthlyPick]:
+    """The picks that have started, newest first, memoised like _current_pick().
+
+    Same trade, same TTL: the landing's carousel repeats this question on every anonymous hit,
+    and on the Neon free plan (ADR-13) each repetition is a connection to a database that would
+    rather be asleep. The list is materialised before it is cached — a lazy QuerySet would pickle
+    its *query* and run it again on every hit, which is the opposite of the point — and the book
+    comes along through select_related, so a hit renders every slide without a query.
+
+    "Started" (`starts_on <= today`) rather than "ended": the current pick belongs at the front
+    of the list, and a pick announced for next month does not belong on it at all — the landing
+    only ever says what the club is reading, never what it will read. The empty list is cached
+    too, through the same sentinel _current_pick() uses: a club with no picks yet is exactly the
+    one whose landing would otherwise query on every hit.
+
+    Where the current pick is concerned this deliberately duplicates one row with the entry under
+    CURRENT_PICK_KEY instead of deriving one from the other. The og: tags, the <title> and the
+    description are built from _current_pick() and only from it (ADR-18): the carousel is a
+    second reader of the same table, not a second source of truth for the link preview.
+    """
+    picks = cache.get(PICK_HISTORY_KEY, _MISS)
+    if picks is _MISS:
+        picks = list(
+            MonthlyPick.objects.filter(starts_on__lte=timezone.localdate())
+            .select_related("book")
+            .order_by("-month")[:PICK_HISTORY_LIMIT]
+        )
+        cache.set(PICK_HISTORY_KEY, picks, CURRENT_PICK_TTL)
+    return picks
+
+
 def root(request):
     """`/` — the landing page for a visitor, the app itself for a member (ADR-18).
 
@@ -85,6 +124,10 @@ def root(request):
         "landing.html",
         {
             "pick": pick,
+            # The carousel's slides. `pick` above stays the only source for the head of the
+            # document; the template tells the current slide apart by comparing pks, never by
+            # position, so the two caches disagreeing for up to a TTL cannot mislabel a month.
+            "history": _monthly_picks_history(),
             # A crawler will not resolve a relative og:image, and this one has three possible
             # shapes: an absolute R2 URL (ADR-11), an absolute cover_url from the external
             # catalogue, or the relative /media/ path of a local upload in development.

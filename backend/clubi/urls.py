@@ -11,17 +11,20 @@
 from django.conf import settings
 from django.conf.urls.static import static
 from django.contrib import admin
+from django.contrib.auth.views import LoginView
 from django.urls import include, path, re_path
 
 from api.api import api
 from core.views import healthz, root, shell
+from users.forms import LoginForm
 from users.views import SignupView
 
 urlpatterns = [
     path("admin/", admin.site.urls),
     path("api/", api.urls),
-    # Must come before the include() so it wins over auth's own patterns.
+    # Both must come before the include() so they win over auth's own patterns.
     path("accounts/signup/", SignupView.as_view(), name="signup"),
+    path("accounts/login/", LoginView.as_view(authentication_form=LoginForm), name="login"),
     path("accounts/", include("django.contrib.auth.urls")),
     # Before the catch-all for the same reason as the root: the lookahead does not exclude
     # "healthz", so the shell would answer it — a 200 full of HTML, which Render would happily

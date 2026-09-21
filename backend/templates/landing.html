@@ -55,6 +55,13 @@ and the brand is verbal anyway (DESIGN.md 6.3) — so this page is type, paper a
   <link rel="preload" href="{% static 'brand/fonts/Manrope-Regular.woff2' %}" as="font" type="font/woff2" crossorigin>
   <link rel="stylesheet" href="{% static 'css/tokens.css' %}">
   <link rel="stylesheet" href="{% static 'css/landing.css' %}">
+  <link rel="stylesheet" href="{% static 'css/landing-carousel.css' %}">
+  {% comment %}
+    Deferred, not async: it has to see the slides, and it must not block the first paint of a
+    page whose whole point is to render without it. Static, hashed by the manifest storage in
+    production like the stylesheets — never part of the Vite build.
+  {% endcomment %}
+  <script defer src="{% static 'js/landing-carousel.js' %}"></script>
 </head>
 <body>
   <a class="skip-link" href="#conteudo">Pular para o conteúdo</a>
@@ -96,53 +103,133 @@ and the brand is verbal anyway (DESIGN.md 6.3) — so this page is type, paper a
       </div>
     </section>
 
+    {% comment %}
+      The book of the month, and the months before it (experimental/landing-carousel).
+
+      `pick` and `history` are two cached queries over the same table (core/views.py). The head of
+      this document — <title>, description, every og: tag — reads `pick` and nothing else; the
+      slides read `history`. The current slide is found by comparing pks, never by assuming it is
+      history's first element, so the two caches drifting for up to a TTL cannot mislabel a month.
+
+      Without JavaScript the slides are a plain stack, newest first, and the controls stay
+      `hidden`: the page keeps its promise of surviving without a bundle (ADR-18). What
+      landing-carousel.js adds is the horizontal track, the two buttons and the loop — nothing
+      that is not already on the page. `--i` is the slide's position from the newest; the CSS
+      turns it into a reversed `order`, so the DOM keeps the current book first (what a crawler
+      and a screen reader meet first) while the track lays the months out left to right in time.
+    {% endcomment %}
     <section class="section section--invert pick">
       <div class="container">
-        <p class="pick__eyebrow">O livro deste mês</p>
-
-        {% if pick %}
-          <div class="pick__inner">
-            <div class="pick__cover">
-              {% if pick.book.cover_image %}
-                <span class="book-cover">
-                  <img src="{{ pick.book.cover_image }}" alt="Capa de {{ pick.book.title }}">
-                </span>
-              {% else %}
-                {% comment %}
-                  The same typographic placeholder the SPA's BookCover draws, for the same
-                  reason: a graphic element here would spend one of the two the screen is
-                  allowed (DESIGN.md 6.2).
-                {% endcomment %}
-                <span class="book-cover book-cover--blank">
-                  <span class="book-cover__title">{{ pick.book.title }}</span>
-                  <span class="book-cover__author">{{ pick.book.author }}</span>
-                </span>
-              {% endif %}
-            </div>
-
-            <div class="pick__body">
-              <h2 class="pick__title">{{ pick.book.title }}</h2>
-              <p class="pick__author">{{ pick.book.author }}</p>
-              {% comment %}
-                |lower is not cosmetic: Django's pt-BR locale capitalises month names
-                ("Agosto"), while the SPA's Intl.DateTimeFormat does not ("agosto") — and
-                lowercase is the correct Portuguese. Without it the two halves of the same site
-                write the same date two ways. See format.ts, formatDay.
-              {% endcomment %}
-              <p class="pick__period">
-                Leitura de {{ pick.starts_on|date:"j" }} de {{ pick.starts_on|date:"F"|lower }}
-                a {{ pick.ends_on|date:"j" }} de {{ pick.ends_on|date:"F"|lower }}
-              </p>
-              {% if pick.blurb %}
-                <p class="pick__blurb">{{ pick.blurb }}</p>
-              {% endif %}
-            </div>
-          </div>
-        {% else %}
+        {% if not pick and not history %}
+          <p class="pick__eyebrow">O livro deste mês</p>
           <p class="pick__blank">
             A próxima leitura ainda está sendo escolhida. Crie sua conta para acompanhar —
             o livro aparece aqui assim que o clube decidir.
           </p>
+        {% else %}
+          <div class="carousel" data-carousel role="region" aria-label="Livros do mês">
+            {% comment %}
+              The viewport is what the arrows and the two peek fades are positioned against: it
+              is the track's box (same bleed into the gutter), so an arrow sits in the faded zone
+              where the neighbouring month shows through, at the container's edge, and never
+              scrolls with the slides.
+            {% endcomment %}
+            <div class="carousel__viewport">
+              <div class="carousel__track" data-carousel-track>
+                {% if not pick %}
+                  {% comment %}
+                    Between two picks the front slide is still "this month", with the same sentence
+                    the page shows when there is no history at all — the carousel starts at today
+                    whether or not today has a book.
+                  {% endcomment %}
+                  <div class="carousel__slide" data-carousel-slide data-carousel-label="Este mês"
+                       style="--i: 0">
+                    <p class="pick__eyebrow">O livro deste mês</p>
+                    <p class="pick__blank">
+                      A próxima leitura ainda está sendo escolhida. Crie sua conta para acompanhar —
+                      o livro aparece aqui assim que o clube decidir.
+                    </p>
+                  </div>
+                {% endif %}
+  
+                {% for item in history %}
+                  {% comment %}
+                    |lower on the month is not cosmetic: Django's pt-BR locale capitalises month
+                    names ("Agosto"), the SPA's Intl.DateTimeFormat does not ("agosto"), and
+                    lowercase is the correct Portuguese. See format.ts, formatDay.
+                  {% endcomment %}
+                  <div class="carousel__slide" data-carousel-slide
+                       data-carousel-label="{{ item.month|date:"F"|lower }} de {{ item.month|date:"Y" }}"
+                       style="--i: {{ forloop.counter }}">
+                    {% if pick and item.pk == pick.pk %}
+                      <p class="pick__eyebrow">O livro deste mês</p>
+                    {% else %}
+                      <p class="pick__eyebrow pick__eyebrow--past">
+                        {{ item.month|date:"F"|lower }} de {{ item.month|date:"Y" }}
+                      </p>
+                    {% endif %}
+  
+                    <div class="pick__inner">
+                      <div class="pick__cover">
+                        {% if item.book.cover_image %}
+                          <span class="book-cover">
+                            <img src="{{ item.book.cover_image }}" alt="Capa de {{ item.book.title }}"
+                                 loading="{% if forloop.first %}eager{% else %}lazy{% endif %}">
+                          </span>
+                        {% else %}
+                          {% comment %}
+                            The same typographic placeholder the SPA's BookCover draws, for the same
+                            reason: a graphic element here would spend one of the two the screen is
+                            allowed (DESIGN.md 6.2).
+                          {% endcomment %}
+                          <span class="book-cover book-cover--blank">
+                            <span class="book-cover__title">{{ item.book.title }}</span>
+                            <span class="book-cover__author">{{ item.book.author }}</span>
+                          </span>
+                        {% endif %}
+                      </div>
+  
+                      <div class="pick__body">
+                        <h2 class="pick__title">{{ item.book.title }}</h2>
+                        <p class="pick__author">{{ item.book.author }}</p>
+                        <p class="pick__period">
+                          Leitura de {{ item.starts_on|date:"j" }} de {{ item.starts_on|date:"F"|lower }}
+                          a {{ item.ends_on|date:"j" }} de {{ item.ends_on|date:"F"|lower }}
+                        </p>
+                        {% if item.blurb %}
+                          <p class="pick__blurb">{{ item.blurb }}</p>
+                        {% endif %}
+                      </div>
+                    </div>
+                  </div>
+                {% endfor %}
+              </div>
+  
+              {% comment %}
+                Glyph arrows, at the founder's request — a deliberate exception to DESIGN.md 6.3
+                rule 2, registered in E-19. The glyph is aria-hidden and the aria-label carries the
+                phrase, so the control still reads as a word. Both ship `hidden`: the script shows
+                them only once there is more than one month to move between.
+              {% endcomment %}
+              <button type="button" class="carousel__arrow carousel__arrow--prev"
+                      data-carousel-prev aria-label="Livro anterior" hidden>
+                <span aria-hidden="true">‹</span>
+              </button>
+              <button type="button" class="carousel__arrow carousel__arrow--next"
+                      data-carousel-next aria-label="Próximo livro" hidden>
+                <span aria-hidden="true">›</span>
+              </button>
+            </div>
+
+            {% comment %}
+              One dot per month, built by the script from the slides it finds — they are controls
+              that only work with it, so without it there is nothing to render. The live region
+              is visually hidden and announces the month in view to a screen reader.
+            {% endcomment %}
+            <div class="carousel__dots" data-carousel-dots role="group" aria-label="Ir para um mês"
+                 hidden></div>
+            <p class="carousel__sr" data-carousel-status aria-live="polite"></p>
+          </div>
         {% endif %}
       </div>
     </section>
