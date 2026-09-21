@@ -222,6 +222,19 @@ class TestMemberRoot:
         assert "Como funciona" not in content
         assert 'href="/accounts/signup/"' not in content
 
+    def test_leaks_no_template_comment(self, client, member):
+        """The landing's lesson, learned a second time on the other document `/` serves.
+
+        A multi-line `{# … #}` above the robots tag shipped to production as a paragraph at the
+        top of every member's page. The landing had the assertion; the shell did not.
+        """
+        client.force_login(member)
+
+        content = client.get("/").content.decode()
+
+        assert "{#" not in content
+        assert "{%" not in content
+
     def test_sets_the_csrf_cookie(self, client, member):
         """The shell's ensure_csrf_cookie has to survive being reached through the root view:
         without it client.ts has no token and every write of the session is rejected."""

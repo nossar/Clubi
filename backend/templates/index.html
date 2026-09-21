@@ -20,12 +20,14 @@ Two things this file has to get right:
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>clubi</title>
   <meta name="description" content="O clube do livro da ESPM.">
-  {# Nothing here is indexable. Every route this shell serves sits behind the session (ADR-19),
-     the markup arrives empty, and React only mounts once /api/me has answered — so a crawler
-     following a deep link like /u/ana would file a blank page under a member's name. The twin of
-     this tag lives in frontend/index.html, which is the Vite dev entry; this copy is the one a
-     crawler actually meets. templates/landing.html deliberately has no such tag: it exists to be
-     indexed and shared, which is ADR-18 entire. #}
+  {% comment %}
+  Nothing here is indexable. Every route this shell serves sits behind the session (ADR-19),
+  the markup arrives empty, and React only mounts once /api/me has answered — so a crawler
+  following a deep link like /u/ana would file a blank page under a member's name. The twin of
+  this tag lives in frontend/index.html, which is the Vite dev entry; this copy is the one a
+  crawler actually meets. templates/landing.html deliberately has no such tag: it exists to be
+  indexed and shared, which is ADR-18 entire.
+  {% endcomment %}
   <meta name="robots" content="noindex">
   {# Only the two faces that appear above the fold (DESIGN.md 4.2). #}
   <link rel="preload" as="font" type="font/woff2" crossorigin
