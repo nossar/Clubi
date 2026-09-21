@@ -334,7 +334,8 @@ class TestCarousel:
         content = client.get("/").content.decode()
 
         assert slides_of(content) == [written_month(pick.month)]
-        assert "data-carousel-controls hidden" in content
+        assert 'data-carousel-prev aria-label="Livro anterior" hidden' in content
+        assert 'data-carousel-next aria-label="Próximo livro" hidden' in content
         assert pick.book.title in content
         assert "O livro deste mês" in content
 
@@ -430,17 +431,27 @@ class TestCarousel:
         assert 'property="og:image"' not in head
         assert 'property="og:description" content="O clube do livro da ESPM."' in head
 
-    def test_controls_are_words_with_labels(self, client, pick, past_pick):
-        """DESIGN.md 6.3: a control is a word. The arrows are typographic and hidden from the
-        accessibility tree; the label carries the whole phrase."""
+    def test_controls_ship_hidden_with_their_labels(self, client, pick, past_pick):
+        """Arrows, dots and the live region are progressive enhancement: the arrows ship `hidden`
+        with the phrase in aria-label and the glyph out of the accessibility tree, the dots box
+        ships empty (the script builds one dot per slide it finds), and none of it is needed for
+        the months to be readable — the stack is the markup as served."""
         past_pick(1)
         content = client.get("/").content.decode()
 
-        assert 'data-carousel-prev\n                      aria-label="Leitura anterior"' in content
-        assert 'data-carousel-next\n                      aria-label="Próxima leitura"' in content
-        assert '<span aria-hidden="true">←</span>Anterior' in content
-        assert 'Próxima<span aria-hidden="true">→</span>' in content
-        assert 'aria-live="polite"' in content
+        assert 'data-carousel-prev aria-label="Livro anterior" hidden' in content
+        assert 'data-carousel-next aria-label="Próximo livro" hidden' in content
+        assert '<span aria-hidden="true">‹</span>' in content
+        assert '<span aria-hidden="true">›</span>' in content
+        assert re.search(
+            r'data-carousel-dots role="group" aria-label="Ir para um mês"\s+hidden></div>', content
+        )
+        assert 'carousel__dot"' not in content  # no dots in the served markup
+        assert 'data-carousel-status aria-live="polite"></p>' in content
+        # Words, never chevrons, everywhere else on the page (DESIGN.md 6.3): the two glyphs are
+        # the exception E-19 registers, and they must not spread.
+        assert content.count("‹") == 1
+        assert content.count("›") == 1
 
     def test_loads_its_own_static_files(self, client, pick):
         """Served by Django through {% static %}, never through the Vite build."""

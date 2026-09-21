@@ -18,6 +18,7 @@ the seeded picks carry a blurb that names this command, and that is how they are
 import calendar
 import io
 from datetime import date
+from pathlib import Path
 
 from django.conf import settings
 from django.core.cache import cache
@@ -57,6 +58,10 @@ COVER_PALETTES = [
 COVER_SIZE = (400, 600)
 SEED_MARK = "dados de teste de seed_landing_carousel"
 
+# The brand's own faces (DESIGN.md 4.1), read straight from core/static/brand/fonts/: FreeType
+# opens woff2, and Pillow's bundled fallback has no glyphs for ç, í or ã — half these titles.
+FONTS_DIR = Path(__file__).resolve().parents[2] / "static" / "brand" / "fonts"
+
 
 def previous_month(day: date) -> date:
     first = day.replace(day=1)
@@ -69,13 +74,20 @@ def last_day_of_month(day: date) -> date:
     return day.replace(day=calendar.monthrange(day.year, day.month)[1])
 
 
+def _font(name: str, size: int) -> ImageFont.FreeTypeFont:
+    try:
+        return ImageFont.truetype(str(FONTS_DIR / name), size)
+    except OSError:
+        return ImageFont.load_default(size=size)
+
+
 def draw_cover(title: str, author: str, palette: tuple[str, str]) -> bytes:
     """A flat rectangle with the title, in the brand's colours. A mock, and it looks like one."""
     background, ink = palette
     image = Image.new("RGB", COVER_SIZE, background)
     draw = ImageDraw.Draw(image)
-    title_font = ImageFont.load_default(size=36)
-    author_font = ImageFont.load_default(size=22)
+    title_font = _font("ClashDisplay-Semibold.woff2", 36)
+    author_font = _font("Manrope-Regular.woff2", 22)
 
     margin = 32
     width = COVER_SIZE[0] - 2 * margin
