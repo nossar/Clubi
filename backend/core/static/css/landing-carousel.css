@@ -216,6 +216,17 @@
   outline-offset: 2px;
 }
 
+/* Where the finger is the primary input the arrows come off. They exist because a mouse cannot
+   swipe; a thumb can, and it already does — and on a phone the two discs sat on top of the very
+   peek that says "there is more this way". The dots stay as the reachable control (a screen
+   reader lands on them), the peek and the swipe do the rest. By input, not by width: a phone
+   and a tablet lose them, a narrow desktop window keeps them along with the drag. */
+@media (hover: none) and (pointer: coarse) {
+  .carousel--ready .carousel__arrow {
+    display: none;
+  }
+}
+
 /* --------------------------------------------------------------------------- dots */
 
 /* One per month, centred under the stage. Each is a 44px-tall target that is only 24px wide:
