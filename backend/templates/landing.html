@@ -29,8 +29,8 @@ and the brand is verbal anyway (DESIGN.md 6.3) — so this page is type, paper a
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
 
-  <title>clubi — o clube do livro da ESPM</title>
-  <meta name="description" content="{% if pick %}Neste mês o clubi está lendo {{ pick.book.title }}, de {{ pick.book.author }}.{% else %}O clube do livro da ESPM.{% endif %}">
+  <title>clubi — o clube do livro na ESPM</title>
+  <meta name="description" content="{% if pick %}Neste mês o clubi está lendo {{ pick.book.title }}, de {{ pick.book.author }}.{% else %}O clube do livro na ESPM.{% endif %}">
 
   {% comment %}
     The link preview. og:image must be absolute — a crawler will not resolve a relative path —
@@ -40,8 +40,8 @@ and the brand is verbal anyway (DESIGN.md 6.3) — so this page is type, paper a
   <meta property="og:site_name" content="clubi">
   <meta property="og:locale" content="pt_BR">
   <meta property="og:url" content="{{ request.build_absolute_uri }}">
-  <meta property="og:title" content="clubi — o clube do livro da ESPM">
-  <meta property="og:description" content="{% if pick %}Neste mês estamos lendo {{ pick.book.title }}, de {{ pick.book.author }}.{% else %}O clube do livro da ESPM.{% endif %}">
+  <meta property="og:title" content="clubi — o clube do livro na ESPM">
+  <meta property="og:description" content="{% if pick %}Neste mês estamos lendo {{ pick.book.title }}, de {{ pick.book.author }}.{% else %}O clube do livro na ESPM.{% endif %}">
   {% if cover_url %}
     <meta property="og:image" content="{{ cover_url }}">
     <meta property="og:image:alt" content="Capa de {{ pick.book.title }}">

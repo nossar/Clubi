@@ -2,7 +2,6 @@
 name = "clubi-backend"
 version = "0.1.0"
 description = "Backend do Clubi — clube do livro da ESPM"
-readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
     "dj-database-url>=3.1.2",
