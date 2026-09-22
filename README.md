@@ -6,7 +6,7 @@
 </p>
 
 <p align="center">
-  Site do Clubi, o clube de leitura da ESPM: livro do mês, progresso de leitura,
+  Site do Clubi, o clube de leitura na ESPM: livro do mês, progresso de leitura, resenha,
   estante de favoritos e postagens com imagens.
 </p>
 
