@@ -102,6 +102,10 @@ export function MemberSearch() {
   function leaveSuggestions() {
     setOpen(false);
     setDraft("");
+    // The panel holds the field's focus through the press (see the panel's onMouseDown), so once
+    // the member is on their way to a profile the field has to let go — otherwise the phone
+    // keyboard would stay up over the screen they just asked for.
+    inputRef.current?.blur();
   }
 
   /**
@@ -165,7 +169,22 @@ export function MemberSearch() {
       </form>
 
       {suggesting && suggestions ? (
-        <ul className="member-search__panel" aria-label="Sugestões de membros" ref={panelRef}>
+        <ul
+          className="member-search__panel"
+          aria-label="Sugestões de membros"
+          ref={panelRef}
+          // Why the panel refuses the focus a press would hand it: pressing a link blurs the
+          // field, `onBlur` below closes the panel, and the panel is gone before the click that
+          // was going to open the profile ever lands. On a desktop the blur arrives with the
+          // link as `relatedTarget`, so the guard there sees the focus stay inside and nothing
+          // breaks — but a phone does not focus an anchor on tap. `relatedTarget` comes back
+          // null, the guard reads it as focus leaving, and the tap dies with the panel: the one
+          // bug a member reported from a phone and nobody could reproduce on a laptop.
+          // Preventing the default on mousedown keeps the field focused, so no blur fires and
+          // the click has something to land on. It also keeps the on-screen keyboard up through
+          // the tap, which is what stops the viewport from reflowing under the finger.
+          onMouseDown={(event) => event.preventDefault()}
+        >
           {suggestions.map((person) => (
             <li key={person.username}>
               <Link
