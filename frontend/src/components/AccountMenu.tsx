@@ -18,7 +18,7 @@ import { MemberAvatar } from "./MemberAvatar";
  *
  * Three things decide the shape:
  *
- * 1. **A disclosure, not an ARIA menu.** Same choice `MemberSearch` and `FinishedReaders` made:
+ * 1. **A disclosure, not an ARIA menu.** Same choice `MemberSearch` made:
  *    `aria-expanded` + `aria-controls` over a panel that is in the DOM at all times (so the
  *    reference never dangles), rather than `role="menu"` with a virtual cursor. Two items do not
  *    earn the heavier pattern, and Tab already walks a link and a button.

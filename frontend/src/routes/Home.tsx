@@ -64,7 +64,9 @@ export function Home() {
   // Two blocks, and that is the whole screen: the book, and your reading of it. The postagens
   // preview that used to sit under them moved out entirely — they have their own screen, reached
   // from the balão in the header, and the club's own voice does not belong in the middle of the
-  // member's reading. "Quem já terminou" folded into the reading card (see FinishedReaders).
+  // member's reading. "Quem já terminou" left by the same door: it is a screen of its own now
+  // (routes/Readers), reached from a link in the hero, so what other members thought never lands
+  // beside the pages you are logging.
   return (
     <>
       <MonthlyPickHighlight pick={pick} />

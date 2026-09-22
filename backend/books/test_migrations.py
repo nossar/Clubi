@@ -28,9 +28,17 @@ def migrate(target):
 
 @pytest.fixture(autouse=True)
 def leave_the_database_migrated():
-    """A failed assertion here would otherwise strand the schema at 0001 for the whole session."""
+    """A failed assertion here would otherwise strand the schema at 0001 for the whole session.
+
+    It restores the *last* books migration rather than AFTER: this module targets 0002 because
+    that is the one it tests, and stopping there would hand every later test a schema missing
+    whatever 0003 and its successors do.
+    """
     yield
-    migrate(AFTER)
+    executor = MigrationExecutor(connection)
+    executor.loader.build_graph()
+    latest = next(node for node in executor.loader.graph.leaf_nodes("books"))
+    migrate(latest)
 
 
 @pytest.mark.django_db(transaction=True)

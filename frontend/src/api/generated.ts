@@ -193,15 +193,21 @@ export interface paths {
         };
         /**
          * Finished Readers
-         * @description Who has finished this month's book and left a rating.
+         * @description Who has finished this month's book and said something about it.
          *
          *     Both halves of the filter are load-bearing. `finished_at` is what makes this "quem já
-         *     terminou" instead of "quem está lendo", and `rating_halves__isnull=False` is what gives
-         *     every row something to say. **A rating of 0 keeps a member on this list**: zero stars is an
+         *     terminou" instead of "quem está lendo", and the `exclude` is what gives every row something
+         *     to say. That second half used to be `rating_halves__isnull=False` alone, which silently
+         *     made the note the price of admission: a member who wrote a resenha and never touched the
+         *     stars was dropped from the list, and their resenha — the longest thing anyone writes here —
+         *     had nowhere to appear. The condition is now "a note **or** a resenha".
+         *
+         *     `exclude(rating_halves__isnull=True, review="")` is one negated AND, so it drops only the
+         *     rows that have neither. **A rating of 0 keeps a member on this list**: zero stars is an
          *     opinion, and the only way a reading has no rating at all is for nobody to have written one
          *     — the column is `null=True` with no default, so it is born NULL and a 0 only ever arrives
-         *     because someone sent one. Erasing a rating (`MonthlyReadingIn.clear_rating`) takes the row
-         *     back off the list, which is the reversibility DESIGN.md 9 asks for.
+         *     because someone sent one. Erasing both (`clear_rating` plus `review=""`) takes the row back
+         *     off the list, which is the reversibility DESIGN.md 9 asks for.
          *
          *     Ordered by name, not by when they finished or by how far they read: this is companionship,
          *     not a race (DESIGN.md 9). `pick__book` left the select_related along with `percent` — the
@@ -226,7 +232,15 @@ export interface paths {
         };
         /** My Reading */
         get: operations["my_reading"];
-        /** Update Reading */
+        /**
+         * Update Reading
+         * @description Write one member's reading of the current pick — progress, note, resenha, finished.
+         *
+         *     One row, one partial PUT: every field is optional and a field left out is left alone. That
+         *     is why `None` cannot mean "erase" anywhere here, and why the two erasures look different.
+         *     A note erases through `clear_rating`, because `0` is a real rating. A resenha erases through
+         *     `review=""`, because an empty resenha is not one — no twin field is needed.
+         */
         put: operations["update_reading"];
         post?: never;
         delete?: never;
@@ -518,20 +532,29 @@ export interface components {
         };
         /**
          * FinishedReaderOut
-         * @description One member who finished the current pick and rated it.
+         * @description One member who finished the current pick and left a note, a resenha, or both.
          *
          *     It used to be `ReaderOut`, and it used to carry `pages_read`, `percent` and `finished_at`
          *     for a list of everyone with a reading row. The screen behind it now asks a narrower
          *     question — who closed the book, and what did they think — so the fields it stopped
          *     drawing left the contract with it rather than staying on as dead weight.
          *
-         *     `rating` is not optional even though the column is: the route filters rows without one
-         *     out, so a null can never reach this schema.
+         *     `rating` **is** optional, and that is a correction rather than a widening. It used to be
+         *     required because the route filtered every unrated row out — which also meant a member who
+         *     wrote a resenha and left the stars alone was dropped from the list, taking their resenha
+         *     with them. The route now asks for a finished reading with *something to say*, so a row can
+         *     arrive with a review and no note.
+         *
+         *     The review travels inline rather than behind a second request per member: this is one
+         *     month's readers, tens of rows at most, and a fetch-on-expand would be N round trips to
+         *     render a panel that is already only opened on purpose.
          */
         FinishedReaderOut: {
             user: components["schemas"]["UserBrief"];
             /** Rating */
-            rating: number;
+            rating: number | null;
+            /** Review */
+            review: string;
         };
         /** MonthlyReadingOut */
         MonthlyReadingOut: {
@@ -564,6 +587,8 @@ export interface components {
             clear_rating: boolean;
             /** Review */
             review?: string | null;
+            /** Finished */
+            finished?: boolean | null;
         };
         /** Page */
         Page: {

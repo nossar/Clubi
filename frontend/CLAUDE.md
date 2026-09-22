@@ -34,14 +34,16 @@ main.tsx            QueryClient defaults + router mount
 App.tsx             routes; unmatched paths render a pt-BR not-found screen
 api/                client.ts (the only fetch), generated.ts (generated), types.ts
 context/            CurrentUser.tsx — useCurrentUser() is a context read, not a fetch
-routes/             Home, Feed, NewPost, PostDetail, Profile, EditProfile, PickHistory, Search
+routes/             Home, Feed, NewPost, PostDetail, Profile, EditProfile, PickHistory, Readers,
+                    Search
 components/         Header, AccountMenu, Footer, MonthlyPickHighlight, ProgressBar, BookCover,
-                    FinishedReaders, UnreadNotice, PostCard, PostEditForm, PostImages, MemberSearch,
+                    ReadingReview, UnreadNotice, PostCard, PostEditForm, PostImages, MemberSearch,
                     MemberAvatar, BrandElement, FavoritesShelf, StarRating (+ratingScale.ts),
                     BookPicker (+externalBook.ts)
 styles/             tokens.css, base.css
 format.ts           pt-BR Intl helpers + initials()
 posts.ts            canManagePost, useDeletePost, useUpdatePost, postEditPayload
+reading.ts          useWriteReading, ReadingWrite, REVIEW_MAX_LENGTH
 unreadPosts.ts      useUnreadPosts, useMarkPostsSeen
 useDebouncedValue.ts
 ```
@@ -54,8 +56,8 @@ There is no `assets/` dir: brand SVGs live in `backend/core/static/brand/element
 | `/` | `Home` | | `/profile/edit` | `EditProfile` |
 | `/posts` | `Feed` | | `/book-of-the-month` | → `/` (the Home *is* that screen) |
 | `/posts/new` | `NewPost` | | `/book-of-the-month/history` | `PickHistory` |
-| `/posts/:id` | `PostDetail` | | `/search` | `Search` |
-| `/u/:username` | `Profile` | | | |
+| `/posts/:id` | `PostDetail` | | `/book-of-the-month/readers` | `Readers` |
+| `/u/:username` | `Profile` | | `/search` | `Search` |
 
 ## To do X, edit Y
 
@@ -64,6 +66,8 @@ There is no `assets/` dir: brand SVGs live in `backend/core/static/brand/element
 | Add or change an endpoint's fields | backend schema → `make types` → `api/types.ts` |
 | Change how a postagem is edited or deleted | `posts.ts` — `PostCard` and `PostDetail` share it |
 | Change how a postagem shows its photos | `PostImages` — both hosts share it |
+| Change anything written to the member's reading | `reading.ts` — `ProgressBar` and `ReadingReview` share the mutation and its invalidations |
+| Change what other members' notes and resenhas look like | `routes/Readers` — the only consumer of `["readers", "current"]` |
 | Register or search a book | `BookPicker`, the only place the SPA creates a book |
 | Change the rating maths or its captions | `ratingScale.ts` (+ its `.test.ts`) |
 | Change a colour, size or spacing | DESIGN.md first, then `styles/tokens.css` |
@@ -102,6 +106,15 @@ There is no `assets/` dir: brand SVGs live in `backend/core/static/brand/element
 - **Erasing a rating is `{"clear_rating": true}`; `{"rating": null}` means "leave it alone"** (it is
   what makes the `PUT` partial). `0` is a real rating, so "Remover nota" shows for a 0 as much as
   for a 5, and only `ratingCaption(null)` is "sem nota".
+- **Erasing a resenha is `{"review": ""}`** — no `clear_review`, because an empty resenha is
+  unambiguously no resenha. The ceiling is `REVIEW_MAX_LENGTH` in `reading.ts`, a hand-kept twin of
+  `books.models.REVIEW_MAX_LENGTH`: pydantic's `max_length` does not survive into `generated.ts`.
+- **`{"finished": true | false}` declares the reading over, or takes it back.** `ProgressBar` only
+  sends it for a pick with no `book.pages`; where there *is* a page count it sends the last page
+  instead, because that is what keeps the bar and "Leitura terminada." agreeing.
+- **`FinishedReader.rating` is nullable and `FinishedReader.review` is a plain string.** The list is
+  "finished, with a note **or** a resenha", so a row can arrive unrated — `routes/Readers` prints a
+  bare name for those instead of five empty stars, which would read as a zero.
 - **`GET /api/me` is the only response carrying `is_staff`** — its TS type is `Me`, not `User`.
   Hiding the "Postar" shortcuts is courtesy; the backend refuses regardless of what is drawn.
 - **The shelf is replaced whole** — `PUT /api/me/favorites`, positions rebuilt as index + 1.
@@ -137,14 +150,14 @@ Three disciplines Django used to enforce for free (guide 7.5):
 | Data | `queryKey` | Invalidate after |
 |---|---|---|
 | Book of the month | `["monthly-pick", "current"]` | (practically never) |
-| My reading | `["reading", "current"]` | saving progress or a rating |
-| Who already finished | `["readers", "current"]` | saving progress, **and saving or erasing a rating** |
+| My reading | `["reading", "current"]` | any write to the reading — `useWriteReading` |
+| Who already finished | `["readers", "current"]` | any write to the reading — `useWriteReading` |
 | Feed | `["posts", page]` | creating, editing or deleting a postagem |
 | Unread | `["posts", "unread"]` | `POST /posts/seen` — `setQueryData`, the response *is* the count |
 | Single post | `["post", id]` | editing it (`setQueryData`); `removeQueries` on a delete |
 | Book search | `["books", "search", query]` | `POST /api/books` (see below) |
 | External catalogue | `["books", "external", term, limit]` | never — read-only |
-| Profile | `["user", username]` | editing the profile, saving favorites, saving a rating |
+| Profile | `["user", username]` | editing the profile, saving favorites, **any write to the reading** (the history prints its pages, note and resenha) |
 | Current user | `["me"]` | editing the profile, **and saving favorites** (`UserOut` embeds them) |
 | Member search | `["users", "search", term, limit]` | never — read-only |
 | Every pick | `["monthly-picks"]` | never — picks are elected in the Admin (ADR-14) |
@@ -155,8 +168,15 @@ Three disciplines Django used to enforce for free (guide 7.5):
   write may change which page an item belongs on. It covers the unread key harmlessly.
 - **`limit` belongs in a search key because it is in the request** — the header asks for five and
   `/search` for fifty. The term in it is the debounced, `@`-stripped one (`searchTerm()`).
-- **`["readers", "current"]` is lazy** — `FinishedReaders` passes `enabled: open`. The
-  invalidations above still fire while it is disabled; it refetches once when opened.
+- **`["readers", "current"]` is only ever fetched by the `Readers` screen.** It used to be a lazy
+  query inside the reading card (`enabled: open`); now nothing on the Home asks for it at all. The
+  invalidations below still fire from the Home — they cost nothing while no component holds the
+  key, and they are what makes the screen correct when the member walks over to it.
+- **Every write to the reading goes through `useWriteReading`, and it invalidates all three keys.**
+  They were three `useMutation` calls with hand-written invalidation lists, and the lists had
+  drifted — saving progress skipped the profile, whose history prints that very row. One caller
+  per *control*, though: `isPending` and `error` belong to a mutation, so sharing an instance would
+  print a failed rating under the pages field.
 - `main.tsx` sets `staleTime: 30_000`, `refetchOnWindowFocus: false` and **`retry: false`** — this
   API's non-200s are states, not blips, and a 401 is already navigating away.
 
@@ -174,8 +194,19 @@ Three disciplines Django used to enforce for free (guide 7.5):
   word — "Editar", "Excluir", "Postar". Three hand-drawn glyphs carry a *job* each (`×` closes, the
   arrows move); a fourth is a DESIGN.md decision. Do not install Lucide, Feather or Heroicons.
 - **The tone is anti-metric and load-bearing** (DESIGN.md 9): no ranking, no streaks, no "you're
-  behind", no red for low progress. `FinishedReaders` lives closest to the line — alphabetical, no
-  average, no count, folded away until asked. Do not "improve" it with a club average.
+  behind", no red for low progress. `routes/Readers` lives closest to the line — alphabetical, no
+  average, no count, no podium, and reachable only from a named link. Do not "improve" it with a
+  club average, a sort control, or a count beside the hero link: DESIGN.md 9 names all three.
+- **`.progress__rating` is the site's one block-level wine ground** (DESIGN.md 3.4, E-20). The
+  `on-invert` class on it is not decoration — it is the switch every child reads to repaint for
+  wine. A second block asking for its own background is not a CSS change, it is a reopening of 3.4.
+- **The nota and the resenha render only when `finished_at` is set** (DESIGN.md 9, E-21), so a
+  member still reading sees the bar, the page field and the finish button — nothing else. The gate
+  is the *declaration*, never the page count: "Terminei este livro" is available at any progress,
+  which is the only reason this is not the "a gente não te cobra ter lido o livro inteiro" charge
+  that same section forbids. **Moving the gate to `pages_read >= total` turns it into exactly
+  that.** Hiding is not erasing — the row keeps whatever was written, and un-finishing takes the
+  member off "quem já terminou" through the same stamp.
 - `aria-label` and `Intl` output are strings a member reads, so they are pt-BR like the rest.
 - Deliberately absent: no UI kit, no CSS framework, no state library beyond the Query cache, no
   jsdom or Testing Library — pure logic goes in a `.ts` beside the component with a `.test.ts`,

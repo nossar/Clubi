@@ -3,6 +3,7 @@ from datetime import date, datetime
 from ninja import Field, Schema
 
 from api.schemas import BookOut, UserBrief
+from books.models import REVIEW_MAX_LENGTH
 
 
 class BookIn(Schema):
@@ -33,13 +34,23 @@ class MonthlyReadingIn(Schema):
     # number (books.models.MonthlyReading.rating_halves), and that is deliberately invisible
     # here — the contract is stars, not storage.
     rating: float | None = Field(default=None, ge=0, le=5, multiple_of=0.5)
-    # Zero is a rating — zero stars — and no longer doubles as "no rating", because the
-    # "quem já terminou" list is filtered on `rating_halves` being NOT NULL and a member who
-    # meant to erase their note would otherwise stay on it. A null `rating` cannot mean "erase"
+    # Zero is a rating — zero stars — and no longer doubles as "no rating", because a NOT NULL
+    # `rating_halves` is one of the two things that puts a member on the "quem já terminou" list
+    # and someone who meant to erase their note would otherwise stay on it. A null `rating` cannot mean "erase"
     # either: this is a partial PUT, so a request carrying only `pages_read` arrives with
     # `rating=None` and must leave the note alone. Hence a field of its own.
     clear_rating: bool = False
-    review: str | None = None
+    # Bounded here and nowhere else that matters: the column is a TextField, so without this a
+    # textarea the member can paste into is an unbounded write. An empty string is a real value
+    # and it is the erasure — unlike the rating, whose 0 had to stop meaning "sem nota", "" is
+    # unambiguously "no review", so no `clear_review` twin is needed.
+    review: str | None = Field(default=None, max_length=REVIEW_MAX_LENGTH)
+    # Finishing is a declaration, not an inference. Reaching the last page still marks the
+    # reading finished, but `Book.pages` is nullable — for a pick without a page count that
+    # inference can never fire, and before this field such a member could never finish, never
+    # appear on "quem já terminou", and never be offered the review. `False` un-finishes, which
+    # is the reversibility DESIGN.md 9 asks of everything on this row.
+    finished: bool | None = None
 
 
 class MonthlyReadingOut(Schema):
@@ -67,19 +78,27 @@ class MonthlyPickOut(Schema):
 # the UserBrief projection rather than importing users.schemas — that import is
 # what would make books and users circular (ADR-15).
 class FinishedReaderOut(Schema):
-    """One member who finished the current pick and rated it.
+    """One member who finished the current pick and left a note, a resenha, or both.
 
     It used to be `ReaderOut`, and it used to carry `pages_read`, `percent` and `finished_at`
     for a list of everyone with a reading row. The screen behind it now asks a narrower
     question — who closed the book, and what did they think — so the fields it stopped
     drawing left the contract with it rather than staying on as dead weight.
 
-    `rating` is not optional even though the column is: the route filters rows without one
-    out, so a null can never reach this schema.
+    `rating` **is** optional, and that is a correction rather than a widening. It used to be
+    required because the route filtered every unrated row out — which also meant a member who
+    wrote a resenha and left the stars alone was dropped from the list, taking their resenha
+    with them. The route now asks for a finished reading with *something to say*, so a row can
+    arrive with a review and no note.
+
+    The review travels inline rather than behind a second request per member: this is one
+    month's readers, tens of rows at most, and a fetch-on-expand would be N round trips to
+    render a panel that is already only opened on purpose.
     """
 
     user: UserBrief
-    rating: float
+    rating: float | None
+    review: str
 
 
 # Read by users.schemas.UserProfileOut — the one cross-app schema import (ADR-15).

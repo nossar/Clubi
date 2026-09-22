@@ -48,8 +48,23 @@ export function MonthlyPickHighlight({ pick }: { pick: MonthlyPick }) {
               {book.pages ? ` · ${book.pages} páginas` : ""}
             </p>
 
-            {/* The club's memory is one link away from its present (Fase 7). */}
+            {/* The two ways out of this month, both yellow on the wine ground (3.2 measures
+                that pair at 6.84 and it is the only background yellow is allowed on).
+
+                "Quem já terminou" comes first because it is about *this* book; the history is
+                the club's memory, which is elsewhere by definition. It used to be a disclosure
+                folded into the reading card below, and moving it up here is what took the
+                club's longest writing off the screen where each member logs their own pages —
+                without making it something anyone is shown unasked (routes/Readers). No count
+                beside it, deliberately: a number here would be the scoreboard DESIGN.md 9
+                refuses, and it would cost a request the hero does not otherwise make. */}
             <p className="pick__more">
+              <Link to="/book-of-the-month/readers">Ver quem já terminou</Link>
+              {/* A separator, not a control and not a bullet anyone should hear: two underlined
+                  phrases side by side read as one long link at a glance, and the gap alone was
+                  not saying where the first one ends. aria-hidden keeps it out of the sentence a
+                  screen reader builds — the two links are already two stops. */}
+              <span className="pick__more-dot" aria-hidden="true" />
               <Link to="/book-of-the-month/history">Ver as escolhas anteriores</Link>
             </p>
           </div>

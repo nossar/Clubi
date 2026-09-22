@@ -1,7 +1,7 @@
 import pytest
 from django.utils import timezone
 
-from books.models import Book, MonthlyReading
+from books.models import REVIEW_MAX_LENGTH, Book, MonthlyReading
 
 pytestmark = pytest.mark.django_db
 
@@ -141,6 +141,7 @@ class TestMonthlyPicks:
             {
                 "user": {"username": "ana", "full_name": "Ana Ribeiro", "photo": None},
                 "rating": 4.0,
+                "review": "",
             }
         ]
 
@@ -217,18 +218,20 @@ class TestRating:
 class TestWhoFinished:
     """`GET /api/monthly-picks/current/readers` — who closed the book *and* said what they thought.
 
-    The filter is two conditions and both matter: `finished_at` is "terminou", and a non-NULL
-    `rating_halves` is "avaliou". A rating of **0 is a rating** — the column is born NULL and a
-    zero only ever gets there because a member sent one.
+    The filter is two conditions and both matter: `finished_at` is "terminou", and "said
+    something" is a note **or** a resenha. A rating of **0 is a rating** — the column is born
+    NULL and a zero only ever gets there because a member sent one — and a resenha with no note
+    is equally something to say, which is the half this list used to drop.
     """
 
-    def finished(self, user, pick, rating_halves):
+    def finished(self, user, pick, rating_halves, review=""):
         return MonthlyReading.objects.create(
             user=user,
             pick=pick,
             pages_read=600,
             finished_at=timezone.now(),
             rating_halves=rating_halves,
+            review=review,
         )
 
     def readers(self, client):
@@ -239,10 +242,27 @@ class TestWhoFinished:
 
         assert self.readers(auth) == []
 
-    def test_finishing_without_a_rating_stays_out(self, auth, member, pick):
+    def test_finishing_with_nothing_to_say_stays_out(self, auth, member, pick):
         self.finished(member, pick, rating_halves=None)
 
         assert self.readers(auth) == []
+
+    def test_a_resenha_without_a_rating_gets_in(self, auth, member, pick):
+        """The half the old filter dropped: the longest thing anyone writes, made invisible."""
+        self.finished(member, pick, rating_halves=None, review="Demorei, mas valeu.")
+
+        assert self.readers(auth) == [
+            {
+                "user": {"username": "ana", "full_name": "Ana Ribeiro", "photo": None},
+                "rating": None,
+                "review": "Demorei, mas valeu.",
+            }
+        ]
+
+    def test_a_rating_without_a_resenha_still_gets_in(self, auth, member, pick):
+        self.finished(member, pick, rating_halves=8)
+
+        assert [(r["rating"], r["review"]) for r in self.readers(auth)] == [(4.0, "")]
 
     def test_a_rating_of_zero_is_a_rating_and_gets_in(self, auth, member, pick):
         self.finished(member, pick, rating_halves=0)
@@ -251,6 +271,7 @@ class TestWhoFinished:
             {
                 "user": {"username": "ana", "full_name": "Ana Ribeiro", "photo": None},
                 "rating": 0.0,
+                "review": "",
             }
         ]
 
@@ -321,3 +342,110 @@ class TestClearingARating:
         self.put(auth, {"clear_rating": True})
 
         assert auth.get("/api/monthly-picks/current/readers").json() == []
+
+    def test_a_resenha_keeps_a_member_on_the_list_after_the_note_is_erased(self, auth, pick):
+        self.put(auth, {"pages_read": 600, "rating": 4, "review": "Fiquei pensando dias."})
+
+        self.put(auth, {"clear_rating": True})
+
+        assert [r["review"] for r in auth.get("/api/monthly-picks/current/readers").json()] == [
+            "Fiquei pensando dias."
+        ]
+
+
+class TestWritingAResenha:
+    """The resenha is a field of the same row, written by the same partial PUT."""
+
+    def put(self, auth, payload):
+        return auth.put(
+            "/api/monthly-picks/current/reading", payload, content_type="application/json"
+        )
+
+    def test_it_is_written_and_read_back(self, auth, pick):
+        body = self.put(auth, {"review": "Comecei sem esperar nada."}).json()
+
+        assert body["review"] == "Comecei sem esperar nada."
+
+    def test_a_request_that_only_moves_pages_leaves_the_resenha_alone(self, auth, pick):
+        self.put(auth, {"review": "Vale."})
+
+        assert self.put(auth, {"pages_read": 10}).json()["review"] == "Vale."
+
+    def test_an_empty_string_erases_it(self, auth, member, pick):
+        """No `clear_review` twin: unlike a 0, an empty resenha is unambiguously no resenha."""
+        self.put(auth, {"review": "Escrevi sem querer."})
+
+        assert self.put(auth, {"review": ""}).json()["review"] == ""
+        assert MonthlyReading.objects.get(user=member, pick=pick).review == ""
+
+    def test_erasing_it_takes_a_member_off_the_finished_list(self, auth, pick):
+        self.put(auth, {"pages_read": 600, "review": "Por ora."})
+        assert len(auth.get("/api/monthly-picks/current/readers").json()) == 1
+
+        self.put(auth, {"review": ""})
+
+        assert auth.get("/api/monthly-picks/current/readers").json() == []
+
+    def test_a_resenha_past_the_ceiling_is_refused(self, auth, member, pick):
+        response = self.put(auth, {"review": "a" * (REVIEW_MAX_LENGTH + 1)})
+
+        assert response.status_code == 422
+        assert not MonthlyReading.objects.filter(user=member, pick=pick).exclude(review="").exists()
+
+    def test_a_resenha_at_the_ceiling_is_accepted(self, auth, pick):
+        assert self.put(auth, {"review": "a" * REVIEW_MAX_LENGTH}).status_code == 200
+
+
+class TestDeclaringTheReadingFinished:
+    """`finished` is the declaration the page count could only ever infer.
+
+    It is what makes the resenha reachable at all for a pick whose `Book.pages` is NULL — the
+    inference from `pages_read` cannot fire there, so before this field such a reading could
+    never be finished by any request the SPA is able to send.
+    """
+
+    def put(self, auth, payload):
+        return auth.put(
+            "/api/monthly-picks/current/reading", payload, content_type="application/json"
+        )
+
+    def test_it_finishes_a_book_with_no_page_count(self, auth, book, pick):
+        book.pages = None
+        book.save()
+
+        assert self.put(auth, {"finished": True}).json()["finished_at"] is not None
+
+    def test_false_un_finishes(self, auth, member, pick):
+        self.put(auth, {"pages_read": 600})
+
+        assert self.put(auth, {"finished": False}).json()["finished_at"] is None
+        assert MonthlyReading.objects.get(user=member, pick=pick).finished_at is None
+
+    def test_un_finishing_leaves_the_pages_where_they_are(self, auth, pick):
+        self.put(auth, {"pages_read": 600})
+
+        assert self.put(auth, {"finished": False}).json()["pages_read"] == 600
+
+    def test_a_second_true_does_not_move_the_stamp(self, auth, pick):
+        first = self.put(auth, {"finished": True}).json()["finished_at"]
+
+        assert self.put(auth, {"finished": True}).json()["finished_at"] == first
+
+    def test_it_is_applied_after_the_page_count_so_the_declaration_wins(self, auth, pick):
+        body = self.put(auth, {"pages_read": 600, "finished": False}).json()
+
+        assert body["pages_read"] == 600
+        assert body["finished_at"] is None
+
+    def test_un_finishing_takes_a_member_off_the_list(self, auth, pick):
+        self.put(auth, {"pages_read": 600, "rating": 4})
+        assert len(auth.get("/api/monthly-picks/current/readers").json()) == 1
+
+        self.put(auth, {"finished": False})
+
+        assert auth.get("/api/monthly-picks/current/readers").json() == []
+
+    def test_omitting_it_leaves_the_stamp_alone(self, auth, pick):
+        self.put(auth, {"pages_read": 600})
+
+        assert self.put(auth, {"pages_read": 300}).json()["finished_at"] is not None

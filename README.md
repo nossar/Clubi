@@ -35,8 +35,8 @@ Screenshots: ainda não capturadas. Caminhos sugeridos:
 Para o membro do clube:
 
 - Ver o livro do mês na página inicial, com capa, autor e o texto do clube sobre a escolha.
-- Marcar o progresso da leitura, dar nota (com meia estrela) e escrever a resenha.
-- Ver quem já terminou a leitura do mês e percorrer as escolhas anteriores.
+- Marcar o progresso da leitura e, depois de marcar o livro como terminado, dar nota (com meia estrela) e escrever a resenha — as duas opcionais e editáveis a qualquer momento.
+- Ver quem já terminou a leitura do mês, com a nota e a resenha de cada um, e percorrer as escolhas anteriores.
 - Ler as postagens do clube, com imagens, e saber quantas chegaram desde a última visita.
 - Montar a estante: quatro livros favoritos, buscados no acervo do clube ou na Open Library.
 - Ter um perfil com foto, uma frase e o histórico de todas as leituras; procurar outros membros pelo nome.

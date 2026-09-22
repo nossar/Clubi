@@ -117,15 +117,21 @@ def current_pick(request):
 
 @picks_router.get("/current/readers", response=list[FinishedReaderOut])
 def finished_readers(request):
-    """Who has finished this month's book and left a rating.
+    """Who has finished this month's book and said something about it.
 
     Both halves of the filter are load-bearing. `finished_at` is what makes this "quem já
-    terminou" instead of "quem está lendo", and `rating_halves__isnull=False` is what gives
-    every row something to say. **A rating of 0 keeps a member on this list**: zero stars is an
+    terminou" instead of "quem está lendo", and the `exclude` is what gives every row something
+    to say. That second half used to be `rating_halves__isnull=False` alone, which silently
+    made the note the price of admission: a member who wrote a resenha and never touched the
+    stars was dropped from the list, and their resenha — the longest thing anyone writes here —
+    had nowhere to appear. The condition is now "a note **or** a resenha".
+
+    `exclude(rating_halves__isnull=True, review="")` is one negated AND, so it drops only the
+    rows that have neither. **A rating of 0 keeps a member on this list**: zero stars is an
     opinion, and the only way a reading has no rating at all is for nobody to have written one
     — the column is `null=True` with no default, so it is born NULL and a 0 only ever arrives
-    because someone sent one. Erasing a rating (`MonthlyReadingIn.clear_rating`) takes the row
-    back off the list, which is the reversibility DESIGN.md 9 asks for.
+    because someone sent one. Erasing both (`clear_rating` plus `review=""`) takes the row back
+    off the list, which is the reversibility DESIGN.md 9 asks for.
 
     Ordered by name, not by when they finished or by how far they read: this is companionship,
     not a race (DESIGN.md 9). `pick__book` left the select_related along with `percent` — the
@@ -134,7 +140,8 @@ def finished_readers(request):
     """
     return (
         _current_pick()
-        .readings.filter(finished_at__isnull=False, rating_halves__isnull=False)
+        .readings.filter(finished_at__isnull=False)
+        .exclude(rating_halves__isnull=True, review="")
         .select_related("user")
         .order_by("user__full_name")
     )
@@ -148,6 +155,13 @@ def my_reading(request):
 
 @picks_router.put("/current/reading", response=MonthlyReadingOut)
 def update_reading(request, payload: MonthlyReadingIn):
+    """Write one member's reading of the current pick — progress, note, resenha, finished.
+
+    One row, one partial PUT: every field is optional and a field left out is left alone. That
+    is why `None` cannot mean "erase" anywhere here, and why the two erasures look different.
+    A note erases through `clear_rating`, because `0` is a real rating. A resenha erases through
+    `review=""`, because an empty resenha is not one — no twin field is needed.
+    """
     pick = _current_pick()
     reading, _ = MonthlyReading.objects.get_or_create(user=request.user, pick=pick)
 
@@ -158,6 +172,17 @@ def update_reading(request, payload: MonthlyReadingIn):
         reading.pages_read = payload.pages_read
         if total and payload.pages_read >= total and not reading.finished_at:
             reading.finished_at = timezone.now()
+
+    # Applied after the page count so a declaration beats the inference drawn from it, and
+    # written last-wins rather than one-way: `false` clears the stamp. Un-finishing leaves
+    # `pages_read` where it is on purpose — a member correcting a mis-tap has not un-read the
+    # book — which does mean that re-sending the last page finishes the reading again. That is
+    # the same declaration arriving a second time, so it is the right answer and not a leak.
+    if payload.finished is not None:
+        if payload.finished:
+            reading.finished_at = reading.finished_at or timezone.now()
+        else:
+            reading.finished_at = None
 
     # Erasing and grading are two different requests, not one field doing both jobs — see the
     # comment on MonthlyReadingIn.clear_rating for why 0 stopped meaning "sem nota".

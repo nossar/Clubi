@@ -293,7 +293,7 @@ A pergunta que decide isso não é estética. É onde ficam os *schemas* quando 
 - **Projeções** (`BookOut`, `UserBrief`) — representam uma entidade, não dependem de nenhum outro schema e existem para serem embutidas. Por construção não têm arestas de saída.
 - **Formatos de resposta** (`PostOut`, `ReaderOut`, `UserProfileOut`) — representam *o que um endpoint devolve*. Moram com a rota que os devolve, nunca com a entidade que eles citam.
 
-O `ReaderOut` é o exemplo que ensina a regra: ele não é um schema de "books", é o retorno de `GET /api/monthly-picks/current/readers`. Arquivá-lo sob a entidade errada é o que cria ciclo; arquivá-lo sob a rota resolve.
+O `FinishedReaderOut` (nascido `ReaderOut`, renomeado quando a rota deixou de responder "quem está lendo") é o exemplo que ensina a regra: ele não é um schema de "books", é o retorno de `GET /api/monthly-picks/current/readers`. Arquivá-lo sob a entidade errada é o que cria ciclo; arquivá-lo sob a rota resolve.
 
 **Alternativas consideradas.**
 

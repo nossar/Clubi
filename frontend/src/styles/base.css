@@ -151,6 +151,30 @@ a {
   color: var(--clubi-ink-muted-on-invert);
 }
 
+/* A quiet control on a wine ground. Without this it keeps --clubi-ink-brand, which *is* wine —
+   the label would vanish into its own background. Yellow is what 3.2 measures at 6.84 against
+   wine and the colour .on-invert a already gives every link there, so a quiet button and a link
+   read as the same kind of thing on both grounds. The hover tint follows: --clubi-tint-wine is
+   mixed for cream, and on wine the tinted surface is --clubi-line-invert. */
+.on-invert .button--quiet {
+  color: var(--clubi-highlight);
+}
+
+.on-invert .button--quiet:hover,
+.on-invert .button--quiet:active {
+  background: var(--clubi-line-invert);
+}
+
+/* --clubi-danger and --clubi-success are mixed against cream and both sit too close to wine to
+   be read on it. They drop to the plain on-invert ink rather than being swapped for another
+   colour, which costs nothing: 3.3 and 10.3 already forbid colour from being the only signal,
+   so every notice opens with a bold word saying what happened, and the rule down its left edge
+   is `currentColor` and follows. */
+.on-invert .notice--error,
+.on-invert .notice--ok {
+  color: var(--clubi-ink-on-invert);
+}
+
 /* ---------------------------------------------------------------- layout */
 /* The gutter is proportional, so past --container-max it kept *subtracting* from a box that had
    stopped growing: the content settled at 928px on a 1920 screen and 864px on a 2560 one — the
@@ -720,8 +744,55 @@ a {
 }
 
 .pick__more {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2) var(--space-4);
   margin-top: var(--space-4);
   font-size: var(--text-sm);
+}
+
+/* The dot between the two links: --space-1 across, the smallest step on the 4px grid (E-10), in
+   the yellow the links themselves already use on this ground. align-items: center on the row is
+   what puts it on the middle of their line rather than on the baseline, where a 4px circle would
+   have read as a full stop. It is decoration and it says so — see the aria-hidden span. */
+.pick__more-dot {
+  flex: none;
+  width: var(--space-1);
+  height: var(--space-1);
+  border-radius: var(--radius-pill);
+  background: var(--clubi-highlight);
+}
+
+/* A dot separates two things *on one line*, and below 480px the two phrases stop sharing one:
+   "Ver as escolhas anteriores" wraps and the dot is left dangling at the end of the first row,
+   separating a link from nothing. So on the phone the links stack and the dot leaves with the
+   line it belonged to — the stacking is the separation there. The breakpoint is the 479px this
+   file already uses, not the width where these particular strings happen to stop fitting: a
+   threshold tuned to today's copy would break the day the copy changes. */
+@media (max-width: 479px) {
+  .pick__more {
+    display: grid;
+    justify-items: start;
+    /* No gap: the 44px boxes below are the spacing, and a gap on top of them would push the
+       two phrases further apart than they are related. */
+    gap: 0;
+  }
+
+  /* 10.4, and it is this layout that made it matter: on a wide screen these are one link and
+     then another, far apart on a line; stacked on a phone they are two 22px strips a few
+     pixels from each other, which is the arrangement a thumb gets wrong. The box grows, the
+     text does not move — sized to content by the grid's justify-items, so the target is the
+     phrase and not the whole column. */
+  .pick__more a {
+    display: flex;
+    align-items: center;
+    min-height: 44px;
+  }
+
+  .pick__more-dot {
+    display: none;
+  }
 }
 
 .pick__dates {
@@ -841,12 +912,42 @@ a {
   gap: var(--space-3);
 }
 
+/* "Terminei este livro" and its way back. No rule above it: it belongs to the pages it sits
+   under — the same question, declared instead of counted — where the rating and the resenha below
+   are separate subjects and each get one. Baseline alignment, because the sentence and the quiet
+   control are one line and would otherwise sit on different ones. */
+.progress__finish {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--space-3);
+  margin-top: var(--space-5);
+}
+
+.progress__finished {
+  font-size: var(--text-sm);
+}
+
 /* The rating hangs off the same reading row as the progress, so it lives inside .progress —
-   separated by a rule, never presented as a step you have to complete (DESIGN.md 9). */
+   never presented as a step you have to complete (DESIGN.md 9).
+
+   It is the site's one **block-level** wine ground, and DESIGN.md 3.4 is amended to name it
+   (E-16). The alternation was written as a page rhythm — whole sections, cream then wine — with
+   an explicit ban on zebra-striping the items of a list. This is neither: it is one block inside
+   one cream section, and what it buys is the thing hairlines could not. From the progress bar
+   down, the card is four text blocks stacked on one ground, and a rule between two of them
+   separates without resting. Wine here also pays for itself twice over, because the invert is
+   already what turns the star fill yellow (.on-invert .star-rating__fill) — the brand's own
+   pairing, not a colour invented for this panel.
+
+   --radius-lg rather than --radius-md: 8.2 gives the large radius to the things that read as
+   pasted-in objects, which is what a coloured panel inside a plain column is. */
 .progress__rating {
   margin-top: var(--space-6);
-  padding-top: var(--space-5);
-  border-top: 1px solid var(--clubi-line);
+  padding: var(--space-5);
+  border-radius: var(--radius-lg);
+  background: var(--clubi-bg-invert);
+  color: var(--clubi-ink-on-invert);
 }
 
 /* ---------------------------------------------------------------- notices
@@ -923,35 +1024,123 @@ a {
   background: var(--clubi-tint-wine);
 }
 
-/* ---------------------------------------------------------------- who finished
-   A disclosure inside the reading card, not a section of the page: it opens on a word, and the
-   panel is recessed (--clubi-surface-sunken, which 3.3 gives to sunken areas) so an open list
-   reads as part of this card instead of a new block stacked under it.
-
-   Still not a scoreboard (DESIGN.md 9): alphabetical, no average, no count, no podium. */
-.finished {
+/* ---------------------------------------------------------------- reading review
+   The member's own resenha, a third block inside the reading card with the same rule above it
+   the rating carries: one row, three subjects, none of them a step in a sequence (DESIGN.md 9).
+   justify-items: start keeps the quiet controls at their own width instead of stretching them
+   across the column; the form takes the width back, because a textarea at label width is a box
+   nobody wants to write in. */
+.reading-review {
+  display: grid;
+  justify-items: start;
+  gap: var(--space-3);
   margin-top: var(--space-6);
-  padding-top: var(--space-5);
-  border-top: 1px solid var(--clubi-line);
 }
 
-/* The panel's own scroll is what keeps the promise the disclosure makes: however many people
-   finish, the page below it never moves further away (E-13). */
-.finished__panel {
-  margin-top: var(--space-4);
-  padding: var(--space-4);
-  border-radius: var(--radius-md);
-  background: var(--clubi-surface-sunken);
-  max-height: 18rem;
-  overflow-y: auto;
-}
-
-.finished__list {
+.reading-review__form {
   display: grid;
   gap: var(--space-2);
+  width: 100%;
+  max-width: var(--measure);
+}
+
+/* pre-wrap, like every other free-text field the site prints back: the paragraph breaks someone
+   typed are part of what they wrote. */
+.reading-review__text {
+  max-width: var(--measure);
+  white-space: pre-wrap;
+}
+
+.reading-review__invite {
+  font-size: var(--text-sm);
+}
+
+.reading-review__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+}
+
+/* The same sunken panel the feed confirms a deletion in, for the same reason: an irreversible
+   action must not look like the quiet link that opened it. */
+.reading-review__confirm {
+  display: grid;
+  gap: var(--space-3);
+  width: 100%;
+  max-width: var(--measure);
+  padding: var(--space-4);
+  border: 1px solid var(--clubi-line-strong);
+  border-radius: var(--radius-md);
+  background: var(--clubi-surface-sunken);
+}
+
+.reading-review__confirm-text {
+  font-size: var(--text-sm);
+}
+
+/* ---------------------------------------------------------------- who finished
+   A screen of its own now (/book-of-the-month/readers), reached from a named link in the hero.
+   It used to be a disclosure with a scrolling 18rem panel inside the reading card, and that
+   ceiling was what broke first: once a row carried a resenha it showed two people and a half.
+
+   Still not a scoreboard (DESIGN.md 9): alphabetical, no average, no count, no podium — and no
+   entry point anywhere that the member did not click. Each reader is a card rather than a line
+   on the page ground, which is the same answer the feed gives to a column of long text: the
+   paper edge is what keeps one person's words from running into the next person's. */
+.readers__intro {
+  margin-top: var(--space-4);
+  max-width: var(--measure);
+  font-size: var(--text-sm);
+}
+
+.readers {
+  display: grid;
+  gap: var(--space-4);
+  max-width: var(--measure);
   margin: 0;
   padding: 0;
   list-style: none;
+}
+
+.readers__item {
+  display: grid;
+  justify-items: start;
+  gap: var(--space-3);
+  padding: var(--space-5);
+  border: 1px solid var(--clubi-line);
+  border-radius: var(--radius-md);
+  background: var(--clubi-surface);
+  box-shadow: var(--shadow-paper);
+}
+
+/* A member who wrote a resenha and left the stars alone. Same type as the caption a star row
+   prints its name in (--text-sm, muted), so a card with stars and a card without still read as
+   one list — see routes/Readers for why the empty stars are not drawn. */
+.readers__name {
+  font-size: var(--text-sm);
+  color: var(--clubi-ink-muted);
+}
+
+.readers__review {
+  max-width: var(--measure);
+  white-space: pre-wrap;
+}
+
+/* Three lines, then "Ler tudo" — and the button only renders when the text actually outruns
+   them, which routes/Readers measures (a character count cannot know where the words break).
+   -webkit-box is still the only clamp every target browser implements; `line-clamp` is written
+   beside it so the rule stops needing the prefix on its own. */
+.readers__review.is-clamped {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+  line-clamp: 3;
+  overflow: hidden;
+}
+
+.readers__back {
+  margin-top: var(--space-6);
+  font-size: var(--text-sm);
 }
 
 /* ---------------------------------------------------------------- avatar
@@ -1596,6 +1785,20 @@ a {
 
 .on-invert .star-rating__fill {
   color: var(--clubi-highlight);
+}
+
+/* The empty star and the caption, repainted for the wine ground of .progress__rating. Both keep
+   --clubi-line / --clubi-ink-muted on cream, and both are mixed against cream: the hairline
+   would read as a *lighter* mark than the yellow beside it, and the muted ink would be
+   unreadable. --clubi-ink-muted-on-invert is the token 3.3 gives to exactly this — quiet text
+   and quiet marks on wine. Not --clubi-line-invert, which is a hairline and would leave an
+   unrated row with no visible slots at all. */
+.on-invert .star-rating__star {
+  color: var(--clubi-ink-muted-on-invert);
+}
+
+.on-invert .star-rating__caption {
+  color: var(--clubi-ink-muted-on-invert);
 }
 
 /* The preview — where the pointer is, not what the member chose. Fading it apart from the

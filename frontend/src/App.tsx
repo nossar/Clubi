@@ -11,6 +11,7 @@ import { NewPost } from "./routes/NewPost";
 import { PickHistory } from "./routes/PickHistory";
 import { PostDetail } from "./routes/PostDetail";
 import { Profile } from "./routes/Profile";
+import { Readers } from "./routes/Readers";
 import { Search } from "./routes/Search";
 
 /* Django's catch-all sends every path it does not own to this shell, so React Router has to
@@ -54,6 +55,10 @@ export function App() {
               a 404). See frontend/CLAUDE.md for the full decision. */}
           <Route path="/book-of-the-month" element={<Navigate to="/" replace />} />
           <Route path="/book-of-the-month/history" element={<PickHistory />} />
+          {/* The list that used to be a disclosure inside the reading card. It is a screen now,
+              but still one nobody reaches without asking — the only way in is the named link in
+              the hero (see routes/Readers for why that distinction is the whole argument). */}
+          <Route path="/book-of-the-month/readers" element={<Readers />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </main>

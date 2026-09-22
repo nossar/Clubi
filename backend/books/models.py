@@ -7,6 +7,10 @@ from django.utils import timezone
 MAX_RATING = 5
 # One unit of MonthlyReading.rating_halves is half a star (ADR-06 keeps the column an integer).
 HALVES_PER_STAR = 2
+# A ceiling on MonthlyReading.review. The column is a TextField and does not need one; the
+# *field* does, now that the SPA offers a textarea for it instead of leaving it to the Admin.
+# Declared here so the schema and the Admin's form enforce the same number.
+REVIEW_MAX_LENGTH = 4000
 
 
 class Book(models.Model):
@@ -93,7 +97,14 @@ class MonthlyReading(models.Model):
         validators=[MinValueValidator(0), MaxValueValidator(HALVES_PER_STAR * MAX_RATING)],
         help_text="Half-stars: 7 means 3.5 stars. Use MonthlyReading.rating to read or write it.",
     )
-    review = models.TextField(blank=True)
+    # max_length on a TextField is a form-level limit, not a column one — which is exactly
+    # what is wanted: the Admin's textarea gets the same ceiling MonthlyReadingIn enforces for
+    # the SPA, and no migration of the stored data is implied.
+    review = models.TextField(
+        blank=True,
+        max_length=REVIEW_MAX_LENGTH,
+        help_text="O que a pessoa achou do livro. Todo o clubi lê.",
+    )
     finished_at = models.DateTimeField(null=True, blank=True)
     updated_at = models.DateTimeField(auto_now=True)
 
