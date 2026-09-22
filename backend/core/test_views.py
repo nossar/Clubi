@@ -429,7 +429,7 @@ class TestCarousel:
         head = client.get("/").content.decode().split("<body", 1)[0]
 
         assert 'property="og:image"' not in head
-        assert 'property="og:description" content="O clube do livro da ESPM."' in head
+        assert 'property="og:description" content="O clube do livro na ESPM."' in head
 
     def test_controls_ship_hidden_with_their_labels(self, client, pick, past_pick):
         """Arrows, dots and the live region are progressive enhancement: the arrows ship `hidden`
