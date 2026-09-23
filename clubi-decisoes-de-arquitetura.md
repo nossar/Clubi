@@ -2,35 +2,41 @@
 
 Registro das decisões estruturais do projeto, com o contexto que as motivou, as alternativas descartadas e as consequências assumidas. O objetivo é que daqui a seis meses — ou quando entrar alguém novo — ninguém precise reconstruir o raciocínio do zero.
 
-Formato: cada decisão traz **contexto**, **decisão**, **alternativas consideradas**, **consequências** (boas e ruins) e **quando revisar**.
+**Este é um documento vivo, não um log.** Cada ADR descreve a decisão **vigente**. Quando um ADR posterior corrige um anterior, a correção entra no texto do anterior e a trajetória vira uma linha de **Histórico**. Um ADR lido isoladamente não deve informar nada que outro desminta.
+
+Formato: **Contexto**, **Decisão**, **Alternativas consideradas**, **Consequências** (boas e ruins), **Quando revisar** e, quando houver, **Histórico**.
 
 **Índice**
 
-| | Decisão |
-|---|---|
-| ADR-01 | Django como plataforma |
-| ADR-02 | Django Ninja como camada de API |
-| ADR-03 | SPA separada, mesmo repositório |
-| ADR-04 | Mesma origem, sessão e CSRF |
-| ADR-05 | Autenticação em views renderizadas |
-| ADR-06 | Livro do Mês como entidade própria |
-| ADR-07 | `MonthlyReading` unifica progresso e histórico |
-| ADR-08 | Listas de tamanho fixo como tabelas com `position` |
-| ADR-09 | Modelo de usuário customizado desde o dia 1 |
-| ADR-10 | Autor do livro como texto |
-| ADR-11 | Object storage desde o primeiro upload |
-| ADR-12 | Tipos do frontend gerados do OpenAPI |
-| ADR-13 | Render + Neon + R2 |
-| ADR-14 | Admin como produto da primeira entrega |
-| ADR-15 | Apps autocontidos, não um app de API central |
-| ADR-16 | Ferramental de desenvolvimento do frontend |
-| ADR-17 | Brandbook como fonte da verdade visual |
-| ADR-18 | Página de apresentação renderizada em `/` |
-| ADR-19 | API fechada por padrão |
+| | Decisão | Status |
+|---|---|---|
+| ADR-01 | Django como plataforma | Aceito |
+| ADR-02 | Django Ninja como camada de API | Revisado |
+| ADR-03 | SPA separada, mesmo repositório | Aceito |
+| ADR-04 | Mesma origem, autenticação por sessão | Revisado |
+| ADR-05 | Autenticação em views renderizadas | Aceito |
+| ADR-06 | Livro do Mês como entidade própria | Aceito |
+| ADR-07 | `MonthlyReading` unifica progresso e histórico | Aceito |
+| ADR-08 | Listas de tamanho fixo como tabelas com `position` | Aceito |
+| ADR-09 | Modelo de usuário customizado desde o dia 1 | Aceito |
+| ADR-10 | Autor do livro como texto | Aceito |
+| ADR-11 | Object storage desde o primeiro upload | Aceito |
+| ADR-12 | Tipos do frontend gerados do OpenAPI | Revisado |
+| ADR-13 | Render, Neon e Cloudflare R2 | Aceito |
+| ADR-14 | Admin como produto da primeira entrega | Aceito |
+| ADR-15 | Apps autocontidos, não um app de API central | Aceito |
+| ADR-16 | Ferramental de desenvolvimento do frontend | Revisado (16b) |
+| ADR-17 | Brandbook como fonte da verdade visual | Aceito |
+| ADR-18 | Página de apresentação renderizada em `/` | Revisado |
+| ADR-19 | API fechada por padrão | Aceito |
+| ADR-20 | Sentry para erros, com o payload decidido antes do DSN | Aceito |
+
+**Revisado** quer dizer que a decisão continua de pé, mas parte do texto original foi corrigida por um ADR posterior — a correção já está incorporada e o **Histórico** ao fim do ADR diz o que mudou.
 
 ---
 
 ## ADR-01 — Django como plataforma
+**Status:** Aceito  ·  **Em uma frase:** Django porque o clube precisa de Admin, autenticação e upload prontos, não de async.
 
 **Contexto.** O Clubi é um site de clube de leitura com autenticação, perfis, upload de imagens e uma operação editorial recorrente: alguém precisa eleger o Livro do Mês todo mês. A equipe é de uma a duas pessoas, com prazo de semestre.
 
@@ -51,6 +57,7 @@ Formato: cada decisão traz **contexto**, **decisão**, **alternativas considera
 ---
 
 ## ADR-02 — Django Ninja como camada de API
+**Status:** Revisado (ver histórico)  ·  **Em uma frase:** Django Ninja dá a ergonomia moderna de API sem abrir mão do ORM e do Admin.
 
 **Contexto.** Escolhido o Django (ADR-01), resta decidir como o backend expõe dados: templates renderizados, Django REST Framework ou Django Ninja.
 
@@ -75,6 +82,7 @@ Vale registrar que **DRF e Ninja não são alternativas ao Django** — rodam de
 ---
 
 ## ADR-03 — SPA separada, mesmo repositório
+**Status:** Aceito  ·  **Em uma frase:** A API é o caminho principal de dados por um objetivo de aprendizado declarado — e, dado isso, o mono-repo é o arranjo mais simples, não uma concessão.
 
 **Contexto.** Existem três arranjos possíveis: (1) templates renderizados no servidor; (2) SPA e API no mesmo repositório, com deploy coordenado; (3) SPA e API em repositórios e deploys independentes.
 
@@ -110,6 +118,7 @@ O mono-repo é também o que viabiliza as decisões ADR-04 (mesma origem, sem CO
 ---
 
 ## ADR-04 — Mesma origem, autenticação por sessão
+**Status:** Revisado (ver histórico)  ·  **Em uma frase:** Mesma origem e cookie de sessão eliminam uma classe inteira de problemas que só existe quando se separam as origens.
 
 **Contexto.** Escolhido o nível 2, é preciso decidir como a SPA se autentica na API.
 
@@ -128,6 +137,7 @@ O mono-repo é também o que viabiliza as decisões ADR-04 (mesma origem, sem CO
 ---
 
 ## ADR-05 — Autenticação em views renderizadas
+**Status:** Aceito  ·  **Em uma frase:** Login, cadastro, logout e reset de senha ficam em views Django renderizadas, porque é a área onde um erro tem consequência de segurança real e o Django já acertou.
 
 **Contexto.** Mesmo com a interface principal em React, o fluxo de autenticação precisa existir: login, cadastro, logout e recuperação de senha.
 
@@ -144,26 +154,34 @@ O mono-repo é também o que viabiliza as decisões ADR-04 (mesma origem, sem CO
 ---
 
 ## ADR-06 — Livro do Mês como entidade própria
+**Status:** Aceito  ·  **Em uma frase:** O Livro do Mês é uma entidade própria, `MonthlyPick`, porque um booleano no `Book` destruiria o histórico a cada virada de mês.
 
 **Contexto.** O sketch original modelava o Livro do Mês como um booleano `isLivroDoMes` no próprio `Book`.
 
 **Decisão.** Criar `MonthlyPick`, com FK para `Book`, `month` única e período de vigência. O booleano não existe.
 
-**Justificativa.** Com o booleano, eleger o livro de novembro exige desmarcar o de outubro — e nesse instante a informação de que outubro existiu desaparece. O histórico de avaliações no perfil, que é requisito, se torna impossível de reconstruir. Além disso, o booleano impede que o mesmo livro seja escolhido novamente anos depois, e não tem onde guardar dados que são do clube e não do livro: período de leitura, justificativa da escolha, data da discussão.
+**Alternativas consideradas.**
+
+*O booleano `isLivroDoMes` no `Book`.* Descartado por três falhas. Eleger novembro exige desmarcar outubro, e nesse instante a informação de que outubro existiu desaparece — o histórico de avaliações no perfil, que é requisito, se torna impossível de reconstruir. O mesmo livro nunca poderia ser escolhido de novo anos depois. E não haveria onde guardar o que é do clube e não do livro: período de leitura, justificativa da escolha, data da discussão.
 
 **Consequências.**
 - Positivas: histórico preservado por construção; releitura possível; `on_delete=PROTECT` impede que apagar um livro destrua o histórico de todos.
 - Negativas: uma consulta a mais para descobrir o livro vigente. Encapsulada em `MonthlyPick.current()`.
 
+**Quando revisar.** Se o clube passar a eleger mais de um livro por mês, ou a deixar uma escolha atravessar dois meses — `month` é única, e é ela que sustenta a unicidade de `MonthlyReading` no ADR-07.
+
 ---
 
 ## ADR-07 — `MonthlyReading` unifica progresso e histórico
+**Status:** Aceito  ·  **Em uma frase:** Progresso e histórico são o mesmo registro — `MonthlyReading` — observado em momentos diferentes.
 
 **Contexto.** O sketch listava, como campos separados do usuário, "progresso/avaliação (livro do mês)" e "histórico de avaliações dos livros do mês".
 
 **Decisão.** Um único modelo `MonthlyReading`, com unicidade em `(user, pick)`.
 
-**Justificativa.** São o mesmo registro observado em momentos diferentes. O progresso atual é o `MonthlyReading` cuja seleção está vigente; o histórico é o conjunto de todas elas. Mantê-los separados criaria duplicação de verdade e um bug previsível: na virada do mês, o progresso anterior seria sobrescrito.
+**Alternativas consideradas.**
+
+*Dois campos separados no usuário, como no sketch.* Descartado: são o mesmo registro observado em momentos diferentes. O progresso atual é o `MonthlyReading` cuja seleção está vigente; o histórico é o conjunto de todas elas. Separá-los criaria duplicação de verdade e um bug previsível — na virada do mês, o progresso anterior seria sobrescrito.
 
 **Consequências.**
 - Positivas: uma fonte de verdade; o histórico é subproduto automático; a média de notas de um livro é uma agregação simples.
@@ -173,15 +191,20 @@ O mono-repo é também o que viabiliza as decisões ADR-04 (mesma origem, sem CO
 
 **Nota sobre o nome.** Chama-se `MonthlyReading`, e não `Reading`, porque a tabela **só existe atrelada a um `MonthlyPick`** — nunca a um livro qualquer do acervo. O acesso `user.readings` sugeriria erradamente um histórico de leituras em geral; `user.monthly_readings` diz o que é. Também não é `Review` porque a linha existe desde o primeiro clique de progresso, quando ainda não há nota nem resenha.
 
+**Quando revisar.** Se o clube passar a registrar leituras fora do Livro do Mês. Aí `MonthlyReading` deixa de ser o histórico inteiro, e a pergunta a fazer não é esta de novo: é se nasce um `Reading` ao lado ou se este modelo se generaliza.
+
 ---
 
 ## ADR-08 — Listas de tamanho fixo como tabelas com `position`
+**Status:** Aceito  ·  **Em uma frase:** Lista de tamanho fixo vira tabela com `position`, porque a ordem importa e banco relacional não guarda array de chave estrangeira.
 
 **Contexto.** O sketch previa `Livros (favoritos apenas)[4]` no usuário e `images[4]` no post.
 
 **Decisão.** Modelos intermediários `Favorite` e `PostImage`, ambos com campo `position` e `CheckConstraint` limitando a 1–4.
 
-**Justificativa.** Banco relacional não armazena arrays de chave estrangeira de forma satisfatória, e em ambos os casos a ordem importa: qual favorito aparece primeiro na estante, qual imagem é a capa do post.
+**Alternativas consideradas.**
+
+*Array de chaves estrangeiras no próprio modelo, como o sketch previa.* Descartado: banco relacional não guarda isso de forma satisfatória, e em ambos os casos a ordem importa — qual favorito aparece primeiro na estante, qual imagem é a capa do post.
 
 **Consequências.**
 - Positivas: ordenação explícita; unicidade de slot garantida no banco; fácil evoluir o limite de 4 para outro valor.
@@ -189,61 +212,94 @@ O mono-repo é também o que viabiliza as decisões ADR-04 (mesma origem, sem CO
 
 **Decisão de API relacionada.** A estante é salva por substituição atômica (`PUT /api/me/favorites` com os quatro itens), não por endpoints de adicionar, remover e reordenar. Reordenação é a operação mais comum e seria a mais desajeitada no modelo incremental.
 
+**Quando revisar.** Se o limite de 4 virar configurável por usuário, ou se a lista crescer a ponto de a substituição atômica ficar cara — em quatro itens ela é trivial.
+
 ---
 
 ## ADR-09 — Modelo de usuário customizado desde o dia 1
+**Status:** Aceito  ·  **Em uma frase:** O modelo de usuário é customizado antes da primeira migration, porque trocá-lo depois custa dias em vez de minutos.
 
 **Contexto.** O Clubi precisa de campos que o usuário padrão do Django não tem: nome completo, data de nascimento, foto e quote.
 
 **Decisão.** `User(AbstractUser)` com `AUTH_USER_MODEL` definido **antes da primeira migration**.
 
-**Justificativa.** Não é uma decisão de design, é de sequenciamento. Trocar o modelo de usuário depois que o banco existe é notoriamente doloroso no Django e envolve migrations manuais arriscadas. O custo de fazer certo no início é de minutos; o de corrigir depois, de dias.
+**Alternativas consideradas.**
 
-**Alternativa considerada.** `Profile` com relação um-para-um com o `User` padrão. Descartada: adiciona um join em praticamente toda consulta e a possibilidade de perfil ausente.
+*`Profile` com relação um-para-um com o `User` padrão.* Descartada: adiciona um join em praticamente toda consulta e a possibilidade de perfil ausente.
+
+*Adiar a troca para quando fizer falta.* Descartada, e é o ponto inteiro deste ADR — que é de sequenciamento, não de design. Trocar o modelo de usuário depois que o banco existe é notoriamente doloroso no Django e envolve migrations manuais arriscadas. O custo de fazer certo no início é de minutos; o de corrigir depois, de dias.
+
+**Consequências.**
+- Positivas: os campos do domínio moram no usuário, sem join; a porta para qualquer campo futuro já está aberta.
+- Negativas: nenhuma relevante — o custo foi pago antes de haver custo.
+
+**Quando revisar.** Não se revisa. A janela em que essa decisão podia ser tomada fechou na primeira migration.
 
 ---
 
 ## ADR-10 — Autor do livro como texto
+**Status:** Aceito  ·  **Em uma frase:** `Book.author` é texto, porque página de autor não é requisito e uma FK traria deduplicação que não se paga.
 
 **Decisão.** `Book.author` é `CharField`, não uma FK para um modelo `Author`.
 
-**Justificativa.** Página de autor não é requisito do Clubi. Uma FK criaria imediatamente um problema de deduplicação — "Machado de Assis" contra "ASSIS, Machado de" contra "Machado de Assis (1839-1908)" — cujo custo de manutenção não se paga.
+**Alternativas consideradas.**
 
-**Consequências.** Se um dia quiserem "todos os livros do autor X", a migração é direta: criar o modelo, popular a partir dos textos distintos e converter o campo.
+*FK para um modelo `Author`.* Descartada. Página de autor não é requisito do Clubi, e a FK criaria imediatamente um problema de deduplicação — "Machado de Assis" contra "ASSIS, Machado de" contra "Machado de Assis (1839-1908)" — cujo custo de manutenção não se paga.
+
+**Consequências.**
+- Positivas: cadastrar um livro é digitar um campo; não há tabela de autores para manter limpa.
+- Negativas: "todos os livros do autor X" não é consulta possível, e grafias divergentes convivem no acervo.
+
+**Quando revisar.** Quando página de autor virar requisito. A migração é direta — criar o modelo, popular a partir dos textos distintos, converter o campo — e é aí que a deduplicação adiada chega para ser paga de uma vez.
 
 ---
 
 ## ADR-11 — Object storage desde o primeiro upload
+**Status:** Aceito  ·  **Em uma frase:** Toda mídia vai para o Cloudflare R2 desde o primeiro upload, porque o disco das plataformas de deploy é efêmero.
 
 **Contexto.** O Clubi tem imagens em três lugares: foto de perfil, capa de livro e até quatro imagens por post.
 
 **Decisão.** Toda mídia vai para o Cloudflare R2 via `django-storages`, configurado antes do primeiro upload. Todo upload passa por compressão (redimensionamento para 1600px de largura, JPEG qualidade 82).
 
-**Justificativa.** O sistema de arquivos das plataformas de deploy usadas é efêmero: toda mídia enviada pelos usuários desapareceria no próximo deploy. Não é otimização, é requisito de correção. A compressão é o que mantém o consumo dentro do plano gratuito e as páginas rápidas.
+**Por que antes do primeiro upload.** O sistema de arquivos das plataformas de deploy usadas é efêmero: toda mídia enviada pelos usuários desapareceria no próximo deploy. Não é otimização, é requisito de correção. A compressão é o que mantém o consumo dentro do plano gratuito e as páginas rápidas.
 
-**Alternativa considerada.** Volume persistente no provedor de hospedagem. Descartada: prende o projeto a um fornecedor, não tem CDN e sai mais caro.
+**Alternativas consideradas.**
+
+*Volume persistente no provedor de hospedagem.* Descartada: prende o projeto a um fornecedor, não tem CDN e sai mais caro.
+
+*Storage local até doer.* Descartada pelo que acontece no meio: a dor só aparece depois que a primeira foto de perfil de um membro sumiu, e ela não volta.
 
 **Consequências.**
 - Positivas: mídia sobrevive a deploys; egress gratuito no R2; trocar de provedor é mudar o `settings.py`.
 - Negativas: uma credencial a mais para gerenciar; ambiente local precisa de configuração equivalente (ou storage local em desenvolvimento).
 
+**Quando revisar.** Se o egress deixar de ser gratuito no R2, ou se o consumo passar o plano gratuito. Nos dois casos a decisão a tomar é de fornecedor, não de arquitetura, e cabe numa mudança de `settings.py`.
+
 ---
 
 ## ADR-12 — Tipos do frontend gerados do OpenAPI
+**Status:** Revisado (ver histórico)  ·  **Em uma frase:** Os tipos TypeScript são gerados do schema OpenAPI e nunca editados à mão.
 
 **Contexto.** Com backend e frontend separados, o contrato entre eles pode divergir silenciosamente.
 
-**Decisão.** Os tipos TypeScript são gerados a partir do schema OpenAPI do Ninja (`make types`), e `tsc --noEmit` roda no CI. O arquivo `src/api/generated.ts` nunca é editado à mão.
+**Decisão.** Os tipos TypeScript são gerados a partir do schema OpenAPI do Ninja (`make types`), e `tsc --noEmit` roda no `make check`. O arquivo `src/api/generated.ts` nunca é editado à mão.
 
-**Justificativa.** É o que neutraliza a principal desvantagem do ADR-03. Se alguém renomear um campo num `Schema` do backend e o frontend não acompanhar, o build quebra na hora — em vez de o usuário ver `undefined` em produção. Vale notar que isso é *mais* segurança de tipos do que a maioria dos projetos SPA com DRF tem na prática.
+**Por que isso importa.** É o que neutraliza a principal desvantagem do ADR-03. Se alguém renomear um campo num `Schema` do backend e o frontend não acompanhar, `tsc` reprova — em vez de o usuário ver `undefined` em produção. É *mais* segurança de tipos do que a maioria dos projetos SPA com DRF tem na prática.
+
+**A guarda é manual, e isso é uma fragilidade conhecida.** **Não existe CI neste projeto** — não há `.github/workflows/`, e o ADR-16a registra a ausência ao explicar por que o Playwright fica de fora. O que existe é o alvo `check` do `Makefile`, que roda `pytest`, `tsc --noEmit`, os testes do frontend e o build. Ele pega tudo o que um CI pegaria, **quando alguém o roda**. Enquanto for assim, "o build quebra na hora" quer dizer "quebra na máquina de quem rodou o `check`", não "quebra antes do merge".
 
 **Consequências.**
 - Positivas: contrato tipado ponta a ponta; refatorações seguras; diferencial técnico real para portfólio.
-- Negativas: um passo a mais no fluxo de trabalho, que é esquecido com facilidade. Por isso está no `Makefile` e no CI.
+- Negativas: dois passos a mais no fluxo (`make types`, `make check`), os dois fáceis de esquecer, e nada automático os cobra. O esquecimento falha **aberto**: um `generated.ts` desatualizado não dá sinal nenhum até alguém compilar.
+
+**Quando revisar.** Quando existir CI — aí `make check` vira gatilho de pull request e a fragilidade acima desaparece sem mudar nada desta decisão. É também o momento que o ADR-16a nomeia para reavaliar o Playwright.
+
+**Histórico.** O texto original afirmava que `tsc --noEmit` rodava no CI. Corrigido em 2026-09-23: o CI nunca existiu, e a verificação é o `make check` local.
 
 ---
 
 ## ADR-13 — Render, Neon e Cloudflare R2
+**Status:** Aceito  ·  **Em uma frase:** Render, Neon e R2 no plano gratuito — com o banco deliberadamente fora do Render.
 
 **Decisão.** Versão inicial gratuita: aplicação no Render, banco no Neon, mídia no R2.
 
@@ -264,20 +320,32 @@ O mono-repo é também o que viabiliza as decisões ADR-04 (mesma origem, sem CO
 ---
 
 ## ADR-14 — Admin como produto da primeira entrega
+**Status:** Aceito  ·  **Em uma frase:** O Admin configurado é entrega ao usuário na Fase 1, e é o seguro barato contra o único risco real do projeto.
 
 **Contexto.** A escolha do ADR-03 alonga o cronograma. O risco concreto não é técnico: é o clube ficar sem site enquanto a equipe aprende React.
 
 **Decisão.** A Fase 1 do roadmap (modelos e Admin configurado) é tratada como **entrega ao usuário**, não como etapa interna. A fundadora recebe acesso ao `/admin/` assim que os modelos existirem.
 
-**Justificativa.** O Django Admin não depende de views nem de templates da equipe — ele sobrevive integralmente à escolha do nível 2. Com ele, a fundadora já cadastra livros, elege o Livro do Mês e modera posts. Isso transforma o risco de cronograma em risco de conforto: existe algo funcionando desde a segunda semana, e nenhuma reunião acontece sem nada para mostrar.
+**Por que funciona como seguro.** O Django Admin não depende de views nem de templates da equipe — ele sobrevive integralmente à escolha do nível 2. Com ele, a fundadora já cadastra livros, elege o Livro do Mês e modera posts. Isso transforma o risco de cronograma em risco de conforto: existe algo funcionando desde a segunda semana, e nenhuma reunião acontece sem nada para mostrar.
+
+**Alternativas consideradas.**
+
+*Tratar a Fase 1 como etapa interna e entregar só quando a SPA existir.* Descartada: é o arranjo que deixa o clube sem nada durante o aprendizado de React, que é exatamente o risco que o ADR-03 criou.
+
+*Construir telas administrativas na SPA.* Descartada por ora, e continua descartada: seria refazer em React o que o Admin já faz, para um único usuário.
 
 **Consequências.**
 - Positivas: rede de segurança real; feedback do usuário desde cedo; validação da modelagem antes de investir em interface.
 - Negativas: é preciso deixar claro para a fundadora que aquilo é uma etapa, não o produto final — senão a expectativa se ancora numa interface administrativa.
 
+**Consequência que sobrevive ao roadmap.** Configurar o Admin de um modelo novo faz parte de adicionar o modelo, não é tarefa posterior. O Admin é produto, e a fundadora opera o clube por ele — é por isso que há coisas que a SPA nunca ganha tela e não são funcionalidade faltando. É também o que sustenta a exceção de `is_staff` no `/api/docs` (ADR-19).
+
+**Quando revisar.** Se o clube ganhar um segundo operador que não seja da equipe, ou se uma operação recorrente exigir mais passos no Admin do que exigiria numa tela própria. Aí a pergunta é qual operação ganha tela — não se o Admin sai.
+
 ---
 
 ## ADR-15 — Apps autocontidos, não um app de API central
+**Status:** Aceito  ·  **Em uma frase:** Cada app de domínio é dono dos seus schemas e rotas; só as projeções são compartilhadas.
 
 **Contexto.** O ADR-02 escolheu o Django Ninja, mas não disse onde o código da API mora. O guia, na seção 1.2, prescreveu um app `api/` central com `schemas.py` único e um `routers/` por área — uma fachada na frente dos apps de domínio. A alternativa é a que o Django pressupõe e que a documentação do próprio Ninja mostra: cada app expõe o seu pedaço da API.
 
@@ -336,6 +404,7 @@ O preço é que os nomes de view passam a ser únicos em toda a API, não só de
 ---
 
 ## ADR-16 — Ferramental de desenvolvimento do frontend
+**Status:** Revisado (ver histórico do 16b)  ·  **Em uma frase:** Entram o Chrome DevTools MCP e a skill `frontend-design`, com escopo estreito; o Hey API é recusado no mérito.
 
 **Contexto.** O backend está fechado e a Fase 4 começa. Três ferramentas foram avaliadas: um MCP de navegador, a skill oficial `frontend-design` da Anthropic, e a troca do `openapi-typescript` pelo Hey API com o plugin de TanStack Query. As duas primeiras mexem só no fluxo de trabalho e são reversíveis apagando uma linha de configuração. A terceira mexe na arquitetura do cliente e contradiz o critério do ADR-03a, então é decisão de arquitetura, não de ferramenta.
 
@@ -381,6 +450,7 @@ O pré-requisito técnico já está satisfeito: o `get_openapi_operation_id` foi
 ---
 
 ## ADR-17 — Brandbook como fonte da verdade visual
+**Status:** Aceito  ·  **Em uma frase:** O brandbook é a fonte da verdade visual, e `frontend/DESIGN.md` é a destilação normativa dele para a web.
 
 **Contexto.** O clube tem identidade visual pronta, produzida antes do site e já em uso nas redes sociais: brandbook de 6 páginas, três variantes de logotipo, duas famílias tipográficas licenciadas, dez elementos gráficos e nove peças aplicadas, tudo em `frontend/clubi/`. O código, enquanto isso, foi para o ar com outra coisa. O `auth.css` das páginas de `/accounts/` define `#f6f2ea` de fundo, `#7a2e2e` de acento, Inter e uma serifada — valores improvisados na Fase de autenticação, quando ninguém tinha aberto o brandbook.
 
@@ -413,6 +483,7 @@ Três regras decorrem:
 ---
 
 ## ADR-18 — Página de apresentação renderizada em `/`
+**Status:** Revisado (ver histórico)  ·  **Em uma frase:** `/` é uma view renderizada porque os robôs de preview de link das redes sociais não executam JavaScript.
 
 **Contexto.** Até aqui o site não tinha porta de entrada. O `/` caía no catch-all, que serve o shell da SPA; a SPA chamava `GET /api/me`, recebia 401 e o `client.ts` mandava o navegador para `/accounts/login/`. Ou seja: **um visitante anônimo era despejado num formulário de senha sem nunca ler uma frase sobre o que é o Clubi.** Isso era tolerável enquanto o site existia para quem já era do clube. Deixa de ser no momento em que o endereço passa a ser divulgado — que é o cenário para o qual esta página nasce.
 
@@ -451,6 +522,7 @@ Os outros três critérios avaliados **não** decidiram, e vale registrar por qu
 ---
 
 ## ADR-19 — API fechada por padrão
+**Status:** Aceito  ·  **Em uma frase:** A API é fechada por padrão e pública por exceção nomeada e testada.
 
 **Contexto.** O ADR-04 e o ADR-05 descrevem o **mecanismo** da autenticação — mesma origem, cookie de sessão, `X-CSRFToken`, telas de login renderizadas sob `/accounts/`. Nenhum dos dois declara a **política**: quais rotas exigem login. O fluxo canônico do ADR-05 ("anônimo abre a SPA → `/api/me` responde 401 → o cliente manda para `/accounts/login/`") induz a ler a API inteira como fechada, e isso era falso. A `NinjaAPI` era instanciada sem `auth=` global, então o default de uma rota nova era **pública** — e, como o django-ninja marca toda view da API com `csrf_exempt` no nível do middleware e delega a checagem à classe de auth, uma escrita sem `auth=` nasceria também **sem proteção CSRF**. A política de fato era a soma de onde alguém lembrou de escrever `auth=django_auth`: dois terços dos GETs respondiam 200 a anônimo.
 
@@ -479,6 +551,7 @@ Isso inclui, explicitamente, perfis, busca de membros, acervo, feed e seleções
 ---
 
 ## ADR-20 — Sentry para erros, com o payload decidido antes do DSN
+**Status:** Aceito  ·  **Em uma frase:** Sentry só com erros, com o payload restringido nas duas pontas antes de o DSN existir.
 
 **Contexto.** A Fase 9 coloca o site num servidor que ninguém acompanha. Até aqui, um erro era um traceback no terminal de quem estava desenvolvendo; depois do deploy, é um 500 que um membro vê e não reporta. O `DEBUG=False` que o ADR-13 exige é justamente o que apaga a página de erro do Django — correto, e também cego. Não há log persistente: o disco do Render é efêmero (ADR-11) e o `stdout` do serviço rola.
 
