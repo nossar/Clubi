@@ -30,7 +30,7 @@ make types             # regenerate src/api/generated.ts — the only supported 
 ## src/
 
 ```
-main.tsx            QueryClient defaults + router mount
+main.tsx            Sentry init + ErrorBoundary, QueryClient defaults, router mount
 App.tsx             routes; unmatched paths render a pt-BR not-found screen
 api/                client.ts (the only fetch), generated.ts (generated), types.ts
 context/            CurrentUser.tsx — useCurrentUser() is a context read, not a fetch
@@ -211,6 +211,23 @@ Three disciplines Django used to enforce for free (guide 7.5):
 - Deliberately absent: no UI kit, no CSS framework, no state library beyond the Query cache, no
   jsdom or Testing Library — pure logic goes in a `.ts` beside the component with a `.test.ts`,
   and behaviour that needs a browser is driven through the DevTools MCP. Adding any is a deviation.
+
+## Error monitoring (ADR-20)
+
+- **No `VITE_SENTRY_DSN`, no SDK.** `main.tsx` guards the `Sentry.init` on it, so `npm run dev` and
+  `vitest` never reach the network. It is a **build-time** variable — Vite inlines it — so it has to
+  exist in Render's build environment, not just its runtime one.
+- **`<Sentry.ErrorBoundary>` sits outside the router and the QueryClientProvider**, which is the
+  point: it still catches when one of those is what broke. Its fallback therefore uses a bare `<a>`
+  and the existing `.state` classes — never `<Link>`, never a hook, never a query.
+- **Session Replay is not installed and must not be.** It records the member's screen, which here
+  means resenhas being typed and other people's profiles being read.
+- **Source maps are emitted only when `SENTRY_AUTH_TOKEN` is in the build env**, and
+  `filesToDeleteAfterUpload` removes them afterwards. Django serves `dist/` under `/static/`
+  (ADR-04), so a `.map` left behind is the SPA's source published to anyone who asks. Deletion runs
+  in a `finally`, so a failed upload still cleans up — and does not fail the build.
+- `vite.config.ts` declares `process` locally instead of pulling in `@types/node`: adding `"node"`
+  to tsconfig's `types` would put Node's globals in scope for `src/` too.
 
 ## Known traps
 

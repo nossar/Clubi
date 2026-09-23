@@ -1,3 +1,4 @@
+import { sentryVitePlugin } from "@sentry/vite-plugin";
 import react from "@vitejs/plugin-react";
 import { defineConfig } from "vite";
 
@@ -18,11 +19,40 @@ const proxyToDjango = {
   headers: { origin: DJANGO },
 };
 
+// Source maps exist only to be uploaded, and only when there is a token to upload them with.
+// Django serves `dist/` under /static/ (ADR-04), so a .map left behind is the SPA's source
+// published to anyone who asks — which is why `filesToDeleteAfterUpload` is not optional and
+// why a build without the token emits no maps at all rather than maps nobody deletes.
+// Declared here instead of installing @types/node: tsconfig sets `types: ["vite/client"]`, and
+// adding "node" to it would put Node's globals in scope for src/ too, where `setTimeout` would
+// start returning a NodeJS.Timeout the browser never produces. This file is the only one Vite
+// runs in Node.
+declare const process: { env: Record<string, string | undefined> };
+
+const SENTRY_AUTH_TOKEN = process.env.SENTRY_AUTH_TOKEN;
+
 export default defineConfig({
-  plugins: [react()],
+  plugins: [
+    react(),
+    // Always last, and absent entirely when there is no token: the plugin would otherwise warn
+    // on every `npm run build` on a developer machine and in `make check`.
+    ...(SENTRY_AUTH_TOKEN
+      ? [
+          sentryVitePlugin({
+            org: process.env.SENTRY_ORG ?? "clubi-yj",
+            project: process.env.SENTRY_PROJECT ?? "clubi-frontend",
+            authToken: SENTRY_AUTH_TOKEN,
+            sourcemaps: { filesToDeleteAfterUpload: ["./dist/**/*.map"] },
+          }),
+        ]
+      : []),
+  ],
   build: {
     outDir: "dist",
     manifest: true,
+    // "hidden" emits the map but omits the //# sourceMappingURL comment, so the browser never
+    // asks for it — only Sentry, which matches by debug id.
+    sourcemap: SENTRY_AUTH_TOKEN ? "hidden" : false,
     // Django's shell resolves the bundle through {% static %}, which cannot know a hash Vite
     // invented at build time. Pin the entry names instead; in production WhiteNoise's manifest
     // storage re-hashes them anyway, so cache busting is not lost (frontend/CLAUDE.md).

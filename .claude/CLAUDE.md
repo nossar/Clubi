@@ -18,7 +18,7 @@ Two folders, and each has its own `CLAUDE.md` with the rules that only apply the
 Two documents at the repo root are the spec for this project. The guide is gitignored (present locally only); the ADRs are versioned:
 
 - `clubi-guia-de-implementacao.md` — the roadmap: repo structure, model code, admin, auth, endpoint map, schemas, frontend layout, deploy, and the phase-by-phase implementation order (section 9).
-- `clubi-decisoes-de-arquitetura.md` — ADR-01 … ADR-18, the *why* behind each choice, including what was deliberately rejected.
+- `clubi-decisoes-de-arquitetura.md` — ADR-01 … ADR-20, the *why* behind each choice, including what was deliberately rejected.
 
 A third document governs anything visual:
 
@@ -62,6 +62,15 @@ The root `Makefile` is the preferred entry point: `install`, `dev-backend`, `dev
 **Reading is the club's, writing is the organisation's.** Creating, editing and deleting a postagem, and attaching an image, are `is_staff`-only and refused with a 403 in pt-BR. `GET /api/me` is the only response carrying `is_staff`. Hiding the "Postar" shortcuts is courtesy; the backend check is the rule.
 
 **Tokens live in two files that must stay identical.** `backend/core/static/css/tokens.css` and `frontend/src/styles/tokens.css` are declared twins — same names, same values. Changing a token means changing both, and `frontend/DESIGN.md` before either (ADR-18).
+
+**Error monitoring sends nothing it was not told to send (ADR-20).** Sentry is wired on both sides
+and, on both, initialises *only when a DSN is present* — so dev machines, CI and pytest never reach
+the network. The four Django options (`send_default_pii=False`, `include_local_variables=False`,
+`max_request_body_size="never"`, `traces_sample_rate=0.0`) are the decision, not boilerplate: they
+keep a member's resenha, e-mail and IP out of every event. Sentry's own quickstart says
+`send_default_pii=True` — that is the thing ADR-20 rejects. Session Replay stays out for the same
+reason. Source maps are emitted only when `SENTRY_AUTH_TOKEN` is set and deleted after upload:
+Django serves `dist/` under `/static/`, so a surviving `.map` publishes the SPA's source.
 
 **Types are generated, never hand-written (ADR-12).** `frontend/src/api/generated.ts` comes from the Ninja OpenAPI schema via `make types`. Regenerate after touching any `Schema`; `tsc --noEmit` is the guard.
 

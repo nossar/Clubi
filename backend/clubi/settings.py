@@ -243,3 +243,45 @@ STORAGES = {
         ),
     },
 }
+
+
+# Error monitoring (Sentry, ADR-20)
+# Nothing initialises without a DSN, so development machines, CI and pytest never send an event.
+
+SENTRY_DSN = config("SENTRY_DSN", default="")
+
+if SENTRY_DSN:
+    import sentry_sdk
+
+    def _scrub_event(event, hint):
+        """Last gate before an event leaves the process (ADR-20).
+
+        The SDK's argv integration puts the whole command line in `extra["sys.argv"]`. For
+        gunicorn that is noise; for `manage.py shell -c "…"` it is the *entire script*, which
+        is how a one-off command carrying a secret or a member's data ends up in a payload.
+        Nothing here needs it, so it goes.
+        """
+        extra = event.get("extra")
+        if extra:
+            extra.pop("sys.argv", None)
+        return event
+
+    sentry_sdk.init(
+        dsn=SENTRY_DSN,
+        environment=config("SENTRY_ENVIRONMENT", default="development" if DEBUG else "production"),
+        # Render injects the deployed commit; locally there is none, and None is what the SDK
+        # expects for "unknown release" — an empty string would tag every event with "".
+        release=config("RENDER_GIT_COMMIT", default=None),
+        # The three options below are the ADR-20 payload contract, and the Sentry quickstart
+        # snippet contradicts the first of them (`send_default_pii=True`). What is at stake is
+        # student data: a member's e-mail, IP and session on every event, the resenha they were
+        # writing in the local variables of the frame that raised, and the request body of the
+        # PUT that carried it. None of it is needed to read a stack trace.
+        send_default_pii=False,
+        include_local_variables=False,
+        max_request_body_size="never",
+        before_send=_scrub_event,
+        # Errors only. Tracing would sample ordinary requests, and the free plan's quota is
+        # better spent on the events that mean something.
+        traces_sample_rate=0.0,
+    )

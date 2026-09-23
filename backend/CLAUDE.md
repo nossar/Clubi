@@ -119,4 +119,16 @@ Email is only used by the password reset. `EMAIL_BACKEND` defaults to the consol
 
 The DB is currently local SQLite; production targets Neon Postgres via `DATABASE_URL` (ADR-13) — that wiring isn't in `settings.py` yet.
 
+Sentry initialises at the bottom of `settings.py`, and **only if `SENTRY_DSN` is set** — which it is
+not in `.env.example`, so no developer machine and no test run sends an event. The four options next
+to it are ADR-20 and not defaults: turning any of them back on puts a member's resenha, e-mail or IP
+into a payload that leaves the building. `before_send=_scrub_event` is the last gate before an event
+leaves the process; it drops `extra["sys.argv"]`, and it is where the next field to keep out belongs.
+
+**To check the wiring, send an event from a shell** with the DSN exported for that command only —
+`SENTRY_DSN=... uv run manage.py shell -c "import sentry_sdk; sentry_sdk.capture_message('teste')"`.
+There is deliberately no `/sentry-debug/` route: it only ever worked under `DEBUG`, where the SDK
+does not even start unless someone exports a DSN by hand, so it proved nothing by default — and in
+production a URL anyone can hit to force a 500 is a gift to whoever finds it.
+
 Locale is `pt-br` / `America/Sao_Paulo`, `USE_TZ=True` — use `timezone.localdate()` for "today".

@@ -478,6 +478,60 @@ Isso inclui, explicitamente, perfis, busca de membros, acervo, feed e seleções
 
 ---
 
+## ADR-20 — Sentry para erros, com o payload decidido antes do DSN
+
+**Contexto.** A Fase 9 coloca o site num servidor que ninguém acompanha. Até aqui, um erro era um traceback no terminal de quem estava desenvolvendo; depois do deploy, é um 500 que um membro vê e não reporta. O `DEBUG=False` que o ADR-13 exige é justamente o que apaga a página de erro do Django — correto, e também cego. Não há log persistente: o disco do Render é efêmero (ADR-11) e o `stdout` do serviço rola.
+
+Monitoramento de erro, porém, é uma ferramenta que **exfiltra**: ela existe para mandar o estado do processo para fora, e o estado do processo do Clubi é resenha de estudante, data de nascimento, e-mail e sessão. A pergunta não é "usar Sentry?", é "**o que sai da aplicação?**" — e ela tem que ser respondida antes de o DSN entrar numa variável de ambiente, porque um evento enviado não se desfaz.
+
+Há uma segunda camada, e ela é nova: o MCP do Sentry. Ele **não** se conecta à produção — lê o que a aplicação já enviou —, mas o que ele lê passa a fazer parte do contexto da conversa com o agente. Isso não relaxa nada: o dado que não foi enviado é o único que nem o painel nem o agente veem.
+
+```
+Django/React em produção ──(SDK + DSN)──▶ sentry.io ◀──(MCP)── Claude Code
+```
+
+**Decisão.** Sentry no plano gratuito, dois projetos (`clubi-backend`, `clubi-frontend`), **só erros**, com o payload restringido nas duas pontas.
+
+*No SDK do Django* (`clubi/settings.py`), quatro opções carregam a decisão e nenhuma é default:
+
+| Opção | O que ela impede |
+|---|---|
+| `send_default_pii=False` | cookies, IP e identidade do usuário logado em todo evento |
+| `include_local_variables=False` | o snapshot de variáveis locais do frame que levantou — numa exceção dentro de `update_reading`, é a resenha do membro |
+| `max_request_body_size="never"` | o corpo da requisição: texto de postagem, resenha, frase do perfil |
+| `traces_sample_rate=0.0` | amostragem de requisições normais, que é onde a cota gratuita iria embora |
+
+**O snippet oficial do "Get Started" da Sentry contradiz a primeira delas** — ele manda `send_default_pii=True`, com o DSN em código. Aqui o DSN vem de `config("SENTRY_DSN", default="")` e a opção é `False`. Sem DSN o SDK **não inicia**, então máquina de desenvolvimento, `pytest` e CI nunca enviam nada; ativá-lo localmente é exportar a variável no shell, deliberadamente.
+
+*No SDK do navegador* (`main.tsx`): `sendDefaultPii: false`, `<Sentry.ErrorBoundary>` em volta do `<App />` — fora do router e do `QueryClientProvider`, para que ele ainda pegue quando é um deles que quebra — e **Session Replay não entra**. Replay grava a tela do membro, que neste site é resenha sendo digitada e perfil alheio sendo lido.
+
+*Nos source maps*: `sourcemap: "hidden"` e `filesToDeleteAfterUpload` no `@sentry/vite-plugin`. **O apagamento é obrigatório, não higiene:** o Django serve o `dist/` sob `/static/` (ADR-04), então um `.map` que sobrevive ao build é o código-fonte da SPA publicado. O plugin só entra quando existe `SENTRY_AUTH_TOKEN`, e sem token o build **não emite mapa nenhum** — em vez de emitir mapas que ninguém apaga.
+
+*No servidor*, como segunda camada para quando alguém esquecer uma opção no SDK: **Data Scrubber** e **Use Default Scrubbers** ligados, **Prevent Storing of IP Addresses** ligado, e em **Additional Sensitive Fields** os campos do domínio — `birth_date`, `review`, `quote`, `full_name`, `email`. **Essa lista cresce junto com os modelos**, pela mesma lógica do ADR-19: um campo novo de texto livre é um campo novo aqui.
+
+*O MCP* entra em `.mcp.json` versionado, com escopo de organização (`/mcp/clubi-yj`) e não de projeto, porque são dois projetos. A autenticação é OAuth, então o arquivo guarda só a URL e cada pessoa autentica com a própria conta — o mesmo arranjo do ADR-16a. Quem quiser o agente estritamente em leitura usa token pessoal com `org:read`, `project:read`, `event:read` e `?skills=inspect`, com o token no ambiente, nunca no repositório.
+
+**Alternativas consideradas.**
+
+- *Só o `stdout` do Render.* É o que já existe e é o que falha: sem retenção, sem agrupamento, sem stack trace do navegador, e ninguém abre o painel de logs de um site que parece estar no ar.
+- *Sentry com os defaults.* Seria uma linha de código em vez de dez. Os defaults foram desenhados para depurar rápido, não para um site de estudantes identificáveis: os três primeiros itens da tabela acima são todos comportamento padrão que teve que ser desligado.
+- *Ligar o tracing desde já.* Descartado por ora. Não há problema de performance conhecido, a cota gratuita é finita, e `traces_sample_rate` é a linha mais fácil de mudar deste ADR inteiro.
+- *Rota `/sentry-debug/`.* O "Get Started" a propõe sem ressalva. Ela chegou a existir, fechada sob `DEBUG`, foi usada uma vez para a validação desta decisão e **foi descartada em seguida**. Três razões: sob `DEBUG` o SDK só inicia se alguém exportar um DSN à mão, então no estado normal de qualquer máquina do time a rota levanta um erro que não vai a lugar nenhum — ela não provava o que existia para provar; era a única função de view dentro do `urls.py`, onde view não mora; e o registro dependia de `urlpatterns.insert(-1, …)`, que quebra em silêncio no dia em que alguém der `append` em outro padrão. Em produção o problema é mais simples: uma URL pública que força um 500 é um presente para quem a encontrar, e o lookahead do `urls.py` não a esconderia. **A validação, em qualquer ambiente, é um `capture_message` pelo shell** com o DSN exportado só naquele comando.
+
+**Consequências.**
+
+- Positivas: um erro em produção vira um evento com stack trace, ambiente e commit, em vez de um silêncio; o `release` sai do `RENDER_GIT_COMMIT`, então dá para dizer *qual deploy* quebrou; o stack trace do navegador aponta para o TypeScript e não para o bundle; e a decisão sobre dado pessoal está tomada em código, com comentário, em vez de depender de quem configurou o painel.
+- Negativas, e são três:
+  1. **Depurar fica mais difícil de propósito.** Sem variáveis locais e sem corpo de requisição, sobra o stack trace e o trecho de código. Em troca, nenhum evento carrega o que o membro escreveu. Quem precisar de mais contexto num caso específico adiciona um `set_context` com campos escolhidos a dedo — nunca liga a opção de volta.
+  2. **O bundle da SPA cresceu**, de ~100 kB para ~132 kB comprimido. O SDK do navegador não é pequeno, e esta é a primeira dependência de runtime do frontend que não serve ao membro diretamente.
+  3. **É mais um serviço de terceiro com dado do clube**, somado ao Render, ao Neon, ao R2 e à Resend. A mitigação é a tabela acima, não a confiança.
+- Neutra, mas vale saber: o `@sentry/cli` baixa um binário por plataforma como dependência opcional. O `package-lock.json` traz `cli-linux-x64` junto com o da máquina de desenvolvimento, que é o que faz o `npm ci` do Render funcionar sem depender do `postinstall` — que o npm 11 bloqueia por padrão.
+- Verificado e não óbvio: o apagamento dos `.map` roda num `finally`, então acontece **mesmo quando o upload falha** — e um upload que falha não derruba o build. Uma indisponibilidade da Sentry custa os mapas daquele deploy, não o deploy.
+
+**Quando revisar.** Se aparecer um erro que as opções acima tornam indepurável — aí a decisão a tomar não é "ligar tudo de volta", é qual contexto nomeado adicionar àquele ponto do código. Se o tracing passar a valer, o que é sintoma de um problema de performance real e não de curiosidade. E a lista de **Additional Sensitive Fields** se revisa a cada campo de texto livre que entrar nos modelos, sem esperar por um ADR.
+
+---
+
 ## Resumo executivo
 
 Se for para levar uma frase de cada decisão:
@@ -492,3 +546,4 @@ Se for para levar uma frase de cada decisão:
 8. **Brandbook como fonte da verdade visual** porque a identidade do clube é anterior ao site — e o que a web precisa e ele não cobre fica registrado como extrapolação, não decidido no CSS.
 9. **Apresentação renderizada em `/`** porque quem recebe o link do clube precisa de preview e de texto antes da senha — e crawler de rede social não executa JavaScript.
 10. **API fechada por padrão** porque a política nunca tinha sido declarada e o default aberto expunha perfil de estudante a quem passasse — e abrir depois é uma linha, enquanto fechar depois de indexado não desfaz nada.
+11. **Sentry só com erros e com o payload restringido nas duas pontas** porque monitoramento existe para mandar o estado do processo para fora, e aqui esse estado é resenha de estudante — um evento enviado não se desfaz.
