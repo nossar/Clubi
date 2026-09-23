@@ -30,6 +30,7 @@ Formato: **Contexto**, **Decisão**, **Alternativas consideradas**, **Consequên
 | ADR-18 | Página de apresentação renderizada em `/` | Revisado |
 | ADR-19 | API fechada por padrão | Aceito |
 | ADR-20 | Sentry para erros, com o payload decidido antes do DSN | Aceito |
+| ADR-21 | Ler é do clube, escrever é da organização | Aceito |
 
 **Revisado** quer dizer que a decisão continua de pé, mas parte do texto original foi corrigida por um ADR posterior — a correção já está incorporada e o **Histórico** ao fim do ADR diz o que mudou. Um ADR **Aceito** também pode ter **Histórico**: é o caso em que o texto afirmava algo que o código desmentia, sem nenhum ADR envolvido.
 
@@ -44,7 +45,7 @@ Formato: **Contexto**, **Decisão**, **Alternativas consideradas**, **Consequên
 
 **Alternativas consideradas.**
 
-*FastAPI.* Descartado. O que ele oferece de diferencial — async por padrão, alta concorrência, I/O externo pesado — não é exercido por este projeto. O único ponto assíncrono plausível é a consulta à API externa de livros, que acontece cerca de doze vezes por ano. Em contrapartida, seria preciso construir do zero: autenticação completa (hash, sessão ou token, reset de senha com token expirável e e-mail), interface administrativa, tratamento de upload e migrations via Alembic. São semanas de trabalho em código que não é o produto.
+*FastAPI.* Descartado. O que ele oferece de diferencial — async por padrão, alta concorrência, I/O externo pesado — não é exercido por este projeto. O único I/O externo é a busca na **Open Library**, que um membro dispara ao montar a estante de favoritos do perfil: uma consulta por vez, interativa, com o usuário esperando — exatamente o caso em que async não ajuda. Em contrapartida, seria preciso construir do zero: autenticação completa (hash, sessão ou token, reset de senha com token expirável e e-mail), interface administrativa, tratamento de upload e migrations via Alembic. São semanas de trabalho em código que não é o produto.
 
 *Flask.* Mesma objeção, com menos recursos que o FastAPI.
 
@@ -92,7 +93,7 @@ Pela análise puramente técnica, o nível 1 seria o indicado: um único consumi
 
 **Critério: não-técnico, declarado.** O objetivo do projeto não é apenas entregar o site: é servir de aprendizado e portfólio para os membros envolvidos. A equipe já domina views e templates Django, de modo que o nível 1 teria aprendizado marginal próximo de zero, enquanto React, TypeScript e consumo de API são exatamente o que uma vaga júnior pede. Esse é um objetivo legítimo — desde que registrado com esse nome, e não disfarçado de necessidade de engenharia.
 
-O nível 1 seria a escolha correta se o critério fosse apenas velocidade de entrega. Nele o Ninja continuaria existindo e sendo usado de fato — favoritos, autocompletes, proxy da API de livros —, apenas com cerca de quatro endpoints em vez de duas dezenas, e com o HTML como caminho principal. A diferença entre os níveis é de proporção, não da existência da API.
+O nível 1 seria a escolha correta se o critério fosse apenas velocidade de entrega. Nele o Ninja continuaria existindo e sendo usado de fato — favoritos, autocompletes, proxy da Open Library —, apenas com cerca de quatro endpoints em vez de duas dezenas, e com o HTML como caminho principal. A diferença entre os níveis é de proporção, não da existência da API.
 
 É a única decisão do projeto em que um critério não-técnico venceu um argumento técnico contrário. Outros ADRs também respondem a critérios não-técnicos — o ADR-14 a risco de cronograma, o ADR-17 à precedência da marca sobre o código —, mas em nenhum deles havia análise técnica apontando para o outro lado.
 
@@ -272,11 +273,21 @@ Uma fonte de verdade, o histórico como subproduto automático, e a média de no
 
 *Storage local até doer.* Descartada pelo que acontece no meio: a dor aparece depois que a primeira foto de perfil sumiu, e ela não volta.
 
-**Consequências.**
-- Positivas: mídia sobrevive a deploys; egress gratuito no R2; trocar de provedor é mudar o `settings.py`.
-- Negativas: uma credencial a mais para gerenciar; ambiente local precisa de configuração equivalente (ou storage local em desenvolvimento).
+### 11a — Mídia pública por URL não adivinhável
 
-**Quando revisar.** Se o egress deixar de ser gratuito no R2, ou se o consumo passar o plano gratuito. Nos dois casos a decisão a tomar é de fornecedor, não de arquitetura, e cabe numa mudança de `settings.py`.
+**Decisão.** A mídia é **pública e sem assinatura**: `querystring_auth=False` mais um `custom_domain`, então todo arquivo responde em `https://media.leiaclubi.com.br/<chave>`, permanentemente e para quem tiver o link. A proteção é a chave não ser adivinhável: `core.storage.RandomKey` devolve `<prefixo>/<uuid4>.jpg` e **descarta o nome do arquivo enviado**.
+
+**Por que sem assinatura.** As imagens vão com `Cache-Control: public, max-age=31536000, immutable`, que é o que mantém o egress baixo e as páginas rápidas. Cache imutável exige **URL estável**, e URL assinada expira — as duas coisas não convivem. Escolhido o cache, a confidencialidade da mídia passa a depender inteiramente da chave.
+
+**Por que UUID e não o nome do arquivo.** O `upload_to="profiles/"` original guardava o nome que o membro tinha no disco, então uma foto enviada como `ana_souza.jpg` publicava `/profiles/ana_souza.jpg` — o nome completo de uma estudante numa URL permanente, e uma chave que qualquer um monta a partir do nome dela. Pior: a chave ficava livre de novo assim que o arquivo era apagado, e o upload seguinte a reusava — com um ano de `immutable`, o cache continuaria servindo a imagem antiga. UUID resolve os dois: não se adivinha e não se repete.
+
+**Consequências.**
+- Positivas: mídia sobrevive a deploys; egress gratuito no R2; trocar de provedor é mudar o `settings.py`; e o cache de um ano passa a ser correto por construção, não por convenção.
+- Negativas: uma credencial a mais para gerenciar; ambiente local precisa de configuração equivalente (ou storage local em desenvolvimento).
+- **Quem tem o link vê a imagem**, e o link não expira. Não há controle de acesso sobre mídia — a foto de perfil de um membro é legível por qualquer um que a tenha, inclusive depois de o perfil ter sido fechado pelo ADR-19. O que o ADR-19 fecha é a rota que *entrega* a URL, não a URL.
+- **Apagar um arquivo custa dois passos**: remover o objeto do R2 **e** purgar a URL no cache da Cloudflare. Só o primeiro não basta enquanto o `max-age` de um ano não vencer. **Isso é pendência declarada do fluxo de exclusão de conta**, que ainda não existe.
+
+**Quando revisar.** Se o egress deixar de ser gratuito no R2, ou se o consumo passar o plano gratuito — nos dois casos a decisão é de fornecedor, não de arquitetura, e cabe numa mudança de `settings.py`. E se alguém pedir que a foto de perfil seja visível só a membros: aí a troca é URL assinada contra cache imutável, e é o `Cache-Control` que se revisa primeiro.
 
 ---
 
@@ -320,7 +331,7 @@ Uma fonte de verdade, o histórico como subproduto automático, e a média de no
 
 **Caminho de upgrade.** O primeiro gasto recomendado é o plano pago do Render (~US$ 7/mês), que elimina o cold start. Banco e storage só depois, por consumo. Estimativa: R$ 0 na versão inicial, ~US$ 7/mês na versão divulgável, ~US$ 15/mês confortável, mais o domínio (~R$ 40/ano).
 
-**A pilha não é só esta.** Somam-se a Sentry (ADR-20) e o provedor de e-mail transacional de que o reset de senha do ADR-05 depende. Nenhum dos dois entra na estimativa acima porque os dois rodam em plano gratuito — mas os dois recebem dado de membro, que é a conta que o ADR-20 manda fazer.
+**A pilha não é só esta.** Somam-se a **Sentry** (ADR-20) e a **Resend**, que entrega o e-mail transacional de que o reset de senha do ADR-05 depende — configurada por SMTP, com as credenciais no ambiente. Nenhuma das duas entra na estimativa acima porque as duas rodam em plano gratuito. As duas recebem dado de membro, e a conta do ADR-20 vale para a Resend também: o que sai para ela é o **e-mail do membro e o link de reset assinado**, montados pelo Django — nada de perfil, resenha ou nota, porque o template de reset do `django.contrib.auth` não os toca.
 
 **Quando revisar.** Quando o cold start constranger de verdade, que é o momento do primeiro gasto; se algum dos tiers gratuitos mudar de regra; ou antes de fechar qualquer conta, porque **preços e limites de tier gratuito mudam com frequência e os números acima têm prazo de validade curto**.
 
@@ -354,7 +365,7 @@ Uma fonte de verdade, o histórico como subproduto automático, e a média de no
 ## ADR-15 — Apps autocontidos, não um app de API central
 **Status:** Aceito  ·  **Em uma frase:** Cada app de domínio é dono dos seus schemas e rotas; só as projeções são compartilhadas.
 
-**Contexto.** O ADR-02 escolheu o Ninja e não disse onde o código da API mora; o guia prescrevia um app `api/` central, fachada na frente dos apps de domínio. A pergunta que decide não é estética: é onde ficam os schemas quando duas entidades aparecem juntas na resposta de um endpoint — o que neste domínio é a regra, não a exceção.
+**Contexto.** O ADR-02 escolheu o Ninja e não disse onde o código da API mora. O layout inicialmente previsto era um app `api/` central, fachada na frente dos apps de domínio. A pergunta que decide não é estética: é onde ficam os schemas quando duas entidades aparecem juntas na resposta de um endpoint — o que neste domínio é a regra, não a exceção.
 
 **Decisão.** Cada app é dono dos seus modelos, schemas e rotas (`books/schemas.py` + `books/api.py`, e assim por diante). O app `api/` é **camada compartilhada fina**: `api/api.py` guarda a instância `NinjaAPI` e os `add_router`, e `api/schemas.py` guarda só as **projeções** — hoje `BookOut` e `UserBrief`.
 
@@ -367,7 +378,7 @@ Uma fonte de verdade, o histórico como subproduto automático, e a média de no
 
 **Alternativas consideradas.**
 
-- *A fachada `api/` do guia.* Descartada: centralizaria um arquivo só, e em troca `schemas.py` vira gaveta, apagar uma feature deixa de ser apagar um diretório, o app `api/` conhece todos os domínios, e o layout contraria a doutrina do Django e a documentação do Ninja.
+- *A fachada `api/` central.* Descartada: centralizaria um arquivo só, e em troca `schemas.py` vira gaveta, apagar uma feature deixa de ser apagar um diretório, o app `api/` conhece todos os domínios, e o layout contraria a doutrina do Django e a documentação do Ninja.
 - *Schemas por app sem camada compartilhada.* Descartada porque **não compila**: `UserOut.favorites` (em `users`) precisa de `BookOut`, e `FinishedReaderOut.user` (em `books`) precisa de `UserBrief` — os dois apps se importariam mutuamente. O Django dissolve isso nos modelos com referências por string; o Pydantic não, e o ciclo vira `ImportError`.
 - *`TYPE_CHECKING` + `model_rebuild()`.* Descartada como arquitetura: é escotilha de emergência, não planta baixa.
 
@@ -438,7 +449,7 @@ O pré-requisito técnico já estava satisfeito — o `operationId` ficou estáv
 **Decisão.** O brandbook é a fonte da verdade visual, e `frontend/DESIGN.md` é a destilação normativa dele para a web — **leitura obrigatória antes de qualquer trabalho de frontend**. Três regras decorrem:
 
 1. **Rastreabilidade.** Toda cor, fonte, medida e escolha de tom precisa ser literal do brandbook, derivada dele por fórmula registrada, ou estar na tabela de extrapolações do `DESIGN.md`. Valor que nasce no componente é bug de processo, mesmo que fique bonito.
-2. **As extrapolações são explícitas e revisáveis.** A seção 12 do `DESIGN.md` numera tudo que não tem respaldo direto — hover, cores de estado, escala tipográfica, espaçamento, breakpoints, movimento. Eram doze quando este ADR foi escrito e são vinte e uma hoje: a tabela **cresce** a cada tela que pede medida nova. Ficam separadas para o fundador contestá-las uma a uma.
+2. **As extrapolações são explícitas e revisáveis.** A seção 12 do `DESIGN.md` numera tudo que não tem respaldo direto — hover, cores de estado, escala tipográfica, espaçamento, breakpoints, movimento. Eram doze quando este ADR foi escrito e são vinte e uma hoje: a tabela **cresce** a cada tela que pede medida nova. Ficam separadas para a fundadora contestá-las uma a uma.
 3. **Os tokens vivem em dois arquivos gêmeos**, `backend/core/static/css/tokens.css` e `frontend/src/styles/tokens.css` — a mitigação que o ADR-05 prometeu para a costura entre `/accounts/` e a SPA. Mudar um sem o outro reabre a costura.
 
 **O que mudou na prática.** As quatro cores da marca entram literais do brandbook (p.3) e os tokens de uso derivam delas:
@@ -465,7 +476,7 @@ O pré-requisito técnico já estava satisfeito — o `operationId` ficou estáv
 - Negativas: `auth.css` precisou de retrabalho; entram duas famílias self-hosted onde antes havia fontes de sistema, com custo de banda e de conversão para `woff2`; e o `DESIGN.md` vira mais um documento a manter em dia — um que cresce a cada tela.
 - Sem tema escuro, e é decisão (E-12): a inversão creme ⇄ vinho já é o modo escuro da marca, e um dark neutro exigiria cores fora do brandbook. Se for pedido, volta como ADR.
 
-**Quando revisar.** Se o brandbook for atualizado — aí o `DESIGN.md` é reescrito a partir dele, nunca o contrário. Ou quando o fundador revisar as extrapolações: as aprovadas viram marca, as recusadas voltam para cá. A E-03 (cores de estado, que exigiram um verde inexistente na marca) é a candidata mais provável.
+**Quando revisar.** Se o brandbook for atualizado — aí o `DESIGN.md` é reescrito a partir dele, nunca o contrário. Ou quando a fundadora revisar as extrapolações: as aprovadas viram marca, as recusadas voltam para cá. A E-03 (cores de estado, que exigiram um verde inexistente na marca) é a candidata mais provável.
 
 ---
 
@@ -489,7 +500,7 @@ Os outros três critérios avaliados **não** decidiram, e vale registrar para n
 **Alternativas consideradas.**
 
 - *Rota pública dentro da SPA.* Descartada pelo argumento do crawler, com o custo do bundle e a quebra do provider como agravantes.
-- *Redirecionar o membro autenticado para `/app` ou `/home`.* Descartada: `/` é a Home e o alvo de `LOGIN_REDIRECT_URL`; mover o app para abrir espaço trocaria uma página nova por uma mudança em toda a navegação.
+- *Redirecionar o membro autenticado para `/app` ou `/home`.* Descartada: `/` é a Home da SPA e o alvo de `LOGIN_REDIRECT_URL`; mover o app para abrir espaço trocaria uma página nova por uma mudança em toda a navegação.
 - *Uma URL própria (`/sobre`), com `/` intacto.* Descartada: o endereço que o clube divulga é o domínio raiz, e uma apresentação um nível abaixo é uma que quase ninguém abre.
 - *Servir a landing a todo mundo.* Descartada: cobra um clique por visita de quem já é do clube, para mostrar um texto escrito para quem não é.
 
@@ -575,3 +586,28 @@ Monitoramento de erro, porém, é uma ferramenta que **exfiltra**: existe para m
 - Dois detalhes de build, verificados e não óbvios: o `@sentry/cli` baixa um binário por plataforma como dependência opcional, e o `package-lock.json` traz `cli-linux-x64` junto com o da máquina de desenvolvimento — é o que faz o `npm ci` do Render funcionar sem o `postinstall` que o npm 11 bloqueia por padrão; e o apagamento dos `.map` roda num `finally`, então acontece **mesmo quando o upload falha**. Uma indisponibilidade da Sentry custa os mapas daquele deploy, não o deploy.
 
 **Quando revisar.** Se aparecer um erro que as opções acima tornam indepurável — aí a decisão a tomar não é "ligar tudo de volta", é qual contexto nomeado adicionar àquele ponto do código. Se o tracing passar a valer, o que é sintoma de um problema de performance real e não de curiosidade. E a lista de **Additional Sensitive Fields** se revisa a cada campo de texto livre que entrar nos modelos, sem esperar por um ADR.
+
+---
+
+## ADR-21 — Ler é do clube, escrever é da organização
+**Status:** Aceito  ·  **Em uma frase:** Todo membro lê o feed; só `is_staff` publica, edita e apaga postagem — e o que é do próprio membro só ele mexe.
+
+**Contexto.** O ADR-19 fechou a API a quem não é membro, e disse com todas as letras que resolve **autenticação**, não **autorização**: uma vez logado, todo mundo é igual para o `auth=django_auth`. Falta declarar quem pode o quê dentro do clube. A regra existia no código desde as primeiras postagens e nunca tinha sido escrita aqui.
+
+**Decisão.** Duas perguntas diferentes, dois mecanismos.
+
+**Postagem é voz da organização.** Criar, editar, apagar uma postagem e anexar imagem a ela são `is_staff`-only, recusados com **403 em pt-BR** (`_staff_only` em `posts/api.py`). Leitura do feed é de todo membro. O clube tem uma voz institucional, e o feed é ela — não é rede social interna. Esconder o botão "Postar" de quem não é staff é cortesia da interface; **a checagem no backend é a regra**, e `GET /api/me` é a única resposta que carrega `is_staff`, justamente para a SPA saber o que desenhar.
+
+**O que é do membro só o membro mexe.** Progresso, nota, resenha, estante e perfil são escritos pelo dono e por mais ninguém — as rotas os alcançam por `request.user`, nunca por um id vindo do cliente, o que torna a regra estrutural em vez de uma checagem que alguém pode esquecer. Onde o id vem do cliente, a checagem é explícita (`_own_post`).
+
+**Alternativas consideradas.**
+
+- *Permissões do Django por objeto, ou um pacote de regras.* Descartada: são duas regras, e um framework de permissões custa mais para ler do que as duas funções que elas viraram.
+- *Deixar qualquer membro postar, moderando depois.* Descartada: o feed é a voz do clube, e moderação é trabalho recorrente que ninguém se ofereceu para fazer.
+
+**Consequências.**
+- Positivas: a regra cabe em duas funções nomeadas; `is_staff` já vem do Django e já é o que dá acesso ao Admin (ADR-14), então não há segundo conceito de "organização" para manter.
+- Negativas, e é a mesma que o ADR-19 aponta: **não há varredura automática de autorização**. `api/test_policy.py` garante que toda rota exige login, mas quem esquecer o `_staff_only` numa escrita nova a deixa aberta a qualquer membro logado, e só o teste do próprio app pega. É o gatilho de revisão abaixo.
+- `is_staff` dá o Admin inteiro junto. Não existe "pode postar mas não entra no Admin", e isso é aceito porque hoje as duas pessoas são as mesmas.
+
+**Quando revisar.** Se surgir alguém que deva publicar sem receber o Admin — aí nasce um papel de verdade, e `is_staff` deixa de servir. Ou se as escritas `is_staff`-only passarem de meia dúzia, quando vale dar à autorização a mesma varredura que o ADR-19 deu à autenticação.
