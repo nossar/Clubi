@@ -182,15 +182,17 @@ class Command(BaseCommand):
             if not MonthlyPick.objects.filter(month=month).exists():
                 title, author, pages = TITLES[created]
                 book, _ = Book.objects.get_or_create(
-                    title=title, author=author, defaults={"pages": pages}
+                    title=title, author=author, defaults={"pages": pages, "synopsis": SEED_MARK}
                 )
                 # A reused book may point at a file the local media/ no longer has (a row
                 # copied from elsewhere): a 404 on the page under test is what this command
                 # exists to avoid, so the file has to be there, not just the name.
                 if not book.cover or not book.cover.storage.exists(book.cover.name):
                     palette = COVER_PALETTES[created % len(COVER_PALETTES)]
+                    # The name passed here is discarded: upload_to is core.storage.RandomKey,
+                    # which returns covers/<uuid>.jpg (ADR-11). Nothing may key off it.
                     book.cover.save(
-                        f"mock-{month:%Y-%m}.jpg",
+                        "mock.jpg",
                         ContentFile(draw_cover(title, author, palette)),
                         save=True,
                     )
@@ -207,12 +209,16 @@ class Command(BaseCommand):
         return created
 
     def clear(self) -> int:
-        """Undo seed(): the marked picks, then the books and mock covers nothing else uses."""
+        """Undo seed(): the marked picks, then the books nothing else uses.
+
+        What makes a book ours is SEED_MARK in its synopsis, not the shape of its cover key —
+        that key is a UUID since ADR-11 and carries no meaning at all.
+        """
         picks = MonthlyPick.objects.filter(blurb__contains=SEED_MARK).select_related("book")
         books = {pick.book.pk: pick.book for pick in picks}
         removed, _ = picks.delete()
         for book in books.values():
-            if book.picks.exists() or not book.cover.name.startswith("covers/mock-"):
+            if book.picks.exists() or SEED_MARK not in book.synopsis:
                 continue  # a real book, or one still picked: not ours to remove
             book.cover.delete(save=False)
             book.delete()

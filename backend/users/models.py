@@ -1,12 +1,14 @@
 from django.contrib.auth.models import AbstractUser
 from django.db import models
 
+from core.storage import RandomKey
+
 
 class User(AbstractUser):
     # username, email, password and is_active come from AbstractUser
     full_name = models.CharField(max_length=120, blank=True)
     birth_date = models.DateField(null=True, blank=True)
-    photo = models.ImageField(upload_to="profiles/", null=True, blank=True)
+    photo = models.ImageField(upload_to=RandomKey("profiles"), blank=True)
     quote = models.CharField(max_length=180, blank=True)
     # "I have seen the postagens up to here" — the mark the unread badge counts from. NULL
     # means the member has never opened the feed, so everything published counts as unread;

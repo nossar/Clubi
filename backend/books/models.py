@@ -4,6 +4,8 @@ from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
 from django.utils import timezone
 
+from core.storage import RandomKey
+
 MAX_RATING = 5
 # One unit of MonthlyReading.rating_halves is half a star (ADR-06 keeps the column an integer).
 HALVES_PER_STAR = 2
@@ -19,7 +21,7 @@ class Book(models.Model):
     year = models.PositiveSmallIntegerField(null=True, blank=True)
     pages = models.PositiveIntegerField(null=True, blank=True)
     synopsis = models.TextField(blank=True)
-    cover = models.ImageField(upload_to="covers/", null=True, blank=True)
+    cover = models.ImageField(upload_to=RandomKey("covers"), blank=True)
     cover_url = models.URLField(blank=True)  # when it came from an external API
     external_id = models.CharField(max_length=60, blank=True, db_index=True)
     added_by = models.ForeignKey(

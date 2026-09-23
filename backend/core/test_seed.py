@@ -5,6 +5,7 @@ invents picks and writes covers into storage must fail closed, and the way it fa
 asserted rather than trusted — the failure mode of a guard is someone editing the condition.
 """
 
+import re
 from io import StringIO
 
 import pytest
@@ -68,7 +69,7 @@ class TestSeeding:
         assert all(SEED_MARK in pick.blurb for pick in picks)
         # Covers are drawn locally and land in the storage settings.py points at — never fetched.
         for pick in picks:
-            assert pick.book.cover.name.startswith("covers/mock-")
+            assert re.match(r"^covers/[0-9a-f]{32}\.jpg$", pick.book.cover.name)
             assert (media_root / pick.book.cover.name).is_file()
 
     def test_leaves_existing_months_alone(self, pick):
@@ -91,7 +92,7 @@ class TestSeeding:
         seed("--months", "2")
         mock_files = [
             media_root / book.cover.name
-            for book in Book.objects.filter(cover__startswith="covers/mock-")
+            for book in Book.objects.filter(synopsis__contains=SEED_MARK)
         ]
         assert mock_files
 

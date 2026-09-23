@@ -1,6 +1,8 @@
 from django.conf import settings
 from django.db import models
 
+from core.storage import RandomKey
+
 
 class Post(models.Model):
     author = models.ForeignKey(
@@ -29,7 +31,7 @@ class Post(models.Model):
 
 class PostImage(models.Model):
     post = models.ForeignKey(Post, on_delete=models.CASCADE, related_name="images")
-    file = models.ImageField(upload_to="posts/%Y/%m/")
+    file = models.ImageField(upload_to=RandomKey("posts/%Y/%m"))
     position = models.PositiveSmallIntegerField(default=1)
 
     class Meta:

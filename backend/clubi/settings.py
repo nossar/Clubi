@@ -207,10 +207,14 @@ if R2_BUCKET:
             "default_acl": None,
             "querystring_auth": False,
             "region_name": "auto",
-            # FileSystemStorage never overwrites; match it, or two members who both
-            # upload "foto.jpg" to profiles/ end up sharing one photo.
+            # Belt and braces: core.storage.RandomKey already makes a collision impossible,
+            # but matching FileSystemStorage's refusal to overwrite costs nothing.
             "file_overwrite": False,
-            # Safe only because the line above makes every key immutable.
+            # Safe because every key is a UUID that is never reused (core.storage.RandomKey), so
+            # the bytes at a given URL can never change. Media here is public and unsigned —
+            # querystring_auth is off above — and a year of immutable caching is what pays for
+            # that; see ADR-11. The cost is that deleting a file needs the object removed from R2
+            # *and* the URL purged from Cloudflare's cache.
             "object_parameters": {"CacheControl": "public, max-age=31536000, immutable"},
         },
     }
