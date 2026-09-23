@@ -67,17 +67,19 @@ Vale registrar que **DRF e Ninja não são alternativas ao Django** — rodam de
 
 **Alternativas consideradas.**
 
-*DRF.* Descartado. O ecossistema dele (viewsets, permissions granulares, throttling, versionamento, filtros) compensa a partir de uma escala de recursos que o Clubi não tem. Com cerca de vinte endpoints, paga-se a cerimônia sem receber o benefício. Além disso, o DRF não gera documentação OpenAPI sem pacote adicional e não tem suporte a async.
+*DRF.* Descartado. O ecossistema dele (viewsets, permissions granulares, throttling, versionamento, filtros) compensa a partir de uma escala de recursos que o Clubi não tem. Com pouco mais de vinte endpoints — 24 hoje —, paga-se a cerimônia sem receber o benefício. Além disso, o DRF não gera documentação OpenAPI sem pacote adicional e não tem suporte a async.
 
 *Templates apenas.* Tecnicamente suficiente e mais rápido de entregar, mas incompatível com ADR-03.
 
 **Consequências.**
-- Positivas: schemas Pydantic com validação declarativa, documentação OpenAPI automática em `/api/docs`, tipagem estática que atravessa até o frontend (ADR-12). Ergonomia próxima à do FastAPI, que atende ao objetivo de aprendizado sem sair do Django.
+- Positivas: schemas Pydantic com validação declarativa, documentação OpenAPI automática em `/api/docs` (em produção restrita a `is_staff`, ver ADR-19), tipagem estática que atravessa até o frontend (ADR-12). Ergonomia próxima à do FastAPI, que atende ao objetivo de aprendizado sem sair do Django.
 - Negativas: comunidade menor que a do DRF; menos respostas prontas em fóruns.
 
 **Quando revisar.** Se a API crescer muito e surgirem padrões repetitivos (filtros, permissões por objeto em dezenas de rotas), o DRF passa a ser um ganho real.
 
-**Onde esse código mora** é assunto do ADR-15.
+**Onde esse código mora** é assunto do ADR-15. **Quem pode chamar** é assunto do ADR-19.
+
+**Histórico.** A contagem de endpoints e a disponibilidade do `/api/docs` foram atualizadas em 2026-09-23; a segunda mudou pelo ADR-19 (2026-09-11).
 
 ---
 
@@ -98,7 +100,7 @@ São, na verdade, **duas decisões encadeadas com critérios diferentes**, e con
 
 O nível 1 seria a escolha correta se o critério fosse apenas velocidade de entrega. Nele o Ninja continuaria existindo e sendo usado de fato — favoritos, autocompletes, proxy da API de livros —, apenas com cerca de quatro endpoints em vez de vinte, e com o HTML como caminho principal. A diferença entre os níveis é de proporção, não da existência da API.
 
-**Esta é a única decisão do projeto tomada por critério não-técnico.**
+**Esta é a única decisão de *arquitetura* tomada por critério não-técnico.** O ADR-14 também responde a um critério que não é técnico — risco de cronograma e relação com a fundadora —, mas o que ele decide é ordem de entrega, não estrutura.
 
 ### 3b — Um repositório, não dois (nível 2, não nível 3)
 
@@ -109,8 +111,8 @@ Importante: nos níveis 2 e 3 **a API é consumida de forma idêntica em runtime
 O mono-repo é também o que viabiliza as decisões ADR-04 (mesma origem, sem CORS nem JWT) e ADR-12 (tipos gerados sem publicar pacote). Ou seja: ele não apenas não cria as dores do nível 3 — ele é a precondição para eliminá-las.
 
 **Consequências.**
-- Positivas: aprendizado alinhado ao mercado; separação real de responsabilidades; a API já nasce pronta para um eventual app mobile.
-- Negativas: perde-se os Django Forms (o formset das 4 imagens vira upload manual pela API) e a renderização server-side. Surge estado duplicado entre banco e cliente, com a classe de problemas de cache que isso implica. O cronograma alonga.
+- Positivas: aprendizado alinhado ao mercado; separação real de responsabilidades; a API já nasce como contrato legível para um eventual app mobile — com a ressalva do ADR-04 de que a sessão não serve a cliente nativo, então o que está pronto é a forma dos dados, não a autenticação.
+- Negativas: as **telas do produto** perdem os Django Forms (o formset das 4 imagens vira upload manual pela API) e a renderização no servidor. As telas de autenticação (ADR-05) e a apresentação em `/` (ADR-18) continuam renderizadas, e não por acidente: são justamente onde o HTML no primeiro byte vale mais que o React. Surge também estado duplicado entre banco e cliente, com a classe de problemas de cache que isso implica. O cronograma alonga.
 - Mitigação do risco de cronograma: ver ADR-14.
 
 **Quando revisar.** Se o projeto atrasar a ponto de ameaçar a entrega ao clube, a fase de fallback é o Admin (ADR-14), não uma volta ao nível 1.
@@ -122,17 +124,21 @@ O mono-repo é também o que viabiliza as decisões ADR-04 (mesma origem, sem CO
 
 **Contexto.** Escolhido o nível 2, é preciso decidir como a SPA se autentica na API.
 
-**Decisão.** Frontend e backend respondem na **mesma origem**. A SPA usa o cookie de sessão do Django e envia o header `X-CSRFToken`. Em desenvolvimento, o Vite faz proxy de `/api`, `/admin`, `/accounts` e `/media` para o Django; em produção, o Django serve o `index.html` do build.
+**Decisão.** Frontend e backend respondem na **mesma origem**. A SPA usa o cookie de sessão do Django e envia o header `X-CSRFToken`. Em desenvolvimento, o Vite faz proxy de `/api`, `/admin`, `/accounts`, `/media` e `/static` para o Django; em produção, o Django serve o `index.html` do build — exceto em `/`, que desde o ADR-18 ramifica na sessão. A raiz **não** entra no proxy: ela é a própria raiz da SPA em `:5173`.
 
 **Alternativas consideradas.**
 
 *Origens distintas com JWT.* É o arranjo default de tutoriais e foi descartado deliberadamente. Ele traz uma cadeia inteira de problemas — CORS, escolha entre `localStorage` (vulnerável a XSS) e cookie, refresh token, revogação, expiração — que **existe apenas porque as origens foram separadas**. Nenhum desses problemas é do domínio do Clubi.
 
 **Consequências.**
-- Positivas: zero configuração de CORS; proteção CSRF do Django continua ativa; `request.user` funciona nos endpoints exatamente como funcionaria numa view; logout é imediato e real.
+- Positivas: zero configuração de CORS; `request.user` funciona nos endpoints exatamente como funcionaria numa view; logout é imediato e real.
 - Negativas: um app mobile nativo futuro não pode usar sessão e precisaria de um esquema de token adicional. É um problema aditivo, não bloqueante.
 
+**A proteção CSRF não vem da mesma origem — vem do `auth=`.** O django-ninja marca toda view da API com `csrf_exempt` no nível do middleware e delega a checagem à classe de auth. Hoje ela está ativa em toda escrita porque o `django_auth` é global (ADR-19) e o `SessionAuth` a aplica em todo método inseguro. Antes disso, uma rota sem `auth=` nascia sem proteção nenhuma. Mesma origem é o que torna a sessão utilizável; não é o que protege a escrita.
+
 **Quando revisar.** Ao construir um cliente que não seja o navegador na mesma origem.
+
+**Histórico.** O texto original creditava a proteção CSRF à mesma origem e listava quatro caminhos no proxy do Vite. Corrigido em 2026-09-23: o proxy tem cinco, e a proteção depende do `auth=django_auth` que o ADR-19 (2026-09-11) tornou global.
 
 ---
 
@@ -143,13 +149,21 @@ O mono-repo é também o que viabiliza as decisões ADR-04 (mesma origem, sem CO
 
 **Decisão.** Essas telas ficam em views Django renderizadas, sob `/accounts/`. Não há endpoints de autenticação na API.
 
-**Justificativa.** A linha `path("accounts/", include("django.contrib.auth.urls"))` entrega seis views prontas, incluindo o fluxo completo de reset de senha com token assinado, expiração e envio de e-mail. Reimplementar isso em React consumiria cerca de duas semanas em código que não agrega nada ao portfólio — e é justamente a área onde um erro tem consequência de segurança real.
+**Por que não reimplementar.** A linha `path("accounts/", include("django.contrib.auth.urls"))` entrega seis views prontas — login, logout e o fluxo completo de reset de senha, com token assinado, expiração e envio de e-mail. **Cadastro não está entre elas**: a `SignupView` é do projeto, registrada antes do `include` junto com o `LoginView` que usa o `LoginForm` próprio. Reimplementar o resto em React consumiria cerca de duas semanas em código que não agrega nada ao portfólio — e é justamente a área onde um erro tem consequência de segurança real.
+
+**Alternativas consideradas.**
+
+*Telas de autenticação na SPA, com endpoints de auth no Ninja.* Descartada pelo parágrafo acima: duas semanas para reescrever pior o que já existe testado, na única área do projeto onde um bug é uma falha de segurança.
 
 **Consequências.**
 - Positivas: segurança testada por padrão; economia grande de tempo; a fronteira é limpa e fácil de justificar.
-- Negativas: uma descontinuidade visual entre as páginas de login e a SPA. Mitigável usando os mesmos tokens de CSS nos dois lados.
+- Negativas: uma descontinuidade visual entre as páginas de login e a SPA — a **única desvantagem real desta decisão**. A mitigação é os dois lados carregarem os mesmos tokens: hoje `backend/core/static/css/tokens.css` e `frontend/src/styles/tokens.css`, gêmeos declarados com a paleta da marca (ADR-17, ADR-18). Mudar um sem o outro reabre a costura.
 
-**Fluxo definido.** Usuário anônimo abre a SPA → `/api/me` responde 401 → o cliente redireciona para `/accounts/login/?next=…` → após autenticar, volta com sessão válida.
+**Fluxo definido.** Usuário anônimo abre a SPA → `/api/me` responde 401 → o cliente redireciona para `/accounts/login/?next=…` → após autenticar, volta com sessão válida. Um deep link como `/posts` percorre esse caminho inteiro; `/` não, porque desde o ADR-18 ele responde a landing renderizada a quem não tem sessão.
+
+**Quando revisar.** Se o cadastro precisar de passos que um formulário renderizado não dê conta — confirmação por e-mail em várias etapas, convite com código. Aí a pergunta é sobre a tela de cadastro, que já é nossa, não sobre trazer o reset de senha para a API.
+
+**Histórico.** O texto original atribuía o cadastro às views do `django.contrib.auth`. Corrigido em 2026-09-23: a `SignupView` sempre foi do projeto.
 
 ---
 
@@ -303,7 +317,7 @@ O mono-repo é também o que viabiliza as decisões ADR-04 (mesma origem, sem CO
 
 **Decisão.** Versão inicial gratuita: aplicação no Render, banco no Neon, mídia no R2.
 
-**Justificativa por componente.**
+**Alternativas consideradas, por componente.**
 
 *Banco no Neon, não no Render.* O Postgres gratuito do Render é deletado 30 dias após a criação, o que o torna inviável para qualquer coisa além de teste. O plano gratuito do Neon é permanente, tem 0,5 GB por projeto — muito acima do necessário, já que só texto e metadados vão para o banco — e escala a zero quando ocioso, com cold start de 0,5 a 2 segundos.
 
@@ -315,7 +329,9 @@ O mono-repo é também o que viabiliza as decisões ADR-04 (mesma origem, sem CO
 
 **Caminho de upgrade.** O primeiro gasto recomendado é o plano pago do Render (~US$ 7/mês), que elimina o cold start. Banco e storage só depois, por consumo. Estimativa: R$ 0 na versão inicial, ~US$ 7/mês na versão divulgável, ~US$ 15/mês confortável, mais o domínio (~R$ 40/ano).
 
-**Observação.** Preços e limites de tier gratuito mudam com frequência. Confirme antes de fechar as contas.
+**A pilha não é só esta.** Somam-se a Sentry (ADR-20) e o provedor de e-mail transacional de que o reset de senha do ADR-05 depende. Nenhum dos dois entra na estimativa acima porque os dois rodam em plano gratuito — mas os dois recebem dado de membro, que é a conta que o ADR-20 manda fazer.
+
+**Quando revisar.** Quando o cold start constranger de verdade, que é o momento do primeiro gasto; se algum dos tiers gratuitos mudar de regra; ou antes de fechar qualquer conta, porque **preços e limites de tier gratuito mudam com frequência e os números acima têm prazo de validade curto**.
 
 ---
 
@@ -359,15 +375,15 @@ A pergunta que decide isso não é estética. É onde ficam os *schemas* quando 
 **A distinção que sustenta tudo.** Schemas se dividem em duas categorias, e só uma é compartilhável:
 
 - **Projeções** (`BookOut`, `UserBrief`) — representam uma entidade, não dependem de nenhum outro schema e existem para serem embutidas. Por construção não têm arestas de saída.
-- **Formatos de resposta** (`PostOut`, `ReaderOut`, `UserProfileOut`) — representam *o que um endpoint devolve*. Moram com a rota que os devolve, nunca com a entidade que eles citam.
+- **Formatos de resposta** (`PostOut`, `FinishedReaderOut`, `UserProfileOut`) — representam *o que um endpoint devolve*. Moram com a rota que os devolve, nunca com a entidade que eles citam.
 
-O `FinishedReaderOut` (nascido `ReaderOut`, renomeado quando a rota deixou de responder "quem está lendo") é o exemplo que ensina a regra: ele não é um schema de "books", é o retorno de `GET /api/monthly-picks/current/readers`. Arquivá-lo sob a entidade errada é o que cria ciclo; arquivá-lo sob a rota resolve.
+O `FinishedReaderOut` (nascido `ReaderOut`, renomeado quando a rota deixou de responder "quem está lendo") é o exemplo que ensina a regra. Ele mora em `books/schemas.py` **não porque descreva um livro, e sim porque o `picks_router` mora em `books/api.py`** — ele é o retorno de `GET /api/monthly-picks/current/readers`. A pergunta que decide o arquivo é "de quem é a rota", nunca "de quem é a entidade".
 
 **Alternativas consideradas.**
 
 *A fachada `api/` (o que o guia prescrevia).* Descartada. O argumento a favor era real: `BookOut` e `UserBrief` são vocabulário de várias áreas, e centralizar evita pensar em import. Mas o ganho é pequeno — os routers já estavam separados por área, então a fachada centralizava de fato um arquivo só — e o custo cresce: `schemas.py` vira gaveta de tudo, apagar uma feature deixa de ser apagar um diretório, e o app `api/` precisa conhecer todos os domínios. Além disso, contraria a doutrina de apps do Django e a documentação do Ninja, o que cobra um imposto de onboarding em todo desenvolvedor novo.
 
-*Schemas por app sem camada compartilhada.* Descartada, porque não compila. `UserOut.favorites` precisa de `BookOut` e `ReaderOut.user` precisa de `UserBrief`: `users` importaria `books` e `books` importaria `users`. No nível de modelo o Django dissolve isso com referências por string (`"books.Book"`, `settings.AUTH_USER_MODEL`); o Pydantic não tem essa saída, e o ciclo vira `ImportError` de verdade. As projeções existem exatamente para quebrar essa aresta.
+*Schemas por app sem camada compartilhada.* Descartada, porque não compila. `UserOut.favorites` precisa de `BookOut` e `FinishedReaderOut.user` precisa de `UserBrief`: `users` importaria `books` e `books` importaria `users`. No nível de modelo o Django dissolve isso com referências por string (`"books.Book"`, `settings.AUTH_USER_MODEL`); o Pydantic não tem essa saída, e o ciclo vira `ImportError` de verdade. As projeções existem exatamente para quebrar essa aresta.
 
 *Referências adiantadas (`TYPE_CHECKING` + `model_rebuild()`).* Descartada como arquitetura. O Pydantic 2 permite ciclos assim, mas isso torna o ciclo possível, não bom. É escotilha de emergência, não planta baixa.
 
@@ -381,7 +397,7 @@ O `FinishedReaderOut` (nascido `ReaderOut`, renomeado quando a rota deixou de re
          users ────────┘
 ```
 
-- `books` → projeções. Só `ReaderOut.user` toca terreno de usuário, e toca a projeção, nunca `users.schemas`.
+- `books` → projeções. Só `FinishedReaderOut.user` toca terreno de usuário, e toca a projeção, nunca `users.schemas`.
 - `posts` → projeções. `PostOut` embute autor e livro; o único contato com outro app é `books.models.Book`, para validar a FK que o `Post` já tem.
 - `users` → projeções **e `books`**. É a única importação de schema entre apps de domínio, e é honesta: o histórico do perfil *é* uma lista de leituras mensais, e `User.favorites` já atravessa `books.Favorite` no nível de modelo.
 
@@ -397,6 +413,8 @@ Repare que o grafo de schemas fica **melhor que o de modelos**: no nível de mod
 
 O preço é que os nomes de view passam a ser únicos em toda a API, não só dentro do app. Não é combinação a se confiar na memória: `api/test_api.py` falha se dois nomes colidirem ou se um `operationId` voltar a carregar nome de módulo.
 
+**Histórico.** O texto e o grafo citavam `ReaderOut`, nome anterior ao `FinishedReaderOut`, e o grafo o arquivava sob a entidade `books` — contra a regra que este próprio ADR estabelece. Corrigido em 2026-09-23.
+
 **Custo de reversão.** Baixo e simétrico. Voltar à fachada é mover quatro arquivos e reunir os schemas; o contrato HTTP e o OpenAPI não mudam em nenhuma das direções — isto é decisão de layout de código, não de API.
 
 **Quando revisar.** Se um app de domínio passar a importar schemas de dois outros, ou se as projeções em `api/schemas.py` passarem de meia dúzia. Qualquer um dos dois indica que a fronteira entre apps parou de corresponder ao domínio.
@@ -406,7 +424,7 @@ O preço é que os nomes de view passam a ser únicos em toda a API, não só de
 ## ADR-16 — Ferramental de desenvolvimento do frontend
 **Status:** Revisado (ver histórico do 16b)  ·  **Em uma frase:** Entram o Chrome DevTools MCP e a skill `frontend-design`, com escopo estreito; o Hey API é recusado no mérito.
 
-**Contexto.** O backend está fechado e a Fase 4 começa. Três ferramentas foram avaliadas: um MCP de navegador, a skill oficial `frontend-design` da Anthropic, e a troca do `openapi-typescript` pelo Hey API com o plugin de TanStack Query. As duas primeiras mexem só no fluxo de trabalho e são reversíveis apagando uma linha de configuração. A terceira mexe na arquitetura do cliente e contradiz o critério do ADR-03a, então é decisão de arquitetura, não de ferramenta.
+**Contexto (2026-08-27).** O backend estava fechado e a Fase 4 começava — os ADR-18, ADR-19 e ADR-20 voltariam a mexê-lo depois. Três ferramentas foram avaliadas: um MCP de navegador, a skill oficial `frontend-design` da Anthropic, e a troca do `openapi-typescript` pelo Hey API com o plugin de TanStack Query. As duas primeiras mexem só no fluxo de trabalho e são reversíveis apagando uma linha de configuração. A terceira mexe na arquitetura do cliente e contradiz o critério do ADR-03a, então é decisão de arquitetura, não de ferramenta.
 
 **Decisão.** Adotar as duas primeiras, com escopo estreito. Recusar a terceira.
 
@@ -416,19 +434,21 @@ Adotado em `.mcp.json` versionado (`claude mcp add --scope project`), não no es
 
 Escolhido em vez do Playwright MCP porque o que falta no dia a dia da Fase 4 é console, rede e cookies — não navegação cross-browser. O Playwright entra quando existir suíte e2e e CI, que hoje não existem; adotá-lo agora seria configurar ferramenta para um fluxo que ninguém roda.
 
-Duas regras de uso. **Aponte o navegador para o Vite (`:5173`), não para o Django (`:8000`)** — é o caminho que exercita o proxy do ADR-04; abrir `:8000` direto testa um arranjo que não existe nem em dev nem em produção. E **use só contra o ambiente local**: um MCP de navegador transforma conteúdo de página em entrada do agente, e apontar para `/admin/` em produção significa expor dados reais dos membros a essa superfície.
+Duas regras de uso. **Aponte o navegador para o Vite (`:5173`), não para o Django (`:8000`)** — é o caminho que exercita o proxy do ADR-04; abrir `:8000` direto testa um arranjo que não existe nem em dev nem em produção. **A landing do ADR-18 é a única exceção**, porque `/` é a raiz da SPA em `:5173` e por isso o único caminho que não pode ser proxiado: vê-se em `localhost:8000/`, em janela anônima. E **use só contra o ambiente local**: um MCP de navegador transforma conteúdo de página em entrada do agente, e apontar para `/admin/` em produção significa expor dados reais dos membros a essa superfície.
 
 O ganho previsto é específico: as duas armadilhas conhecidas da integração do shell — asset com nome que o Vite não emitiu, e escrita recusada por falta do cookie `csrftoken` — são invisíveis no código e imediatas num painel de rede. Vale registrar que o agente consegue autenticar sozinho porque o ADR-04 existe: ele navega até `/accounts/login/`, preenche o form renderizado, e o cookie de sessão vale pelo resto da execução. Com JWT em `localStorage` seria preciso injetar o token a cada requisição.
 
 ### 16b — Skill `frontend-design`, uso único na Fase 4, com a paleta fixada no briefing
 
-Adotada para produzir o `styles/tokens.css` da seção 7.7 do guia, uma vez. Depois disso não entra no fluxo: o registro dela puxa para o editorial e o ousado, que não é o de um site de clube de leitura universitário.
+**Status:** Revisado pelo ADR-17 — ver **Histórico** ao fim desta subseção.
 
-> ⚠️ **Revisado pelo ADR-17 (2026-08-27).** A premissa de que "a paleta já existe e não está em disputa" era falsa: a paleta que existia estava no *código*, não na *marca*. O brandbook em `frontend/clubi/` define outra paleta e outra dupla tipográfica, e é anterior a este ADR. **A paleta a fixar no briefing da skill é a do `frontend/DESIGN.md`, não a do `auth.css`.** O resto de 16b — uso único, na Fase 4, com a paleta fixada e a liberdade gasta em escala tipográfica, espaçamento, layout e elemento assinatura — continua valendo, e agora com respaldo melhor: a paleta é da marca, não uma preferência.
+Adotada para produzir o `frontend/src/styles/tokens.css` da seção 7.7 do guia, uma vez. Depois disso não entra no fluxo: o registro dela puxa para o editorial e o ousado, que não é o de um site de clube de leitura universitário.
 
-**A restrição que a torna utilizável aqui: a paleta já existe e não está em disputa.** `backend/core/static/css/auth.css` já define `--clubi-bg: #f6f2ea`, `--clubi-ink: #1d1a17`, `--clubi-accent: #7a2e2e`, mais uma serifada e uma sans, e essas páginas já estão no ar. Trocar a paleta reabre exatamente a costura entre `/accounts/` e a SPA que o ADR-05 assume como sua única desvantagem real, e cuja mitigação declarada é os dois lados usarem os mesmos tokens.
+**A restrição que a torna utilizável: a paleta é fixada no briefing, e vem da marca.** A skill diz que o briefing vence quando ele fixa uma direção. Então o briefing fixa a paleta do `frontend/DESIGN.md` (ADR-17) e gasta a liberdade da skill no que o brandbook não cobre — conceito de layout e elemento assinatura. Escala tipográfica e espaçamento **não** estão nessa lista: o ADR-17 já as registrou como extrapolações no `DESIGN.md`, e valor que nasce no componente é bug de processo.
 
-Isso importa porque a skill nomeia, entre os três clichês de design gerado por IA que manda evitar, um que descreve a nossa paleta quase no hex: fundo creme quente perto de `#F4F1EA`, serifada de alto contraste, acento terroso. **Assumimos essa coincidência conscientemente.** A skill diz que o briefing vence quando ele fixa uma direção, então o briefing fixa a paleta e a gasta liberdade dela no que ainda está aberto: escala tipográfica, escala de espaçamento, conceito de layout e o "elemento assinatura". Se um dia a proximidade com o clichê incomodar, o que se revisa é o acento — e a mudança é nos dois arquivos, nunca em um só.
+Isso resolve de passagem um risco que a skill nomeia: entre os três clichês de design gerado por IA que ela manda evitar está "creme quente perto de `#F4F1EA`, serifada de alto contraste, acento terroso". A paleta da marca não é essa.
+
+**Histórico.** Escrito com a premissa de que "a paleta já existe e não está em disputa", apontando para os valores do `auth.css` — `#f6f2ea`, `#1d1a17`, `#7a2e2e`, Inter e uma serifada. A premissa era falsa: a paleta que existia estava no *código*, não na *marca*. O brandbook em `frontend/clubi/` define outra paleta e outra dupla tipográfica, e é anterior a este ADR. **Revisado pelo ADR-17 (2026-08-27)**, que tornou o brandbook a fonte da verdade; os valores antigos estão mortos e não devem ser copiados de commit nenhum. O resto de 16b — uso único, na Fase 4, com a paleta fixada no briefing — continua valendo, e com respaldo melhor.
 
 ### 16c — Manter o `openapi-typescript` do ADR-12; não adotar o Hey API
 
@@ -436,13 +456,13 @@ O pré-requisito técnico já está satisfeito: o `get_openapi_operation_id` foi
 
 1. **Contraria o critério declarado do ADR-03a.** A SPA existe por um motivo explicitamente não-técnico, e o ADR lista o que se quer aprender: "React, TypeScript e **consumo de API**". O Hey API gera justamente a camada de consumo. Alongar o cronograma para aprender a consumir uma API e depois gerar essa camada é pagar o custo do ADR-03 sem receber o benefício pelo qual ele foi aprovado.
 2. **O `client.ts` não é boilerplate.** Ele carrega duas regras próprias do projeto: o header `X-CSRFToken` lido do cookie e o 401 → `/accounts/login/?next=…`, que *é* o fluxo de login do ADR-05. Com cliente gerado isso vira configuração de interceptor — possível, mas menos legível para quem está aprendendo, e o invariante "único ponto do frontend que fala com a rede" fica mais difícil de sustentar.
-3. **A tabela de `queryKey` da seção 7.5 é o artefato de ensino, não o problema.** Chaves geradas são objetos por operação; a regra "invalide todas as chaves que exibem aquele dado" passa a operar sobre chaves opacas. Para 22 endpoints congelados e uma a duas pessoas, a disciplina manual é mais barata que a indireção.
+3. **A tabela de `queryKey` da seção 7.5 do guia é o artefato de ensino, não o problema.** Chaves geradas são objetos por operação; a regra "invalide todas as chaves que exibem aquele dado" passa a operar sobre chaves opacas. Para 24 endpoints e uma a duas pessoas, a disciplina manual é mais barata que a indireção.
 
 **O que fica sem cobertura, dito com todas as letras.** O `openapi-typescript` com `tsc --noEmit` pega campo renomeado — que é o risco que o ADR-12 nomeia e o que de fato acontece. Não pega path ou método errado, porque a rota é string literal no `client.ts`. Em dev isso aparece como 404 na primeira renderização, não em produção, e é o preço aceito aqui.
 
 **Consequências.**
 - Positivas: o ferramental que entra é reversível e não toca no código de produção; o gerador de tipos continua sendo um passo só; o `client.ts` segue legível de cabo a rabo por quem está aprendendo.
-- Negativas: o time carrega à mão 22 chamadas e a tabela de invalidação, com a disciplina que isso exige; e a paleta do projeto fica perto de um default reconhecível, por escolha e não por descuido.
+- Negativas: o time carrega à mão uma chamada por endpoint — 24 hoje — e a tabela de invalidação, com a disciplina que isso exige.
 - Versionados junto com esta decisão: `.mcp.json`, `.claude/skills/frontend-design/` e `skills-lock.json`. A skill é cópia vendorizada — atualizá-la é rodar o instalador de novo, não editar o arquivo.
 
 **Quando revisar.** O 16c volta à mesa se a API passar de ~40 endpoints, se entrar um segundo consumidor — o app mobile que o ADR-03 prevê —, ou se o time crescer a ponto de a disciplina manual falhar em revisão. Nos três casos o `operationId` já estável torna a adoção barata. O 16a se revisa quando existir CI com e2e, que é quando o Playwright passa a valer. O 16b se revisa se a skill for usada uma segunda vez sem briefing fixando a paleta — sinal de que a costura do ADR-05 voltou a estar em risco.
@@ -461,10 +481,23 @@ São duas paletas diferentes no mesmo produto. O ADR-16b partiu da que estava no
 Três regras decorrem:
 
 1. **Rastreabilidade.** Toda cor, fonte, medida e escolha de tom no frontend precisa ser literal do brandbook, derivada dele por fórmula registrada, ou estar na tabela de extrapolações do `DESIGN.md`. Valor que nasce no componente é bug de processo, mesmo que fique bonito.
-2. **As extrapolações são explícitas e revisáveis.** A seção 12 do `DESIGN.md` lista as doze decisões sem respaldo direto — estados de hover, cores de erro/sucesso, escala tipográfica, espaçamento, breakpoints, movimento. Elas existem porque a web precisa delas e o brandbook é mídia estática. Ficam separadas para que o fundador possa contestá-las uma a uma.
+2. **As extrapolações são explícitas e revisáveis.** A seção 12 do `DESIGN.md` lista, numeradas, as decisões sem respaldo direto — estados de hover, cores de erro/sucesso, escala tipográfica, espaçamento, breakpoints, movimento, e tudo o que as fases seguintes acrescentaram. Eram doze quando este ADR foi escrito e são vinte e uma hoje; a tabela **cresce** a cada tela que pede medida nova, e é assim que deve ser. Elas existem porque a web precisa delas e o brandbook é mídia estática, e ficam separadas para que o fundador possa contestá-las uma a uma.
 3. **A costura do ADR-05 continua sendo mitigada por tokens compartilhados.** `styles/tokens.css` e `auth.css` carregam os mesmos valores. A diferença é qual paleta: agora a da marca.
 
-**O que muda na prática.** `--clubi-bg` passa de `#f6f2ea` para `#fdfae7`; `--clubi-accent` de `#7a2e2e` para `#88013e`; a dupla Inter/serifada vira Manrope/Clash Display, ambas self-hosted; e entram amarelo `#ffd071` e laranja `#ed6630`, que não tinham equivalente no CSS atual. **O realinhamento do `auth.css` é pré-requisito do primeiro commit de CSS da SPA**, não faxina posterior — enquanto os dois arquivos discordarem, a costura entre `/accounts/` e a SPA fica visível, que é exatamente o que o ADR-05 aceitou como sua única desvantagem real e prometeu mitigar.
+**O que mudou na prática.** As quatro cores da marca entram literais do brandbook (p.3) e os tokens de uso derivam delas:
+
+| Token | Valor | De onde vem |
+|---|---|---|
+| `--clubi-bg` | `#fdfae7` (creme) | era `#f6f2ea` |
+| `--clubi-ink` | `#26161d` | era `#1d1a17`; derivado, não literal — ver E-01 |
+| `--clubi-ink-brand`, `--clubi-bg-invert` | `#88013e` (vinho) | não tinha equivalente |
+| `--clubi-accent` | `#ed6630` (laranja) | era `#7a2e2e` |
+| — | `#ffd071` (amarelo) | não tinha equivalente |
+| Tipografia | Clash Display + Manrope, self-hosted | era Inter + uma serifada |
+
+Repare que **o vinho não é o acento**: ele é a tinta de marca e o fundo invertido, e o acento é o laranja. O laranja mede 3.06 sobre creme, por isso `--clubi-accent-ink` existe e é mais escuro que `--clubi-ink`.
+
+O realinhamento do `auth.css` era pré-requisito do primeiro commit de CSS da SPA, não faxina posterior — enquanto os dois lados discordassem, a costura entre `/accounts/` e a SPA ficaria visível, que é o que o ADR-05 aceitou como sua única desvantagem real e prometeu mitigar. **Foi feito**: os tokens saíram do `auth.css` para `backend/core/static/css/tokens.css`, gêmeo declarado de `frontend/src/styles/tokens.css`, e o `auth.css` ficou só com as regras do `.auth-card` (ADR-18).
 
 **Alternativas consideradas.**
 
@@ -474,9 +507,9 @@ Três regras decorrem:
 
 **Consequências.**
 
-- Positivas: o site passa a parecer com o clube que já existe no Instagram; some a paleta de origem desconhecida; a skill do 16b recebe um briefing com respaldo real; e a preocupação do 16b com "paleta próxima de um default de IA reconhecível" perde objeto — `#88013e` sobre `#fdfae7` com Clash Display não é o creme-e-serifada genérico. O par vinho/creme mede 9.43:1, melhor do que a paleta que ele substitui.
-- Negativas: `auth.css` precisa de retrabalho antes da Fase 4; entram duas famílias self-hosted onde antes havia fontes de sistema, com custo de banda e de conversão para `woff2`; e o `DESIGN.md` vira mais um documento a manter em dia.
-- O ADR-16b tem nota de revisão apontando para cá.
+- Positivas: o site passa a parecer com o clube que já existe no Instagram; some a paleta de origem desconhecida; a skill do 16b recebe um briefing com respaldo real; e a preocupação do 16b com "paleta próxima de um default de IA reconhecível" perde objeto — `#88013e` sobre `#fdfae7` com Clash Display não é o creme-e-serifada genérico. O par vinho/creme mede 9.43:1 e o texto corrido mede 16.47, ambos acima da paleta que substituíram.
+- Negativas: `auth.css` precisou de retrabalho antes da Fase 4; entram duas famílias self-hosted onde antes havia fontes de sistema, com custo de banda e de conversão para `woff2`; e o `DESIGN.md` vira mais um documento a manter em dia — um que cresce, porque cada tela nova acrescenta extrapolação.
+- Sem tema escuro, e é decisão (E-12): a inversão creme ⇄ vinho já é o modo escuro da marca, e um dark neutro exigiria cores fora do brandbook. Se for pedido, volta como ADR — não como ajuste de token.
 
 **Quando revisar.** Se o brandbook for atualizado — aí o `DESIGN.md` é reescrito a partir dele, nunca o contrário. Ou quando as extrapolações da seção 12 forem revisadas pelo fundador: as aprovadas deixam de ser extrapolação e viram marca, e as recusadas voltam para cá. A E-03 (cores de estado, que exigiram um verde inexistente na marca) é a candidata mais provável a mudar.
 
@@ -495,8 +528,8 @@ A pergunta não é se a página deve existir, e sim onde ela mora: uma view Djan
 
 Os outros três critérios avaliados **não** decidiram, e vale registrar por quê, para ninguém reabrir a discussão achando que decidiram:
 
-- *Custo do bundle.* Real, porém secundário. O build atual pesa 383 KB de JS (124 KB comprimido) mais 29 KB de CSS, e hoje o visitante anônimo paga tudo isso **e** uma navegação de documento inteira até `/accounts/login/`. Baixar React para exibir texto estático é desperdício, mas desperdício de alguns décimos de segundo, não um argumento estrutural. *O cold start do plano gratuito do Render foi explicitamente descartado como critério*: ele some no plano pago (ADR-13), e esta página nasce para o cenário divulgado.
-- *Acesso ao ORM.* Menos decisivo do que parecia. A view chama `MonthlyPick.current()` direto, sem round trip e sem estado no cliente — mas **`GET /api/monthly-picks/current` já é público**: o `picks_router` é montado sem `auth=` em `api/api.py` e a rota não declara auth própria. Uma rota na SPA não precisaria de endpoint novo. O que sobra de verdade é outro custo: o `CurrentUserProvider` envolve o `<Routes>` inteiro e bloqueia a renderização até `/api/me` responder, então uma rota pública exigiria quebrar esse provider em dois — uma reestruturação da raiz da SPA para hospedar uma página sem estado nenhum.
+- *Custo do bundle.* Real, porém secundário. O build pesa 406 KB de JS (130 KB comprimido) mais 31 KB de CSS, e sem esta página o visitante anônimo pagaria tudo isso **e** uma navegação de documento inteira até `/accounts/login/`. Baixar React para exibir texto estático é desperdício de alguns décimos de segundo, não um argumento estrutural. *O cold start do plano gratuito do Render foi explicitamente descartado como critério*: ele some no plano pago (ADR-13), e esta página nasce para o cenário divulgado.
+- *Acesso ao ORM.* Menos decisivo do que parecia na hora, e decisivo de novo desde o ADR-19. A view chama `MonthlyPick.current()` direto, sem round trip e sem estado no cliente. Uma rota na SPA precisaria de um endpoint aberto a anônimo — e a API é fechada por padrão, com `PUBLIC_OPERATIONS` vazia, então abrir um seria a decisão, não o detalhe. Some-se outro custo: o `CurrentUserProvider` envolve o `<Routes>` inteiro e bloqueia a renderização até `/api/me` responder, então uma rota pública exigiria quebrar esse provider em dois — uma reestruturação da raiz da SPA para hospedar uma página sem estado nenhum.
 - *Catch-all.* Empate, e é o critério que sai de graça nas duas opções. O `path("", root)` é declarado **antes** do `re_path`, e o Django resolve na ordem: o primeiro padrão que casa vence. O lookahead negativo `^(?!static/|media/|api/|admin/|accounts/).*$` fica **intocado**, o que preserva a propriedade que ele existe para dar — um caminho de API digitado errado devolve 404 em vez de renderizar HTML.
 
 **O que explicitamente não muda: o fluxo do ADR-05.** Um deep link para rota autenticada (`/posts`, `/u/ana`) não casa com `path("")`, cai no catch-all, recebe o shell, e o `client.ts` faz o que sempre fez ao ver o 401 do `/api/me` — redireciona para `/accounts/login/?next=…`. Nenhuma linha de `client.ts`, `CurrentUser.tsx` ou `App.tsx` foi tocada, e não há endpoint novo na API. Os CTAs "Entrar" e "Criar conta" apontam para as views que já existiam sob `/accounts/`.
@@ -517,7 +550,9 @@ Os outros três critérios avaliados **não** decidiram, e vale registrar por qu
   3. **Existe agora uma segunda superfície de copy fora do controle da SPA**, com placeholders esperando a fundadora. Texto provisório que ninguém troca vira texto definitivo por omissão.
 - Neutra, mas vale saber: o `auth.css` foi partido em dois. Os tokens saíram para `core/static/css/tokens.css`, que a landing e as páginas de `/accounts/` carregam, e o `auth.css` ficou só com as regras do `.auth-card`. O arquivo novo é o gêmeo declarado do `frontend/src/styles/tokens.css` — a mitigação de costura que o ADR-05 prometeu e o ADR-17 reafirmou passa a ser verificável a olho, porque os dois carregam a paleta inteira em vez de um subconjunto.
 
-**Quando revisar.** Se a apresentação passar a precisar de estado (formulário de interesse, área de conteúdo paginada, qualquer coisa que peça interatividade além de links), a conta muda e vale reavaliar se ela é uma tela da SPA. E se um dia houver mais de uma página institucional — sobre, contato, edições anteriores abertas ao público —, aí a decisão a tomar não é esta de novo, e sim se o Clubi quer uma camada pública de verdade, com navegação própria, em vez de uma página avulsa.
+**Quando revisar.** Se a apresentação passar a precisar de estado (formulário de interesse, área de conteúdo paginada, qualquer coisa que peça interatividade além de links), a conta muda e vale reavaliar se ela é uma tela da SPA — gatilho que o carrossel experimental da E-19 já encosta. E se um dia houver mais de uma página institucional — sobre, contato, edições anteriores abertas ao público —, aí a decisão a tomar não é esta de novo, e sim se o Clubi quer uma camada pública de verdade, com navegação própria, em vez de uma página avulsa.
+
+**Histórico.** Ao pesar o critério "acesso ao ORM", o texto original registrava que `GET /api/monthly-picks/current` era público e usava o fato como argumento. Era descrição, não decisão — e o **ADR-19 (2026-09-11)** fechou a API inteira. O argumento sobrevive por outro caminho, porque a view chama o ORM. Os números de bundle foram remedidos em 2026-09-23, depois do SDK do Sentry (ADR-20).
 
 ---
 
@@ -528,7 +563,9 @@ Os outros três critérios avaliados **não** decidiram, e vale registrar por qu
 
 Entre eles, `GET /api/users/{username}`, que devolve data de nascimento, frase, estante e o histórico completo de leituras — nota e resenha em texto livre — de qualquer membro, por username adivinhável, com `GET /api/users` entregando a lista de usernames para adivinhar. Enquanto o site existia para quem já era do clube, isso era teórico. O ADR-18 é o que o tornou concreto: ele nasceu para o endereço ser **divulgado**, e com isso colocou perfis de estudantes identificáveis ao alcance de crawlers. O ADR-18 chegou a registrar de passagem que "`GET /api/monthly-picks/current` já é público", usando o fato como argumento sem que ninguém tivesse decidido que ele devia ser.
 
-**Decisão.** A API é **fechada por padrão e pública por exceção nomeada e testada**. `auth=django_auth` é declarado uma vez, na instanciação da `NinjaAPI`, e os `add_router` e decorators não repetem mais o que o mount point já diz. As exceções vivem numa constante `PUBLIC_OPERATIONS` em `api/api.py`, cada entrada exigindo comentário que a justifique — e **ela nasce vazia**. A superfície pública do Clubi é a landing renderizada do ADR-18, e só ela: a landing lê o livro do mês pelo ORM (`MonthlyPick.current()`), não pela rota, então fechar `/api/monthly-picks` não lhe custa nada.
+**Decisão.** A API é **fechada por padrão e pública por exceção nomeada e testada**. `auth=django_auth` é declarado uma vez, na instanciação da `NinjaAPI`, e os `add_router` e decorators não repetem mais o que o mount point já diz. As exceções vivem numa constante `PUBLIC_OPERATIONS` em `api/api.py`, cada entrada exigindo comentário que a justifique — e **ela está vazia**.
+
+**Abrir uma rota custa duas edições, de propósito.** `auth=None` na própria rota, que é o que o runtime lê, e a entrada em `PUBLIC_OPERATIONS`, que é o que diz que foi intencional. Nenhuma das duas sozinha faz nada, e `api/test_policy.py` reprova quando discordam: uma operação nomeada na constante que ainda responde 401 falha tão alto quanto uma que responde 200 sem estar nomeada. A superfície pública do Clubi é a landing renderizada do ADR-18, e só ela: a landing lê o livro do mês pelo ORM (`MonthlyPick.current()`), não pela rota, então fechar `/api/monthly-picks` não lhe custa nada.
 
 Isso inclui, explicitamente, perfis, busca de membros, acervo, feed e seleções mensais. Os checks de autoria e de `is_staff` dentro das views (`_own_post`, `_staff_only`) continuam onde estão: são **autorização**, uma pergunta diferente de autenticação, e nenhum auth global responde por eles.
 
@@ -541,12 +578,14 @@ Isso inclui, explicitamente, perfis, busca de membros, acervo, feed e seleções
 
 **Consequências.**
 
-- Positivas: o default passa a ser o seguro, e o esquecimento agora falha fechado em vez de aberto; toda escrita ganha CSRF por construção, não por convenção; a política vira uma linha lida num arquivo só; e uma varredura em `api/test_api.py` percorre o registro de routers e asserta 401 para toda operação fora de `PUBLIC_OPERATIONS`, o que torna a regra verificável em vez de declarada.
-- Negativas: uma rota que **deva** ser pública agora exige um gesto deliberado — que é o ponto, mas é atrito real para quem vier depois. E o `/api/docs` sai do ar em produção (fica sob `DEBUG`), o que custa a quem usava o Swagger contra o ambiente publicado; `make types` não depende dele, porque o `export_openapi_schema` resolve a instância pela raiz `/api/` e não pela URL do schema.
+- Positivas: o default passa a ser o seguro, e o esquecimento agora falha fechado em vez de aberto; toda escrita ganha CSRF por construção, não por convenção (ver ADR-04); a política vira uma linha lida num arquivo só; e `api/test_policy.py` percorre o registro de routers que a `NinjaAPI` de fato serve — não uma lista de caminhos — assertando 401 para toda operação fora de `PUBLIC_OPERATIONS`. Uma rota montada amanhã já nasce coberta.
+- Negativas: uma rota que **deva** ser pública agora exige um gesto deliberado — que é o ponto, mas é atrito real para quem vier depois. E o `/api/docs` sai do ar para o público em produção: fora do `DEBUG` ele responde **404 a quem não é `is_staff`**, o que preserva o Swagger para a fundadora (ADR-14) e o tira de todo o resto. A decisão é por requisição e não por `docs_url=None`, porque ler `settings.DEBUG` no import faria o comportamento depender de quando o módulo foi importado — e fazia. `make types` não depende disso, porque o `export_openapi_schema` resolve a instância pela raiz `/api/` e não pela URL do schema.
 - Neutra, mas vale saber: o shell da SPA ganhou `<meta name="robots" content="noindex">`. Ele nunca teve conteúdo indexável — deep links como `/u/ana` chegam vazios para um crawler, porque o React só monta depois do `/api/me` —, e agora que esses caminhos respondem 401 o que um robô indexaria seria uma casca. A `landing.html` **não** recebeu a meta: ela existe para ser indexada e compartilhada, que é o ADR-18 inteiro.
-- O ADR-18 tem uma afirmação que esta decisão invalida: a de que `GET /api/monthly-picks/current` é público. Ela era descritiva, não normativa, e o argumento que ela sustentava (a landing não precisaria de endpoint novo) continua valendo pelo outro caminho — a view chama o ORM.
+- A autorização continua sem varredura equivalente: `_own_post` e `_staff_only` são verificados nos testes dos seus próprios apps, um a um. O que esta decisão torna impossível de esquecer é autenticação, não autorização.
 
 **Quando revisar.** Se a fundadora pedir perfil visível a não-membros. Nesse caso a decisão a tomar **não é esta de novo**: é quais **campos** ficam públicos, um a um. `birth_date` e `review` não são candidatos por default — o primeiro é dado pessoal sem função pública, o segundo é texto escrito para um público conhecido. A pergunta correspondente na seção 10 do guia ("Perfis são públicos ou só para logados?") sai da lista de pendências com esta decisão.
+
+**Histórico.** O texto original nomeava `api/test_api.py` como a varredura de 401; ela mora em `api/test_policy.py`, e o `test_api.py` é o do `operationId` (ADR-15). Corrigido em 2026-09-23, junto com a regra das duas edições e com a exceção de `is_staff` no `/api/docs`.
 
 ---
 
@@ -596,7 +635,7 @@ Django/React em produção ──(SDK + DSN)──▶ sentry.io ◀──(MCP)�
 - Positivas: um erro em produção vira um evento com stack trace, ambiente e commit, em vez de um silêncio; o `release` sai do `RENDER_GIT_COMMIT`, então dá para dizer *qual deploy* quebrou; o stack trace do navegador aponta para o TypeScript e não para o bundle; e a decisão sobre dado pessoal está tomada em código, com comentário, em vez de depender de quem configurou o painel.
 - Negativas, e são três:
   1. **Depurar fica mais difícil de propósito.** Sem variáveis locais e sem corpo de requisição, sobra o stack trace e o trecho de código. Em troca, nenhum evento carrega o que o membro escreveu. Quem precisar de mais contexto num caso específico adiciona um `set_context` com campos escolhidos a dedo — nunca liga a opção de volta.
-  2. **O bundle da SPA cresceu**, de ~100 kB para ~132 kB comprimido. O SDK do navegador não é pequeno, e esta é a primeira dependência de runtime do frontend que não serve ao membro diretamente.
+  2. **O bundle da SPA cresceu** para 130 kB comprimido (406 kB brutos), cerca de 30 kB a mais. O SDK do navegador não é pequeno, e esta é a primeira dependência de runtime do frontend que não serve ao membro diretamente.
   3. **É mais um serviço de terceiro com dado do clube**, somado ao Render, ao Neon, ao R2 e à Resend. A mitigação é a tabela acima, não a confiança.
 - Neutra, mas vale saber: o `@sentry/cli` baixa um binário por plataforma como dependência opcional. O `package-lock.json` traz `cli-linux-x64` junto com o da máquina de desenvolvimento, que é o que faz o `npm ci` do Render funcionar sem depender do `postinstall` — que o npm 11 bloqueia por padrão.
 - Verificado e não óbvio: o apagamento dos `.map` roda num `finally`, então acontece **mesmo quando o upload falha** — e um upload que falha não derruba o build. Uma indisponibilidade da Sentry custa os mapas daquele deploy, não o deploy.
