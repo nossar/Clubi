@@ -62,7 +62,7 @@ Toda a API exige login (ADR-19). A única página aberta a visitantes é a apres
 | Banco | PostgreSQL (psycopg 3) | SQLite em desenvolvimento, Postgres em produção |
 | Mídia | django-storages + Cloudflare R2 | disco de host é efêmero; upload vai para object storage |
 | Erros | Sentry | monitoramento nas duas pontas, só quando há DSN, e sem dado do membro no evento |
-| Testes | pytest + pytest-django, vitest | backend por app, frontend na lógica pura |
+| Testes | pytest + pytest-django, vitest | 279 testes: 252 no backend, por app, e 27 no frontend, na lógica pura |
 
 ## Arquitetura
 
