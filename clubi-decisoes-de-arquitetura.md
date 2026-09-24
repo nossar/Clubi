@@ -39,7 +39,7 @@ Formato: **Contexto**, **Decisão**, **Alternativas consideradas**, **Consequên
 ## ADR-01 — Django como plataforma
 **Status:** Aceito  ·  **Em uma frase:** Django porque o clube precisa de Admin, autenticação e upload prontos, não de async.
 
-**Contexto.** O Clubi é um site de clube de leitura com autenticação, perfis, upload de imagens e uma operação editorial recorrente: alguém precisa eleger o Livro do Mês todo mês. A equipe é de uma a duas pessoas, com prazo de semestre.
+**Contexto.** O Clubi é um site de clube de leitura com autenticação, perfis, upload de imagens e uma operação editorial recorrente: alguém precisa eleger o Livro do Mês todo mês. O projeto é tocado por uma pessoa só, com prazo de semestre.
 
 **Decisão.** Django como framework de backend.
 
@@ -85,13 +85,13 @@ Formato: **Contexto**, **Decisão**, **Alternativas consideradas**, **Consequên
 
 **Contexto.** Existem três arranjos possíveis: (1) templates renderizados no servidor; (2) SPA e API no mesmo repositório, com deploy coordenado; (3) SPA e API em repositórios e deploys independentes.
 
-Pela análise puramente técnica, o nível 1 seria o indicado: um único consumidor, estado da interface derivável da URL, equipe mínima.
+Pela análise puramente técnica, o nível 1 seria o indicado: um único consumidor, estado da interface derivável da URL, uma pessoa desenvolvendo.
 
 **Decisão.** Nível 2 — `backend/` e `frontend/` no mesmo repositório, um único deploy. São duas decisões encadeadas, com critérios diferentes.
 
 ### 3a — Adotar a API como caminho principal de dados (nível 1 → nível 2)
 
-**Critério: não-técnico, declarado.** O objetivo do projeto não é apenas entregar o site: é servir de aprendizado e portfólio para os membros envolvidos. A equipe já domina views e templates Django, de modo que o nível 1 teria aprendizado marginal próximo de zero, enquanto React, TypeScript e consumo de API são exatamente o que uma vaga júnior pede. Esse é um objetivo legítimo — desde que registrado com esse nome, e não disfarçado de necessidade de engenharia.
+**Critério: não-técnico, declarado.** O objetivo do projeto não é apenas entregar o site: é servir de aprendizado e portfólio para quem o constrói. Views e templates Django já são domínio adquirido, de modo que o nível 1 teria aprendizado marginal próximo de zero, enquanto React, TypeScript e consumo de API são exatamente o que uma vaga júnior pede. Esse é um objetivo legítimo — desde que registrado com esse nome, e não disfarçado de necessidade de engenharia.
 
 O nível 1 seria a escolha correta se o critério fosse apenas velocidade de entrega. Nele o Ninja continuaria existindo e sendo usado de fato — favoritos, autocompletes, proxy da Open Library —, apenas com cerca de quatro endpoints em vez de duas dezenas, e com o HTML como caminho principal. A diferença entre os níveis é de proporção, não da existência da API.
 
@@ -99,7 +99,7 @@ O nível 1 seria a escolha correta se o critério fosse apenas velocidade de ent
 
 ### 3b — Um repositório, não dois (nível 2, não nível 3)
 
-**Critério: técnico.** Dada a decisão 3a, o mono-repo é o caminho **mais simples**, não uma concessão. A separação em dois repositórios codifica uma fronteira organizacional — times distintos com ciclos de release independentes. Com uma ou duas pessoas, ela só cobra imposto: PRs pareados, ordem de deploy, tipos duplicados, ambiente local mais complexo, e a impossibilidade de mudar contrato e consumidor no mesmo commit.
+**Critério: técnico.** Dada a decisão 3a, o mono-repo é o caminho **mais simples**, não uma concessão. A separação em dois repositórios codifica uma fronteira organizacional — times distintos com ciclos de release independentes. Com uma pessoa só, ela só cobra imposto: PRs pareados, ordem de deploy, tipos duplicados, ambiente local mais complexo, e a impossibilidade de mudar contrato e consumidor no mesmo commit.
 
 O mono-repo é também a precondição do ADR-04 (mesma origem, sem CORS nem JWT) e do ADR-12 (tipos gerados sem publicar pacote).
 
@@ -340,11 +340,11 @@ Uma fonte de verdade, o histórico como subproduto automático, e a média de no
 ## ADR-14 — Admin como produto da primeira entrega
 **Status:** Aceito  ·  **Em uma frase:** O Admin configurado é a primeira entrega ao usuário, e é o seguro barato contra o único risco real do projeto.
 
-**Contexto.** A escolha do ADR-03 alonga o cronograma. O risco concreto não é técnico: é o clube ficar sem site enquanto a equipe aprende React.
+**Contexto.** A escolha do ADR-03 alonga o cronograma. O risco concreto não é técnico: é o clube ficar sem site enquanto se aprende React.
 
 **Decisão.** A primeira etapa do roadmap — modelos e Admin configurado — é tratada como **entrega ao usuário**, não como passo interno. A fundadora recebe acesso ao `/admin/` assim que os modelos existirem.
 
-**Por que funciona como seguro.** O Django Admin não depende de views nem de templates da equipe — ele sobrevive integralmente à escolha do nível 2. Com ele, a fundadora já cadastra livros, elege o Livro do Mês e modera posts. Isso transforma o risco de cronograma em risco de conforto: existe algo funcionando desde a segunda semana, e nenhuma reunião acontece sem nada para mostrar.
+**Por que funciona como seguro.** O Django Admin não depende das views nem dos templates do projeto — ele sobrevive integralmente à escolha do nível 2. Com ele, a fundadora já cadastra livros, elege o Livro do Mês e modera posts. Isso transforma o risco de cronograma em risco de conforto: existe algo funcionando desde a segunda semana, e nenhuma conversa com a fundadora acontece sem nada para mostrar.
 
 **Alternativas consideradas.**
 
@@ -358,7 +358,7 @@ Uma fonte de verdade, o histórico como subproduto automático, e a média de no
 
 **Corolário permanente.** Configurar o Admin de um modelo novo faz parte de adicionar o modelo. O Admin é produto, e a fundadora opera o clube por ele — é por isso que há coisas que a SPA nunca ganha tela e não são funcionalidade faltando, e é o que sustenta a exceção de `is_staff` no `/api/docs` (ADR-19).
 
-**Quando revisar.** Se o clube ganhar um segundo operador fora da equipe, ou se uma operação recorrente exigir mais passos no Admin do que exigiria numa tela própria. O que se decide aí é qual operação ganha tela, não se o Admin sai.
+**Quando revisar.** Se o clube ganhar um segundo operador, ou se uma operação recorrente exigir mais passos no Admin do que exigiria numa tela própria. O que se decide aí é qual operação ganha tela, não se o Admin sai.
 
 ---
 
@@ -406,7 +406,7 @@ Uma fonte de verdade, o histórico como subproduto automático, e a média de no
 
 ### 16a — Chrome DevTools MCP, em escopo de projeto
 
-Adotado em `.mcp.json` versionado (`--scope project`), não no escopo local: a configuração vale para as duas pessoas do time e entra em revisão de código como qualquer arquivo. Escolhido em vez do Playwright MCP porque o que falta no dia a dia de construir a interface é console, rede e cookies — não navegação cross-browser. O Playwright entra quando existir suíte e2e e CI, que hoje não existem (ADR-12).
+Adotado em `.mcp.json` versionado (`--scope project`), não no escopo local: a configuração acompanha o repositório e entra em revisão como qualquer arquivo. Escolhido em vez do Playwright MCP porque o que falta no dia a dia de construir a interface é console, rede e cookies — não navegação cross-browser. O Playwright entra quando existir suíte e2e e CI, que hoje não existem (ADR-12).
 
 Duas regras de uso. **Aponte o navegador para o Vite (`:5173`), não para o Django (`:8000`)** — é o caminho que exercita o proxy do ADR-04, e abrir `:8000` direto testa um arranjo que não existe nem em dev nem em produção; **a landing do ADR-18 é a única exceção**, porque `/` é a raiz da SPA em `:5173` e não pode ser proxiada. E **use só contra o ambiente local**: um MCP de navegador transforma conteúdo de página em entrada do agente, e apontar para `/admin/` em produção expõe dados reais dos membros a essa superfície.
 
@@ -428,16 +428,16 @@ O pré-requisito técnico já estava satisfeito — o `operationId` ficou estáv
 
 1. **Contraria o critério declarado do ADR-03a.** A SPA existe para aprender "React, TypeScript e **consumo de API**", e o Hey API gera justamente a camada de consumo: seria pagar o custo do ADR-03 sem receber o benefício pelo qual ele foi aprovado.
 2. **O `client.ts` não é boilerplate.** Ele carrega duas regras do projeto — o `X-CSRFToken` lido do cookie e o 401 → `/accounts/login/?next=…`, que *é* o fluxo do ADR-05. Com cliente gerado isso vira interceptor: possível, porém menos legível para quem aprende, e o invariante "único ponto do frontend que fala com a rede" fica mais difícil de sustentar.
-3. **A tabela de `queryKey` escrita à mão é o artefato de ensino, não o problema.** Chaves geradas são objetos por operação, e a regra "invalide todas as chaves que exibem aquele dado" passaria a operar sobre chaves opacas. Para 24 endpoints e uma a duas pessoas, a disciplina manual é mais barata que a indireção.
+3. **A tabela de `queryKey` escrita à mão é o artefato de ensino, não o problema.** Chaves geradas são objetos por operação, e a regra "invalide todas as chaves que exibem aquele dado" passaria a operar sobre chaves opacas. Para 24 endpoints e uma pessoa só, a disciplina manual é mais barata que a indireção.
 
 **O que fica sem cobertura, dito com todas as letras.** O `openapi-typescript` com `tsc --noEmit` pega campo renomeado, que é o risco do ADR-12 e o que de fato acontece. **Não pega path nem método errado**, porque a rota é string literal no `client.ts`. Em dev isso aparece como 404 na primeira renderização, e é o preço aceito.
 
 **Consequências.**
 - Positivas: o ferramental que entra é reversível e não toca no código de produção; o gerador de tipos continua sendo um passo só; o `client.ts` segue legível de cabo a rabo por quem está aprendendo.
-- Negativas: o time carrega à mão uma chamada por endpoint — 24 hoje — e a tabela de invalidação, com a disciplina que isso exige.
+- Negativas: carrega-se à mão uma chamada por endpoint — 24 hoje — e a tabela de invalidação, com a disciplina que isso exige.
 - Versionados junto com esta decisão: `.mcp.json`, `.claude/skills/frontend-design/` e `skills-lock.json`. A skill é cópia vendorizada — atualizá-la é rodar o instalador de novo, não editar o arquivo.
 
-**Quando revisar.** O **16c** volta à mesa se a API passar de ~40 endpoints, se entrar um segundo consumidor (o app mobile que o ADR-03 prevê), ou se o time crescer a ponto de a disciplina manual falhar em revisão — nos três casos o `operationId` estável torna a adoção barata. O **16a**, quando existir CI com e2e. O **16b**, se a skill for usada uma segunda vez sem briefing fixando a paleta, sinal de que a costura do ADR-05 voltou a estar em risco.
+**Quando revisar.** O **16c** volta à mesa se a API passar de ~40 endpoints, se entrar um segundo consumidor (o app mobile que o ADR-03 prevê), ou se o projeto ganhar mais gente a ponto de a disciplina manual falhar em revisão — nos três casos o `operationId` estável torna a adoção barata. O **16a**, quando existir CI com e2e. O **16b**, se a skill for usada uma segunda vez sem briefing fixando a paleta, sinal de que a costura do ADR-05 voltou a estar em risco.
 
 ---
 
@@ -578,7 +578,7 @@ Monitoramento de erro, porém, é uma ferramenta que **exfiltra**: existe para m
 - *Só o `stdout` do Render.* É o que já existe e é o que falha: sem retenção, sem agrupamento, sem stack trace do navegador, e ninguém abre o painel de logs de um site que parece estar no ar.
 - *Sentry com os defaults.* Seria uma linha de código em vez de dez, e os três primeiros itens da tabela acima são comportamento padrão que teve que ser desligado: os defaults foram desenhados para depurar rápido.
 - *Ligar o tracing desde já.* Descartado por ora: não há problema de performance conhecido, a cota gratuita é finita, e `traces_sample_rate` é a linha mais fácil de mudar deste ADR inteiro.
-- *Rota `/sentry-debug/`, que o "Get Started" propõe sem ressalva.* Chegou a existir, fechada sob `DEBUG`, foi usada uma vez para validar esta decisão e **foi descartada em seguida**: sob `DEBUG` o SDK só inicia se alguém exportar um DSN à mão, então no estado normal de qualquer máquina do time ela levanta um erro que não vai a lugar nenhum — não provava o que existia para provar. E em produção uma URL pública que força um 500 é um presente para quem a encontrar. **A validação, em qualquer ambiente, é um `capture_message` pelo shell** com o DSN exportado só naquele comando.
+- *Rota `/sentry-debug/`, que o "Get Started" propõe sem ressalva.* Chegou a existir, fechada sob `DEBUG`, foi usada uma vez para validar esta decisão e **foi descartada em seguida**: sob `DEBUG` o SDK só inicia se alguém exportar um DSN à mão, então no estado normal de qualquer máquina de desenvolvimento ela levanta um erro que não vai a lugar nenhum — não provava o que existia para provar. E em produção uma URL pública que força um 500 é um presente para quem a encontrar. **A validação, em qualquer ambiente, é um `capture_message` pelo shell** com o DSN exportado só naquele comando.
 
 **Consequências.**
 - Positivas: um erro em produção vira um evento com stack trace, ambiente e commit em vez de um silêncio; o `release` sai do `RENDER_GIT_COMMIT`, então dá para dizer *qual deploy* quebrou; o stack trace do navegador aponta para o TypeScript e não para o bundle; e a decisão sobre dado pessoal está tomada em código, com comentário, em vez de depender de quem configurou o painel.
@@ -608,6 +608,6 @@ Monitoramento de erro, porém, é uma ferramenta que **exfiltra**: existe para m
 **Consequências.**
 - Positivas: a regra cabe em duas funções nomeadas; `is_staff` já vem do Django e já é o que dá acesso ao Admin (ADR-14), então não há segundo conceito de "organização" para manter.
 - Negativas, e é a mesma que o ADR-19 aponta: **não há varredura automática de autorização**. `api/test_policy.py` garante que toda rota exige login, mas quem esquecer o `_staff_only` numa escrita nova a deixa aberta a qualquer membro logado, e só o teste do próprio app pega. É o gatilho de revisão abaixo.
-- `is_staff` dá o Admin inteiro junto. Não existe "pode postar mas não entra no Admin", e isso é aceito porque hoje as duas pessoas são as mesmas.
+- `is_staff` dá o Admin inteiro junto. Não existe "pode postar mas não entra no Admin", e isso é aceito porque hoje quem publica é quem opera o Admin.
 
 **Quando revisar.** Se surgir alguém que deva publicar sem receber o Admin — aí nasce um papel de verdade, e `is_staff` deixa de servir. Ou se as escritas `is_staff`-only passarem de meia dúzia, quando vale dar à autorização a mesma varredura que o ADR-19 deu à autenticação.
