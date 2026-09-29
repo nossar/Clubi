@@ -1,4 +1,5 @@
 import pytest
+import requests
 from django.utils import timezone
 
 from books.models import REVIEW_MAX_LENGTH, Book, MonthlyReading
@@ -70,6 +71,96 @@ class TestBooks:
                 "cover_url": "https://covers.openlibrary.org/b/id/42-L.jpg",
             }
         ]
+
+    def test_external_search_tolerates_sparse_docs(self, auth, monkeypatch):
+        class FakeResponse:
+            @staticmethod
+            def raise_for_status():
+                return None
+
+            @staticmethod
+            def json():
+                return {
+                    "docs": [
+                        {"title": "Sem capa nem autor"},
+                        {"key": "/works/OL1W", "author_name": ["Uma pessoa", "Outra pessoa"]},
+                    ]
+                }
+
+        monkeypatch.setattr("books.api.requests.get", lambda *a, **kw: FakeResponse())
+
+        body = auth.get("/api/books/external?q=x").json()
+
+        assert body == [
+            {
+                "external_id": "",
+                "title": "Sem capa nem autor",
+                "author": "",
+                "year": None,
+                "pages": None,
+                "cover_url": "",
+            },
+            {
+                "external_id": "OL1W",
+                "title": "",
+                "author": "Uma pessoa, Outra pessoa",
+                "year": None,
+                "pages": None,
+                "cover_url": "",
+            },
+        ]
+
+    def test_external_search_without_docs_is_empty(self, auth, monkeypatch):
+        class FakeResponse:
+            @staticmethod
+            def raise_for_status():
+                return None
+
+            @staticmethod
+            def json():
+                return {}
+
+        monkeypatch.setattr("books.api.requests.get", lambda *a, **kw: FakeResponse())
+
+        response = auth.get("/api/books/external?q=x")
+
+        assert response.status_code == 200
+        assert response.json() == []
+
+    def test_external_search_is_502_when_open_library_times_out(self, auth, monkeypatch):
+        def timeout(*args, **kwargs):
+            raise requests.Timeout
+
+        monkeypatch.setattr("books.api.requests.get", timeout)
+
+        response = auth.get("/api/books/external?q=x")
+
+        assert response.status_code == 502
+        assert response.json() == {"detail": "A busca externa de livros está indisponível."}
+
+    def test_external_search_is_502_on_an_http_error(self, auth, monkeypatch):
+        class FakeResponse:
+            @staticmethod
+            def raise_for_status():
+                raise requests.HTTPError("503 Service Unavailable")
+
+        monkeypatch.setattr("books.api.requests.get", lambda *a, **kw: FakeResponse())
+
+        assert auth.get("/api/books/external?q=x").status_code == 502
+
+    def test_external_search_is_502_on_a_body_that_is_not_json(self, auth, monkeypatch):
+        class FakeResponse:
+            @staticmethod
+            def raise_for_status():
+                return None
+
+            @staticmethod
+            def json():
+                raise ValueError("Expecting value")
+
+        monkeypatch.setattr("books.api.requests.get", lambda *a, **kw: FakeResponse())
+
+        assert auth.get("/api/books/external?q=x").status_code == 502
 
     def test_external_search_requires_login(self, client):
         assert client.get("/api/books/external?q=x").status_code == 401
