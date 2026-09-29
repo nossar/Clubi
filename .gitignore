@@ -42,3 +42,6 @@ Thumbs.db
 
 # Intermediario gerado pelo `make types` (vira frontend/src/api/generated.ts).
 /openapi.json
+
+# Notas locais sobre o MCP do Sentry.
+/sentry.md
