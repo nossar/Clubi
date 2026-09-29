@@ -112,7 +112,7 @@ def root(request):
 
     Reading `request.user` touches the session, so SessionMiddleware stamps `Vary: Cookie` on the
     response. That header is what stops a shared cache from serving the app shell to an anonymous
-    visitor, or this page to a member; core/test_views.py asserts it rather than trusting it.
+    visitor, or this page to a member; core/tests/e2e/test_views.py asserts it rather than trusting it.
     """
     if request.user.is_authenticated:
         return shell(request)
@@ -146,7 +146,7 @@ def healthz(request):
     100 CU-hours, so a health check that so much as reads a session would reset that timer
     forever: the database would never sleep, the allowance would run out around the 17th, and
     Neon suspends the compute until the next billing cycle — the site goes down mid-month, every
-    month. That is why this view touches no model, and why the assertion in core/test_views.py is
+    month. That is why this view touches no model, and why the assertion in core/tests/e2e/test_views.py is
     about the query count rather than the status code.
 
     Nothing in the middleware stack spends a query on its behalf either, but only because every

@@ -384,7 +384,7 @@ Uma fonte de verdade, o histórico como subproduto automático, e a média de no
 
 **As arestas que sobram** são acíclicas: `books` e `posts` importam só projeções; `users` importa projeções **e `books.schemas`**, a única entre apps de domínio — e honesta, porque o histórico do perfil *é* uma lista de leituras mensais.
 
-**Corolário: o `operationId` não pode depender do layout.** O padrão do Ninja é `<módulo>_<view>`, que amarraria o contrato público à árvore de arquivos — mover uma rota mudaria o `generated.ts` sem que a API mudasse. Como esta decisão é sobre mover arquivos, `get_openapi_operation_id` usa **só o nome da view**. Preço: nomes de view são únicos em toda a API, e `api/test_api.py` reprova se dois colidirem.
+**Corolário: o `operationId` não pode depender do layout.** O padrão do Ninja é `<módulo>_<view>`, que amarraria o contrato público à árvore de arquivos — mover uma rota mudaria o `generated.ts` sem que a API mudasse. Como esta decisão é sobre mover arquivos, `get_openapi_operation_id` usa **só o nome da view**. Preço: nomes de view são únicos em toda a API, e `api/tests/unit/test_api.py` reprova se dois colidirem.
 
 **Consequências.**
 - Positivas: cada app é legível e apagável isoladamente; as dependências ficam visíveis nos imports em vez de escondidas num arquivo comum; a superfície compartilhada são duas classes.
@@ -506,7 +506,7 @@ Os outros três critérios avaliados **não** decidiram, e vale registrar para n
 
 **Consequências.**
 - Positivas: o link do clube ganha preview real, com o livro do mês dentro; o visitante lê antes de ser convidado a se cadastrar; a página é HTML puro e serve de fallback se o bundle quebrar; e nada do ADR-05 precisou ser mexido.
-- Negativas, e são três. **(1)** `/` passa a responder dois documentos conforme o cookie, e o que impede um cache compartilhado de entregar o shell a um anônimo é o `Vary: Cookie` do `SessionMiddleware` — uma dependência sutil demais para se confiar, então `core/test_views.py` **asserta o header**. **(2)** A landing não é visível no dev server do Vite: `/` é a raiz da SPA em `:5173` e por isso o único caminho que não pode ser proxiado — vê-se em `localhost:8000/`, em janela anônima. **(3)** Existe agora uma segunda superfície de copy fora da SPA, com placeholders esperando a fundadora, e texto provisório que ninguém troca vira definitivo por omissão.
+- Negativas, e são três. **(1)** `/` passa a responder dois documentos conforme o cookie, e o que impede um cache compartilhado de entregar o shell a um anônimo é o `Vary: Cookie` do `SessionMiddleware` — uma dependência sutil demais para se confiar, então `core/tests/e2e/test_views.py` **asserta o header**. **(2)** A landing não é visível no dev server do Vite: `/` é a raiz da SPA em `:5173` e por isso o único caminho que não pode ser proxiado — vê-se em `localhost:8000/`, em janela anônima. **(3)** Existe agora uma segunda superfície de copy fora da SPA, com placeholders esperando a fundadora, e texto provisório que ninguém troca vira definitivo por omissão.
 - Neutra: o `auth.css` foi partido em dois, e os tokens saíram para `core/static/css/tokens.css`. Como ele passou a carregar a paleta inteira em vez do subconjunto que o `auth.css` tinha, a regra dos gêmeos (ADR-17) ficou verificável a olho.
 
 **Quando revisar.** Se a apresentação passar a precisar de estado — formulário de interesse, conteúdo paginado, qualquer interatividade além de links —, a conta muda e vale reavaliar se ela é uma tela da SPA; é o gatilho que o carrossel experimental da E-19 já encosta. E se um dia houver mais de uma página institucional, a decisão a tomar não é esta de novo: é se o Clubi quer uma camada pública de verdade, com navegação própria.
@@ -524,7 +524,7 @@ Entre eles, `GET /api/users/{username}`, que devolve data de nascimento, frase, 
 
 **Decisão.** A API é **fechada por padrão e pública por exceção nomeada e testada**. `auth=django_auth` é declarado uma vez, na instanciação da `NinjaAPI`, e os `add_router` e decorators não repetem o que o mount point já diz. As exceções vivem em `PUBLIC_OPERATIONS`, em `api/api.py`, cada entrada exigindo comentário que a justifique — e **ela está vazia**. Isso inclui perfis, busca de membros, acervo, feed e seleções mensais: a superfície pública do Clubi é a landing do ADR-18, que lê o livro do mês pelo ORM e não pela rota.
 
-**Abrir uma rota custa duas edições, de propósito:** `auth=None` na rota, que é o que o runtime lê, e a entrada na constante, que é o que diz que foi intencional. Nenhuma sozinha faz nada, e `api/test_policy.py` reprova quando discordam.
+**Abrir uma rota custa duas edições, de propósito:** `auth=None` na rota, que é o que o runtime lê, e a entrada na constante, que é o que diz que foi intencional. Nenhuma sozinha faz nada, e `api/tests/e2e/test_policy.py` reprova quando discordam.
 
 **O perfil é decidido, não pendente**, e a direção é assimétrica: abrir depois é acrescentar `auth=None` a uma linha; fechar depois de indexado não desfaz o índice, o cache do buscador nem a cópia que alguém guardou.
 
@@ -534,7 +534,7 @@ Entre eles, `GET /api/users/{username}`, que devolve data de nascimento, frase, 
 - *Perfil público com os campos sensíveis omitidos.* Descartada por ora: exigiria decidir consentimento campo a campo sem que ninguém tenha pedido a funcionalidade. É desenho de produto disfarçado de ajuste de schema.
 
 **Consequências.**
-- Positivas: o default passa a ser o seguro e o esquecimento falha fechado; toda escrita ganha CSRF por construção (ADR-04); a política vira uma linha lida num arquivo só; e `api/test_policy.py` percorre o registro de routers que a `NinjaAPI` de fato serve — não uma lista de caminhos — assertando 401 para toda operação fora da constante, então uma rota montada amanhã já nasce coberta.
+- Positivas: o default passa a ser o seguro e o esquecimento falha fechado; toda escrita ganha CSRF por construção (ADR-04); a política vira uma linha lida num arquivo só; e `api/tests/e2e/test_policy.py` percorre o registro de routers que a `NinjaAPI` de fato serve — não uma lista de caminhos — assertando 401 para toda operação fora da constante, então uma rota montada amanhã já nasce coberta.
 - Negativas: uma rota que **deva** ser pública exige um gesto deliberado, que é o ponto mas é atrito. E o `/api/docs` responde **404 a quem não é `is_staff`** fora do `DEBUG`, preservando o Swagger para a fundadora (ADR-14) e tirando-o do resto; decidido por requisição e não por `docs_url=None`, porque ler `settings.DEBUG` no import faz o comportamento depender de quando o módulo foi importado — e fazia. `make types` não depende disso.
 - A **autorização continua sem varredura equivalente**: `_own_post` e `_staff_only` são verificados nos testes dos seus próprios apps, um a um. Esta decisão torna impossível esquecer autenticação, não autorização.
 - Neutra: o shell da SPA ganhou `<meta name="robots" content="noindex">`, porque esses caminhos agora respondem 401 e o que um robô indexaria seria uma casca. A `landing.html` **não** recebeu a meta — ela existe para ser indexada, que é o ADR-18 inteiro.
@@ -607,7 +607,7 @@ Monitoramento de erro, porém, é uma ferramenta que **exfiltra**: existe para m
 
 **Consequências.**
 - Positivas: a regra cabe em duas funções nomeadas; `is_staff` já vem do Django e já é o que dá acesso ao Admin (ADR-14), então não há segundo conceito de "organização" para manter.
-- Negativas, e é a mesma que o ADR-19 aponta: **não há varredura automática de autorização**. `api/test_policy.py` garante que toda rota exige login, mas quem esquecer o `_staff_only` numa escrita nova a deixa aberta a qualquer membro logado, e só o teste do próprio app pega. É o gatilho de revisão abaixo.
+- Negativas, e é a mesma que o ADR-19 aponta: **não há varredura automática de autorização**. `api/tests/e2e/test_policy.py` garante que toda rota exige login, mas quem esquecer o `_staff_only` numa escrita nova a deixa aberta a qualquer membro logado, e só o teste do próprio app pega. É o gatilho de revisão abaixo.
 - `is_staff` dá o Admin inteiro junto. Não existe "pode postar mas não entra no Admin", e isso é aceito porque hoje quem publica é quem opera o Admin.
 
 **Quando revisar.** Se surgir alguém que deva publicar sem receber o Admin — aí nasce um papel de verdade, e `is_staff` deixa de servir. Ou se as escritas `is_staff`-only passarem de meia dúzia, quando vale dar à autorização a mesma varredura que o ADR-19 deu à autenticação.

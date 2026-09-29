@@ -1,6 +1,6 @@
-"""Fixtures shared by the per-app API test modules.
+"""Fixtures shared by the per-app test modules.
 
-API tests live with their app (books/test_api.py, users/test_api.py, …), so the
+Tests live with their app (books/tests/e2e/test_api.py, core/tests/unit/…), so the
 fixtures they have in common — a member, a book, an active pick — are hoisted
 here rather than duplicated four times.
 """
@@ -18,6 +18,20 @@ from books.models import Book, MonthlyPick
 from users.models import User
 
 PASSWORD = "livro-do-mes-2026"
+
+CATEGORIES = ("unit", "integration", "e2e")
+
+
+def pytest_collection_modifyitems(items):
+    """Mark every test with its category, read off <app>/tests/<category>/.
+
+    The folder is the classification, so the marker follows it rather than being written into
+    each module: `pytest -m unit` then selects exactly what lives under */tests/unit/.
+    """
+    for item in items:
+        category = next((part for part in item.path.parts if part in CATEGORIES), None)
+        if category is not None:
+            item.add_marker(category)
 
 
 @pytest.fixture(autouse=True)

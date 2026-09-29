@@ -16,7 +16,7 @@ pieces (DESIGN.md 9), which is where the SPA's footer takes it from too.
 
 Write those with `{% comment %}`, never a multi-line `{# … #}`: the hash form is a *single-line*
 comment, and broken across lines Django emits it verbatim into the page. Four of them did exactly
-that here, so core/test_views.py now asserts no `{#` survives into the response.
+that here, so core/tests/e2e/test_views.py now asserts no `{#` survives into the response.
 
 No graphic elements here on purpose. The brand's ten elements live in frontend/src/assets/, which
 Django cannot reach through {% static %}, and copying one into core/static/brand/ would create the

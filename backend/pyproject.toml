@@ -28,6 +28,12 @@ dev = [
 [tool.pytest.ini_options]
 DJANGO_SETTINGS_MODULE = "clubi.settings"
 python_files = ["test_*.py"]
+addopts = "--strict-markers"
+markers = [
+    "unit: touches neither the database nor HTTP",
+    "integration: uses the ORM or the database, but not a URL or middleware",
+    "e2e: a full HTTP request through the test client — routing, middleware, session, auth",
+]
 
 [tool.ruff]
 line-length = 100

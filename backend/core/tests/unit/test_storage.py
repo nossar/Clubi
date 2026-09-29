@@ -8,20 +8,7 @@ again the moment the file was deleted.
 
 import re
 
-import pytest
-
 from core.storage import RandomKey
-
-KEY = re.compile(r"^profiles/[0-9a-f]{32}\.jpg$")
-
-
-@pytest.mark.django_db
-def test_upload_key_drops_the_original_filename(member, image_upload):
-    member.photo = image_upload("ana_souza.jpg")
-    member.save(update_fields=["photo"])
-
-    assert KEY.match(member.photo.name), member.photo.name
-    assert "ana_souza" not in member.photo.name
 
 
 def test_two_uploads_of_the_same_filename_get_different_keys():

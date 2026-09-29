@@ -24,7 +24,7 @@ class ClubiAPI(NinjaAPI):
         renames its operation and churns the generated frontend types. The view
         name is stable across such moves, which is what lets ADR-15 claim that
         app layout is a code decision and not an API one. Uniqueness across the
-        whole surface is asserted in api/test_api.py.
+        whole surface is asserted in api/tests/unit/test_api.py.
         """
         return operation.view_func.__name__
 
@@ -83,7 +83,7 @@ api = ClubiAPI(
 #
 # Opening a route takes two edits, not one: `auth=None` on the route itself, which is what the
 # runtime reads, and an entry here, which is what says it was meant. Neither alone does anything,
-# and api/test_policy.py fails when they disagree — it partitions the whole registered surface by
+# and api/tests/e2e/test_policy.py fails when they disagree — it partitions the whole registered surface by
 # this set, so an operation named here that still answers 401 is as loud a failure as one that
 # answers 200 without being named. The declaration stays on the route, where whoever reads the
 # endpoint sees it; this set is the register that keeps the two honest.
