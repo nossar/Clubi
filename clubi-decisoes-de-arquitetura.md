@@ -315,7 +315,7 @@ Uma fonte de verdade, o histórico como subproduto automático, e a média de no
 ## ADR-13 — Render, Neon e Cloudflare R2
 **Status:** Aceito  ·  **Em uma frase:** Render, Neon e R2 no plano gratuito — com o banco deliberadamente fora do Render.
 
-**Contexto.** O site é de um clube universitário sem orçamento, e precisa de três coisas hospedadas: o processo Django, um Postgres e a mídia do ADR-11. **O deploy ainda não aconteceu** — esta decisão é a escolha dos provedores, não o relato de um ambiente no ar.
+**Contexto.** O site é de um clube universitário sem orçamento, e precisa de três coisas hospedadas: o processo Django, um Postgres e a mídia do ADR-11. O deploy já aconteceu, em leiaclubi.com.br; esta decisão registra a escolha dos provedores e o porquê.
 
 **Decisão.** Versão inicial gratuita: aplicação no Render, banco no Neon, mídia no R2.
 
@@ -548,7 +548,7 @@ Entre eles, `GET /api/users/{username}`, que devolve data de nascimento, frase, 
 ## ADR-20 — Sentry para erros, com o payload decidido antes do DSN
 **Status:** Aceito  ·  **Em uma frase:** Sentry só com erros, com o payload restringido nas duas pontas antes de o DSN existir.
 
-**Contexto.** O deploy, que ainda não aconteceu (ADR-13), coloca o site num servidor que ninguém acompanha. Até aqui um erro era um traceback no terminal de quem estava desenvolvendo; depois do deploy, é um 500 que um membro vê e não reporta. O `DEBUG=False` que o ADR-13 exige é justamente o que apaga a página de erro do Django — correto, e também cego —, e não há log persistente: o disco do Render é efêmero (ADR-11) e o `stdout` do serviço rola.
+**Contexto.** O deploy (ADR-13) coloca o site num servidor que ninguém acompanha. Até aqui um erro era um traceback no terminal de quem estava desenvolvendo; depois do deploy, é um 500 que um membro vê e não reporta. O `DEBUG=False` que o ADR-13 exige é justamente o que apaga a página de erro do Django — correto, e também cego —, e não há log persistente: o disco do Render é efêmero (ADR-11) e o `stdout` do serviço rola.
 
 Monitoramento de erro, porém, é uma ferramenta que **exfiltra**: existe para mandar o estado do processo para fora, e o estado do processo do Clubi é resenha de estudante, data de nascimento, e-mail e sessão. A pergunta não é "usar Sentry?", é "**o que sai da aplicação?**" — e ela tem que ser respondida antes de o DSN entrar numa variável de ambiente, porque um evento enviado não se desfaz. Vale para o MCP do Sentry também: ele não toca a produção, lê o que a aplicação já enviou — e o dado que não foi enviado é o único que nem o painel nem o agente veem.
 

@@ -128,7 +128,7 @@ growing with members × postagens to answer a question a timestamp already answe
 
 Email is only used by the password reset. `EMAIL_BACKEND` defaults to the console backend under `DEBUG` and SMTP otherwise, so a deploy without SMTP configured breaks the reset silently. Reset links last 3 hours (`PASSWORD_RESET_TIMEOUT`).
 
-The DB is currently local SQLite; production targets Neon Postgres via `DATABASE_URL` (ADR-13) — that wiring isn't in `settings.py` yet.
+The DB is local SQLite when `DATABASE_URL` is unset; production runs on Neon Postgres via `DATABASE_URL` (ADR-13). Outside `DEBUG`, a missing `DATABASE_URL` raises `ImproperlyConfigured`.
 
 Sentry initialises at the bottom of `settings.py`, and **only if `SENTRY_DSN` is set** — which it is
 not in `.env.example`, so no developer machine and no test run sends an event. The four options next

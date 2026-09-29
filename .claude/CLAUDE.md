@@ -6,7 +6,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 Clubi — the ESPM book club website. Django + Django Ninja backend serving a React/TypeScript SPA from a single origin.
 
-**State: backend and frontend are both complete and run locally; the deploy has not happened.** What is still open is the guide's Fase 9 — the deploy and the Neon Postgres wiring it needs.
+**State: backend and frontend are both complete and deployed at https://leiaclubi.com.br** (Render + Neon + Cloudflare R2; see `deploy.md`).
 
 Two folders, and each has its own `CLAUDE.md` with the rules that only apply there:
 
