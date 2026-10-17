@@ -55,7 +55,9 @@ export function Feed() {
     <section className="section">
       <div className="container">
         <div className="feed__heading">
-          <h1 className="page-title">Postagens</h1>
+          <h1 className="page-title">
+            <span className="scribble">Postagens</span>
+          </h1>
           {me.is_staff ? (
             <Link className="button" to="/posts/new">
               Postar

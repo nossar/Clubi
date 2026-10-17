@@ -46,7 +46,9 @@ export function PickHistory() {
       <div className="container">
         <h1 className="page-title">
           <BrandElement name="livro-fechado" />
-          As escolhas do clubi
+          <span>
+            As escolhas do <span className="hl">clubi</span>
+          </span>
         </h1>
 
         {isPending ? <p className="muted search__results">Carregando as escolhas…</p> : null}
