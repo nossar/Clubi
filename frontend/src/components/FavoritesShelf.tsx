@@ -106,7 +106,11 @@ export function FavoritesShelf({
       <ol className="shelf">
         {books.map((book) => (
           <li className="shelf__item" key={book.id}>
-            <BookCover book={book} />
+            {/* The slot is what the ledge of DESIGN.md E-30 hangs from — read-only shelf only;
+                the editor below stays a straight, untilted form. */}
+            <div className="shelf__slot">
+              <BookCover book={book} />
+            </div>
             <p className="shelf__title">{book.title}</p>
             <p className="muted shelf__author">{book.author}</p>
           </li>
