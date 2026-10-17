@@ -155,4 +155,10 @@
   --motion-stagger:     80ms;     /* E-26 */
   --motion-ease-out:    cubic-bezier(0.16, 1, 0.3, 1);      /* expo-out, E-26 */
   --motion-ease-pop:    cubic-bezier(0.34, 1.56, 0.64, 1);  /* the one overshoot, E-26 */
+
+  /* ---- Keys: the button as a pressable stamp (DESIGN.md E-32) ---- */
+  --key-offset:      4px 5px;    /* the stamp's own offset, the one --shadow-stamp uses */
+  --key-offset-lift: 6px 7px;    /* hover: the key rises off the page */
+  --key-lift:        -2px, -2px; /* translate() on hover, two steps of the 1px grid */
+  --key-press:       4px, 5px;   /* translate() on press: the key lands on its own shadow */
 }

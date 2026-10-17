@@ -299,3 +299,45 @@ body::after {
     transform: none;
   }
 }
+
+/* =========================================================================== keys (E-32)
+   The button as a pressable stamp: Clash on the label, the hard shadow of the "Leitura terminada."
+   stamp under it (E-24/E-25), rising on hover where there is a mouse and landing on its own shadow
+   when pressed. --key-color is the one thing a variant changes — orange under wine, the strong
+   line under an outlined button, the deep wine under yellow on a wine ground (each a pair 3.2
+   already measures). Only transform and box-shadow move. */
+
+.button {
+  --key-color: var(--clubi-accent);
+  font-family: var(--clubi-font-display);
+  font-weight: 600;
+  letter-spacing: var(--tracking-display);
+  box-shadow: var(--key-offset) 0 0 var(--key-color);
+  transition:
+    background var(--motion-base) var(--motion-ease),
+    transform var(--motion-fast) var(--motion-ease),
+    box-shadow var(--motion-fast) var(--motion-ease);
+}
+
+@media (hover: hover) {
+  .button:not([disabled]):hover {
+    transform: translate(var(--key-lift));
+    box-shadow: var(--key-offset-lift) 0 0 var(--key-color);
+  }
+}
+
+.button:not([disabled]):active {
+  transform: translate(var(--key-press));
+  box-shadow: 0 0 0 0 var(--key-color);
+}
+
+.button[disabled] {
+  box-shadow: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .button:not([disabled]):hover,
+  .button:not([disabled]):active {
+    transform: none;
+  }
+}
