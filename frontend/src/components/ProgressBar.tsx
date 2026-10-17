@@ -5,8 +5,37 @@ import type { FormEvent } from "react";
 import { api } from "../api/client";
 import type { MonthlyPick, MonthlyReading } from "../api/types";
 import { useWriteReading } from "../reading";
+import { useCountUp } from "../useCountUp";
 import { ReadingReview } from "./ReadingReview";
 import { StarRating } from "./StarRating";
+
+/**
+ * The page you are on, in the showreel's size (DESIGN.md E-29): a giant number that counts to
+ * its value, the total under it and the percentage beside it. The counting digits are for the
+ * eye and stay out of the accessibility tree; the sentence a screen reader hears is the settled
+ * one, and the bar above already announces the same thing in `aria-valuetext`.
+ */
+function PageCount({ pages, total, percent }: { pages: number; total: number; percent: number }) {
+  const shown = useCountUp(pages);
+  const shownPercent = total ? Math.round((shown / total) * 100) : 0;
+
+  return (
+    <p className="progress__count">
+      <span className="progress__count-num" aria-hidden="true">
+        {shown}
+      </span>
+      <span className="progress__count-pct" aria-hidden="true">
+        {shown === pages ? percent : Math.min(shownPercent, percent)}%
+      </span>
+      <span className="progress__count-of" aria-hidden="true">
+        de <strong>{total}</strong> páginas
+      </span>
+      <span className="visually-hidden">
+        Página {pages} de {total} · {percent}%
+      </span>
+    </p>
+  );
+}
 
 /**
  * Where you are in this month's book — the pages, whether you have closed it, and the rating and
@@ -97,7 +126,10 @@ export function ProgressBar({ pick }: { pick: MonthlyPick }) {
   return (
     <section className="section">
       <div className="container">
-        <h2 className="section-title">Onde você está</h2>
+        <p className="eyebrow">02 · sua leitura</p>
+        <h2 className="section-title">
+          Onde <span className="hl">você está</span>
+        </h2>
 
         <div className="progress">
           {total ? (
@@ -113,9 +145,7 @@ export function ProgressBar({ pick }: { pick: MonthlyPick }) {
               >
                 <div className="progress__fill" style={{ width: `${percent}%` }} />
               </div>
-              <p className="progress__readout">
-                <strong>{reading.pages_read}</strong> de {total} páginas · {percent}%
-              </p>
+              <PageCount pages={reading.pages_read} total={total} percent={percent} />
             </>
           ) : (
             // percent is null when the book has no page count, and a bar without a total would
@@ -228,6 +258,7 @@ export function ProgressBar({ pick }: { pick: MonthlyPick }) {
                   itself for a wine ground — the star fill turns yellow, the caption and the empty
                   stars take the on-invert inks, and "Remover nota" stops being wine on wine. */}
               <div className="progress__rating on-invert">
+                <p className="eyebrow">03 · nota e resenha</p>
                 <StarRating
                   value={reading.rating}
                   label="Se quiser, dê uma nota"
