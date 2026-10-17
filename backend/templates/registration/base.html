@@ -14,7 +14,8 @@
   <main class="auth-card">
     <a class="auth-brand" href="/" aria-label="clubi"
        style="--logo-src: url('{% static 'brand/logo-clubi.svg' %}')"></a>
-    <h1>{% block heading %}{% endblock %}</h1>
+    {# The span is the heading's marca-texto (DESIGN.md E-31); every auth page inherits it. #}
+    <h1><span class="hl">{% block heading %}{% endblock %}</span></h1>
     {% block content %}{% endblock %}
   </main>
 </body>

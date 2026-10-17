@@ -18,10 +18,10 @@ Write those with `{% comment %}`, never a multi-line `{# … #}`: the hash form 
 comment, and broken across lines Django emits it verbatim into the page. Four of them did exactly
 that here, so core/tests/e2e/test_views.py now asserts no `{#` survives into the response.
 
-No graphic elements here on purpose. The brand's ten elements live in frontend/src/assets/, which
-Django cannot reach through {% static %}, and copying one into core/static/brand/ would create the
-second copy of an asset DESIGN.md 2.1 keeps deliberately single. The logotype is shared already,
-and the brand is verbal anyway (DESIGN.md 6.3) — so this page is type, paper and one logo.
+The brand's elements and stickers are served from core/static/brand/ (DESIGN.md 2.1), one copy for
+both surfaces, and painted as masks so they take a colour from the CSS. The showreel's language —
+checker, marker, numbered eyebrows, giant step numerals, stickers and entrance motion — is
+DESIGN.md E-31, which reuses the SPA's E-22 … E-28 on this page with the same tokens.
 {% endcomment %}
 <!doctype html>
 <html lang="pt-BR">
@@ -90,8 +90,13 @@ and the brand is verbal anyway (DESIGN.md 6.3) — so this page is type, paper a
   <main id="conteudo">
     <section class="hero">
       <div class="container hero__inner">
-        {# The <span> is the marca-texto; the sentence itself is still the founder's to write. #}
-        <h1 class="hero__title">A cada mês, <span class="mark">uma nova leitura.</span></h1>
+        <p class="eyebrow">01 · o clube</p>
+        {% comment %}
+          The outer <span class="mark"> is the marca-texto; the sentence itself is still the founder's
+          to write. Each word is its own span only so it can rise on its beat (DESIGN.md E-31) — the
+          showreel's opening line — and --beat is that beat.
+        {% endcomment %}
+        <h1 class="hero__title"><span class="word" style="--beat: 0">A</span> <span class="word" style="--beat: 1">cada</span> <span class="word" style="--beat: 2">mês,</span> <span class="mark"><span class="word" style="--beat: 3">uma</span> <span class="word" style="--beat: 4">nova</span> <span class="word" style="--beat: 5">leitura.</span></span></h1>
         {# PLACEHOLDER — a frase de proposta é da fundadora. #}
         <p class="hero__lead">
           O clubi é o primeiro clube do livro de estudantes para estudantes na ESPM Rio, onde a leitura vira conversa e troca de experiências.
@@ -120,6 +125,7 @@ and the brand is verbal anyway (DESIGN.md 6.3) — so this page is type, paper a
     {% endcomment %}
     <section class="section section--invert pick">
       <div class="container">
+        <p class="eyebrow">02 · livro do mês</p>
         {% if not pick and not history %}
           <p class="pick__eyebrow">O livro deste mês</p>
           <p class="pick__blank">
@@ -236,18 +242,30 @@ and the brand is verbal anyway (DESIGN.md 6.3) — so this page is type, paper a
 
     <section class="section how">
       <div class="container">
-        <h2 class="section-title">Como funciona</h2>
+        <p class="eyebrow">03 · como funciona</p>
+        <h2 class="section-title"><span class="scribble">Como funciona</span></h2>
+        {% comment %}
+          One brand element per step: the exception DESIGN.md 6.2 already writes for "Como funciona",
+          where each item is element + label. Flat and wine on cream (6.1); aria-hidden, since the
+          title beside each one already says it.
+        {% endcomment %}
         <ol class="how__grid">
           {# PLACEHOLDER — os três blocos abaixo são da fundadora, título e texto. #}
           <li class="how__item">
+            <span class="how__mark" aria-hidden="true"
+                  style="--element-src: url('{% static 'brand/elements/livro-aberto.svg' %}'); --ratio: 246.12 / 208.58"></span>
             <h3 class="how__title">Escolhemos o livro juntos</h3>
             <p>Uma leitura por mês, anunciada aqui com o prazo combinado.</p>
           </li>
           <li class="how__item">
+            <span class="how__mark" aria-hidden="true"
+                  style="--element-src: url('{% static 'brand/elements/nuvem.svg' %}'); --ratio: 250.46 / 157.34"></span>
             <h3 class="how__title">Você lê no seu ritmo</h3>
             <p>Marque por onde está quando quiser. Ninguém é cobrado por página.</p>
           </li>
           <li class="how__item">
+            <span class="how__mark" aria-hidden="true"
+                  style="--element-src: url('{% static 'brand/elements/balao.svg' %}'); --ratio: 232.61 / 176.64"></span>
             <h3 class="how__title">A leitura vira conversa</h3>
             <p>As postagens do clube ficam no site, e o encontro do mês fecha a leitura.</p>
           </li>
@@ -255,7 +273,7 @@ and the brand is verbal anyway (DESIGN.md 6.3) — so this page is type, paper a
 
         <div class="how__cta">
           {# PLACEHOLDER — a frase de convite é da fundadora. #}
-          <p>Toda leitura começa com alguém entrando.</p>
+          <p>Toda leitura começa com <span class="hl">alguém entrando.</span></p>
           <a class="button button--lg" href="{% url 'signup' %}">Criar conta</a>
         </div>
       </div>
@@ -271,7 +289,7 @@ and the brand is verbal anyway (DESIGN.md 6.3) — so this page is type, paper a
         footer carries.
       {% endcomment %}
       <p class="landing-foot__note">
-        Aqui não importa quantos livros você lê por ano. O que importa é fazer parte.
+        Aqui não importa quantos livros você lê por ano. O que importa é <span class="mark">fazer parte.</span>
       </p>
       <p class="muted">Criado por estudantes para estudantes</p>
     </div>
