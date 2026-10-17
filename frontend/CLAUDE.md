@@ -46,6 +46,7 @@ posts.ts            canManagePost, useDeletePost, useUpdatePost, postEditPayload
 reading.ts          useWriteReading, ReadingWrite, REVIEW_MAX_LENGTH
 unreadPosts.ts      useUnreadPosts, useMarkPostsSeen
 useDebouncedValue.ts
+useCountUp.ts       the page counter's count-up (DESIGN.md E-29) — presentation only
 ```
 
 There is no `assets/` dir: brand SVGs live in `backend/core/static/brand/elements/` and
@@ -188,7 +189,14 @@ Three disciplines Django used to enforce for free (guide 7.5):
 - **Body text is wine on cream or cream on wine.** Orange and yellow are measured to fail as body
   text; yellow only ever sits on wine.
 - **Collage lives in the frame, not the machinery.** Hero, empty states and footer carry texture
-  and rotation; forms, the feed, `ProgressBar` and lists stay clean and aligned.
+  and rotation; forms, the feed, `ProgressBar` and lists stay clean and aligned. The one carve-out
+  is the *answer to a gesture* (DESIGN.md E-25): the "Leitura terminada." stamp and the "Progresso
+  salvo." notice may tilt, because they are feedback — the bar, the field, the buttons and the
+  stars beside them never do.
+- **Every animation ends on the element's resting style** (DESIGN.md E-26). The global
+  `prefers-reduced-motion` rule sets `animation: none`, so a keyframe that *starts* hidden is fine
+  and a resting style that *is* hidden is a bug — with motion off, it would never appear. Animate
+  only `transform`, `opacity` and `clip-path`; nothing that moves layout.
 - **There is no icon library and there will not be one** (DESIGN.md 6.3). Where an icon means
   something, use a brand element (`estrela-5`, `clips`, `balao`); where it is a control, use the
   word — "Editar", "Excluir", "Postar". Three hand-drawn glyphs carry a *job* each (`×` closes, the

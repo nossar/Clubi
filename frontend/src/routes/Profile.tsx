@@ -135,6 +135,7 @@ export function Profile() {
           )}
 
           <div>
+            <p className="eyebrow">01 · perfil</p>
             <h1 className="profile-header__name">{profile.full_name || profile.username}</h1>
             <p className="muted profile-header__username">@{profile.username}</p>
 
@@ -162,14 +163,21 @@ export function Profile() {
           rule between them keeps "entre componentes" air instead of a full section's. */}
       <section className="section section--tight">
         <div className="container">
-          <h2 className="section-title">{isMe ? "Sua estante" : "Estante"}</h2>
+          <p className="eyebrow">02 · estante</p>
+          <h2 className="section-title">
+            {isMe ? "Sua " : ""}
+            <span className="hl">{isMe ? "estante" : "Estante"}</span>
+          </h2>
           <FavoritesShelf books={profile.favorites} canEdit={isMe} />
         </div>
       </section>
 
       <section className="section">
         <div className="container">
-          <h2 className="section-title">{"Leituras do clubi"}</h2>
+          <p className="eyebrow">03 · leituras</p>
+          <h2 className="section-title">
+            Leituras do <span className="hl">clubi</span>
+          </h2>
 
           {profile.readings.length === 0 ? (
             <div className="state">

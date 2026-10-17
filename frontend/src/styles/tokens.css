@@ -96,4 +96,19 @@
   --motion-base: 200ms;
   --motion-slow: 320ms;
   --motion-ease: cubic-bezier(0.2, 0, 0.2, 1);
+
+  /* ---- Showreel layer — experimental, branch redesign/a-showreel (DESIGN.md E-22 … E-30) ---- */
+  --clubi-wine-checker: #7f013a;  /* mix(vinho, #000, .065): the darker square of the checker, E-27 */
+  --clubi-wine-deep:    #5e012b;  /* mix(vinho, #000, .31): a hard shadow on a wine ground, E-24 */
+  --text-6xl:           6.25rem;  /* the giant page count: two ~1.25 steps past --text-4xl (64 → 80 → 100px), E-29 */
+  --tracking-eyebrow:   0.16em;   /* the numbered chapter line, E-22 */
+  --shadow-hard-sm:     3px 4px 0 0 var(--clubi-line-strong);   /* E-24 */
+  --shadow-hard:        6px 8px 0 0 var(--clubi-line-strong);   /* E-24 */
+  --shadow-hard-invert: 8px 10px 0 0 var(--clubi-wine-deep);    /* E-24 */
+  --shadow-stamp:       4px 5px 0 0 var(--clubi-accent);        /* E-25 */
+  --checker-size:       4rem;     /* E-27 */
+  --motion-enter:       550ms;    /* E-26 */
+  --motion-stagger:     80ms;     /* E-26 */
+  --motion-ease-out:    cubic-bezier(0.16, 1, 0.3, 1);      /* expo-out, E-26 */
+  --motion-ease-pop:    cubic-bezier(0.34, 1.56, 0.64, 1);  /* the one overshoot, E-26 */
 }

@@ -58,7 +58,9 @@ export function Readers() {
       <div className="container">
         <h1 className="page-title">
           <BrandElement name="estrela-5" />
-          Quem já terminou
+          <span>
+            Quem já <span className="hl">terminou</span>
+          </span>
         </h1>
 
         {noPick ? (

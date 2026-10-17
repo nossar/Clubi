@@ -30,7 +30,15 @@ export function Search() {
   return (
     <section className="section">
       <div className="container">
-        <h1 className="page-title">{debouncedTerm ? "Resultados" : "Membros do clubi"}</h1>
+        <h1 className="page-title">
+          {debouncedTerm ? (
+            "Resultados"
+          ) : (
+            <span>
+              Membros do <span className="hl">clubi</span>
+            </span>
+          )}
+        </h1>
         <p className="muted search__lead">
           {debouncedTerm
             ? `Quem tem “${debouncedTerm}” no nome ou no nome de usuário.`

@@ -7,7 +7,8 @@ export function Footer() {
         <span className="brand-mark site-footer__brand" role="img" aria-label="clubi" />
         {/* Straight from the club's own pieces (DESIGN.md 9) — the tone the whole site answers to. */}
         <p className="site-footer__note">
-          Aqui não importa quantos livros você lê por ano. O que importa é fazer parte.
+          Aqui não importa quantos livros você lê por ano. O que importa é{" "}
+          <span className="hl">fazer parte.</span>
         </p>
         <p className="muted">Criado por estudantes para estudantes</p>
       </div>

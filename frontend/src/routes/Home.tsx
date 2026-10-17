@@ -13,7 +13,9 @@ function NoMonthlyPick() {
     <section className="pick section--invert on-invert">
       <div className="container state">
         <BrandElement name="nuvem" />
-        <h1 className="state__title">ainda não há livro do mês</h1>
+        <h1 className="state__title">
+          ainda não há <span className="hl">livro do mês</span>
+        </h1>
         <p>
           A escolha ainda não foi publicada. Assim que ela sair, o livro aparece aqui — com a
           sinopse e o prazo de leitura.

@@ -3,7 +3,6 @@ import { Link } from "react-router-dom";
 import type { MonthlyPick } from "../api/types";
 import { formatDay, formatMonth } from "../format";
 import { BookCover } from "./BookCover";
-import { BrandElement } from "./BrandElement";
 
 /**
  * The hero, and the one place on the page that carries the brand's collage language: the cover
@@ -19,10 +18,10 @@ export function MonthlyPickHighlight({ pick }: { pick: MonthlyPick }) {
   return (
     <section className="pick section--invert on-invert">
       <div className="container">
-        <p className="pick__eyebrow">
-          <BrandElement name="livro-aberto" />
-          {formatMonth(pick.month)}
-        </p>
+        {/* The numbered chapter line of DESIGN.md E-22, carrying the month the old eyebrow
+            printed beside the livro-aberto — the element left so the hero's two-per-fold budget
+            goes to the sticker (E-28). */}
+        <p className="eyebrow">01 · livro do mês · {formatMonth(pick.month)}</p>
 
         <div className="pick__inner">
           <div className="pick__cutout">
